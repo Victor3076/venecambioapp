@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { RatesService, RatesData } from "@/services/rates"
-import { calculateRate, formatRate } from "@/lib/rates-utils"
+import { calculateRate, formatRate, getRateDecimals } from "@/lib/rates-utils"
 import Link from "next/link"
 import { CURRENCY_LABELS, SUPPORTED_REGIONS } from "@/lib/constants"
 
@@ -42,7 +42,8 @@ export default function Home() {
     const margin = rates.margins[marginKey] || rates.margins["GENERIC"] || 0
 
     const rawRate = calculateRate(targetCurrency, sourceCurrency, targetPrice, sourcePrice, margin)
-    const decimals = (targetCurrency === 'VES' || targetCurrency === 'VENEZUELA') ? 4 : 2
+    const decimals = getRateDecimals(targetCurrency, sourceCurrency)
+    // IMPORTANT: Round rate to displayed precision for exact calculations
     const rate = Number(rawRate.toFixed(decimals))
 
     if (direction === 'sent') {
