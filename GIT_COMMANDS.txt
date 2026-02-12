@@ -1,0 +1,33 @@
+# Comandos Git - Ejecutar en Command Prompt (CMD)
+
+## Paso 1: Navegar a tu proyecto
+cd C:\Users\MorochosPC\Documents\venecambioapp
+
+## Paso 2: Configurar Git (tu nombre y email)
+git config --global user.name "Victor Rodriguez"
+git config --global user.email "victor307@gmail.com"
+
+## Paso 3: Verificar configuración
+git config --global --list
+
+## Paso 4: Inicializar repositorio Git
+git init
+
+## Paso 5: Verificar archivos
+git status
+
+## Paso 6: Agregar todos los archivos
+git add .
+
+## Paso 7: Hacer el primer commit
+git commit -m "Initial commit - Venecambio App"
+
+## Paso 8: Ver el historial
+git log --oneline
+
+---
+
+## Notas:
+- Ejecuta estos comandos UNO POR UNO en el Command Prompt
+- Después del Paso 7, tu código estará listo para subir a GitHub
+- Copia y pega cada comando, presiona Enter después de cada uno
