@@ -1,0 +1,24 @@
+# Comandos para conectar con GitHub y subir el código
+
+## Paso 1: Conectar tu repositorio local con GitHub
+git remote add origin https://github.com/Victor3076/venecambioapp.git
+
+## Paso 2: Renombrar la rama a 'main'
+git branch -M main
+
+## Paso 3: Subir el código a GitHub
+git push -u origin main
+
+---
+
+## Notas:
+- Ejecuta estos comandos UNO POR UNO en el Command Prompt
+- Te pedirá autenticación de GitHub (usuario y contraseña o token)
+- Si te pide contraseña, usa un Personal Access Token (no tu contraseña normal)
+- Después del push, tu código estará en GitHub
+
+## Si te pide autenticación:
+1. Ve a GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)
+2. Generate new token (classic)
+3. Selecciona "repo" scope
+4. Copia el token y úsalo como contraseña

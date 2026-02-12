@@ -6,10 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Plus, Trash2, Landmark, User, CreditCard } from "lucide-react"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
 
-// Note: Ensure Dialog component is available or implement a simpler modal if not.
-// For now, I'll assume standard shadcn/ui components.
 
 export default function AccountsPage() {
     const [accounts, setAccounts] = useState<UserAccount[]>([])
