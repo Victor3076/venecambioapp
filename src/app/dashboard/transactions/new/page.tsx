@@ -21,6 +21,7 @@ export default function NewTransactionPage() {
 
     const [amountInput, setAmountInput] = useState("100")
     const [amountReceivedInput, setAmountReceivedInput] = useState("")
+    const [amountBcvInput, setAmountBcvInput] = useState("")
     const amountSent = parseFloat(amountInput) || 0
     const [sourceCurrency, setSourceCurrency] = useState("PERU")
     const [targetCurrency, setTargetCurrency] = useState("VES")
@@ -82,7 +83,7 @@ export default function NewTransactionPage() {
         loadCountryAccounts()
     }, [sourceCurrency])
 
-    const updateCalculation = (value: string, direction: 'sent' | 'received') => {
+    const updateCalculation = (value: string, direction: 'sent' | 'received' | 'bcv') => {
         if (!rates) return
 
         const getPrice = (code: string) => {
@@ -92,6 +93,7 @@ export default function NewTransactionPage() {
 
         const sourcePrice = getPrice(sourceCurrency)
         const targetPrice = getPrice(targetCurrency)
+        const bcvRate = rates.usdt_prices.BCV || 1
 
         const marginKey = `${sourceCurrency}_${targetCurrency}`
         const margin = rates.margins[marginKey] || rates.margins["GENERIC"] || 0
@@ -105,12 +107,27 @@ export default function NewTransactionPage() {
             setAmountInput(value)
             const res = (parseFloat(value) || 0) * rate
             setAmountReceivedInput(formatRate(res, targetCurrency, sourceCurrency))
-        } else {
+            if (targetCurrency === 'VES') {
+                setAmountBcvInput((res / bcvRate).toFixed(2))
+            }
+        } else if (direction === 'received') {
             const cleanValue = value.replace(/[^0-9.,]/g, '').replace(',', '.')
             setAmountReceivedInput(value)
             const amountRec = parseFloat(cleanValue) || 0
             const res = rate > 0 ? amountRec / rate : 0
             setAmountInput(res.toFixed(2))
+            if (targetCurrency === 'VES') {
+                setAmountBcvInput((amountRec / bcvRate).toFixed(2))
+            }
+        } else if (direction === 'bcv') {
+            setAmountBcvInput(value)
+            if (targetCurrency === 'VES') {
+                const amountBcvVal = parseFloat(value) || 0
+                const amountRec = amountBcvVal * bcvRate
+                setAmountReceivedInput(formatRate(amountRec, targetCurrency, sourceCurrency))
+                const resultSent = rate > 0 ? amountRec / rate : 0
+                setAmountInput(resultSent.toFixed(2))
+            }
         }
     }
 
@@ -132,6 +149,11 @@ export default function NewTransactionPage() {
 
             const res = amountSent * r
             setAmountReceivedInput(formatRate(res, targetCurrency, sourceCurrency))
+
+            if (targetCurrency === 'VES') {
+                const bcvRate = rates.usdt_prices.BCV || 1
+                setAmountBcvInput((res / bcvRate).toFixed(2))
+            }
         }
     }, [sourceCurrency, targetCurrency, rates])
 
@@ -307,6 +329,35 @@ export default function NewTransactionPage() {
                                 </div>
                             </div>
                         </div>
+
+                        {targetCurrency === 'VES' && (
+                            <div className="p-4 bg-muted/20 border-2 border-dashed rounded-lg space-y-3 animate-in fade-in slide-in-from-top-4 duration-500">
+                                <label className="text-sm font-bold flex items-center gap-2 text-muted-foreground uppercase tracking-wider">
+                                    <span className="bg-primary/20 text-primary px-1.5 py-0.5 rounded text-[10px]">Cálculo BCV</span>
+                                    Equivale a:
+                                </label>
+                                <div className="flex gap-2">
+                                    <div className="relative flex-1">
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-bold">$</span>
+                                        <Input
+                                            type="text"
+                                            value={amountBcvInput}
+                                            onChange={e => updateCalculation(e.target.value, 'bcv')}
+                                            onClick={(e) => (e.target as HTMLInputElement).select()}
+                                            className="pl-7 bg-background font-bold border-primary/20"
+                                            placeholder="Monto en $"
+                                        />
+                                    </div>
+                                    <div className="w-[120px] h-10 rounded-md border border-input bg-muted/10 px-3 py-2 text-xs flex items-center justify-center font-bold text-muted-foreground uppercase">
+                                        Dólares
+                                    </div>
+                                </div>
+                                <p className="text-[10px] text-muted-foreground italic">
+                                    * Este valor es solo referencial basado en la tasa oficial BCV de hoy ({rates?.usdt_prices.BCV}).
+                                </p>
+                            </div>
+                        )}
+
                         <div className="p-3 bg-primary/5 rounded-lg border border-primary/20 flex justify-between items-center text-sm">
                             <span className="font-medium">Tasa de cambio:</span>
                             <span className="font-bold">

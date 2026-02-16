@@ -18,6 +18,7 @@ export default function Home() {
   const [sourceCurrency, setSourceCurrency] = useState<string>("PERU")
   const [targetCurrency, setTargetCurrency] = useState<string>("VES")
   const [amountReceived, setAmountReceived] = useState<string>("0")
+  const [amountBcv, setAmountBcv] = useState<string>("0")
 
   const minAmount = MINIMUM_AMOUNTS[sourceCurrency] || 0
   const isBelowMin = amountSent < minAmount
@@ -32,7 +33,7 @@ export default function Home() {
   }, [])
 
   // Calculate based on which input changed
-  const updateCalculation = (value: string, direction: 'sent' | 'received') => {
+  const updateCalculation = (value: string, direction: 'sent' | 'received' | 'bcv') => {
     if (!rates) return
 
     const getPrice = (code: string) => {
@@ -42,6 +43,7 @@ export default function Home() {
 
     const sourcePrice = getPrice(sourceCurrency)
     const targetPrice = getPrice(targetCurrency)
+    const bcvRate = rates.usdt_prices.BCV || 1
 
     const marginKey = `${sourceCurrency}_${targetCurrency}`
     const margin = rates.margins[marginKey] || rates.margins["GENERIC"] || 0
@@ -56,13 +58,30 @@ export default function Home() {
       setAmountInput(value)
       const result = amount * rate
       setAmountReceived(formatRate(result, targetCurrency, sourceCurrency))
-    } else {
+      // Update BCV if target is VES
+      if (targetCurrency === 'VES') {
+        setAmountBcv((result / bcvRate).toFixed(2))
+      }
+    } else if (direction === 'received') {
       // Clean non-numeric characters for received input (e.g. from copy-paste)
       const cleanValue = value.replace(/[^0-9.,]/g, '').replace(',', '.')
       setAmountReceived(value)
       const amountRec = parseFloat(cleanValue) || 0
       const result = rate > 0 ? amountRec / rate : 0
       setAmountInput(result.toFixed(2))
+      // Update BCV if target is VES
+      if (targetCurrency === 'VES') {
+        setAmountBcv((amountRec / bcvRate).toFixed(2))
+      }
+    } else if (direction === 'bcv') {
+      setAmountBcv(value)
+      if (targetCurrency === 'VES') {
+        const amountBcvVal = parseFloat(value) || 0
+        const amountRec = amountBcvVal * bcvRate
+        setAmountReceived(formatRate(amountRec, targetCurrency, sourceCurrency))
+        const resultSent = rate > 0 ? amountRec / rate : 0
+        setAmountInput(resultSent.toFixed(2))
+      }
     }
   }
 
@@ -206,6 +225,33 @@ export default function Home() {
                     </select>
                   </div>
                 </div>
+
+                {targetCurrency === 'VES' && (
+                  <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
+                    <label className="text-sm font-medium flex items-center gap-1.5">
+                      <span className="bg-primary/10 text-primary p-1 rounded text-[10px] font-bold">BCV</span>
+                      Equivale a:
+                    </label>
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-bold">$</span>
+                        <Input
+                          type="text"
+                          value={amountBcv}
+                          onChange={(e) => updateCalculation(e.target.value, 'bcv')}
+                          onClick={(e) => (e.target as HTMLInputElement).select()}
+                          className="pl-7 bg-muted/30 font-bold border-primary/20"
+                        />
+                      </div>
+                      <div className="w-[110px] h-10 rounded-md border border-input bg-muted/10 px-3 py-2 text-xs flex items-center justify-center font-bold text-muted-foreground uppercase">
+                        Dólares
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground italic px-1">
+                      * Referencia calculada a tasa oficial BCV ({rates?.usdt_prices.BCV})
+                    </p>
+                  </div>
+                )}
 
                 <div className="pt-2 border-t text-sm flex justify-between items-center">
                   <span className="text-muted-foreground font-medium">Tasa de cambio:</span>
