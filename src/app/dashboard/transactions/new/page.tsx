@@ -11,8 +11,8 @@ import { calculateRate, formatRate, getRateDecimals } from "@/lib/rates-utils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Landmark, Upload, Info, ArrowLeft, Check, ChevronRight } from "lucide-react"
-import { CURRENCY_LABELS, SUPPORTED_REGIONS } from "@/lib/constants"
+import { Landmark, Upload, Info, ArrowLeft, Check, ChevronRight, AlertCircle } from "lucide-react"
+import { CURRENCY_LABELS, SUPPORTED_REGIONS, MINIMUM_AMOUNTS } from "@/lib/constants"
 
 export default function NewTransactionPage() {
     const router = useRouter()
@@ -25,6 +25,9 @@ export default function NewTransactionPage() {
     const [sourceCurrency, setSourceCurrency] = useState("PERU")
     const [targetCurrency, setTargetCurrency] = useState("VES")
     const [rates, setRates] = useState<RatesData | null>(null)
+
+    const minAmount = MINIMUM_AMOUNTS[sourceCurrency] || 0
+    const isBelowMin = amountSent < minAmount
 
     // Data from Step 1-2
     const [pendingTransfers, setPendingTransfers] = useState<{ account: UserAccount, amountSent: number, rate: number, amountReceived: number }[]>([])
@@ -257,6 +260,7 @@ export default function NewTransactionPage() {
                                         value={amountInput}
                                         onChange={e => updateCalculation(e.target.value, 'sent')}
                                         onClick={(e) => (e.target as HTMLInputElement).select()}
+                                        className={isBelowMin ? "border-red-500" : ""}
                                     />
                                     <select
                                         value={sourceCurrency}
@@ -271,7 +275,13 @@ export default function NewTransactionPage() {
                                         ))}
                                     </select>
                                 </div>
-                                {pendingTransfers.length > 0 && (
+                                {isBelowMin && (
+                                    <p className="text-[10px] text-red-500 font-bold flex items-center gap-1 animate-pulse mt-1">
+                                        <AlertCircle className="w-3 h-3" />
+                                        Monto mínimo: {minAmount} {sourceCurrency === 'USA' ? 'USD' : (sourceCurrency === 'PERU' ? 'PEN' : (sourceCurrency === 'CHILE' ? 'CLP' : 'COP'))}
+                                    </p>
+                                )}
+                                {pendingTransfers.length > 0 && !isBelowMin && (
                                     <p className="text-[10px] text-primary font-bold mt-1">
                                         * La moneda de origen está bloqueada para este grupo de transferencias.
                                     </p>
@@ -325,10 +335,10 @@ export default function NewTransactionPage() {
                                 </div>
                             </div>
                         )}
-                        <Button className="w-full" onClick={() => setStep(2)}>
+                        <Button className="w-full" onClick={() => setStep(2)} disabled={isBelowMin}>
                             {pendingTransfers.length > 0 ? "Añadir otro destinatario" : "Continuar"} <ChevronRight className="ml-2 w-4 h-4" />
                         </Button>
-                        {pendingTransfers.length > 0 && (
+                        {pendingTransfers.length > 0 && !isBelowMin && (
                             <Button className="w-full bg-green-600 hover:bg-green-700" onClick={handleCreateTransaction} disabled={loading}>
                                 {loading ? "Procesando..." : `Finalizar y depositar ${totalToPay} ${CURRENCY_LABELS[sourceCurrency]}`}
                             </Button>

@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input"
 import { RatesService, RatesData } from "@/services/rates"
 import { calculateRate, formatRate, getRateDecimals } from "@/lib/rates-utils"
 import Link from "next/link"
-import { CURRENCY_LABELS, SUPPORTED_REGIONS } from "@/lib/constants"
+import { CURRENCY_LABELS, SUPPORTED_REGIONS, MINIMUM_AMOUNTS } from "@/lib/constants"
 import { Logo } from "@/components/logo"
+import { AlertCircle } from "lucide-react"
 
 export default function Home() {
   const [rates, setRates] = useState<RatesData | null>(null)
@@ -17,6 +18,9 @@ export default function Home() {
   const [sourceCurrency, setSourceCurrency] = useState<string>("PERU")
   const [targetCurrency, setTargetCurrency] = useState<string>("VES")
   const [amountReceived, setAmountReceived] = useState<string>("0")
+
+  const minAmount = MINIMUM_AMOUNTS[sourceCurrency] || 0
+  const isBelowMin = amountSent < minAmount
 
   // Load latest rates
   useEffect(() => {
@@ -136,7 +140,9 @@ export default function Home() {
                 Tus remesas Rápido y Seguro
               </p>
               <div className="flex gap-4">
-                <Button size="lg">Calcular Envío</Button>
+                <Button size="lg" disabled={isBelowMin} asChild={!isBelowMin}>
+                  {isBelowMin ? "Monto insuficiente" : <Link href="/login">Continuar</Link>}
+                </Button>
               </div>
             </div>
 
@@ -155,6 +161,7 @@ export default function Home() {
                       value={amountInput}
                       onChange={(e) => updateCalculation(e.target.value, 'sent')}
                       onClick={(e) => (e.target as HTMLInputElement).select()}
+                      className={isBelowMin ? "border-red-500" : ""}
                     />
                     <select
                       value={sourceCurrency}
@@ -168,6 +175,12 @@ export default function Home() {
                       ))}
                     </select>
                   </div>
+                  {isBelowMin && (
+                    <p className="text-[10px] text-red-500 font-bold flex items-center gap-1 animate-pulse">
+                      <AlertCircle className="w-3 h-3" />
+                      Monto mínimo: {minAmount} {sourceCurrency === 'USA' ? 'USD' : (sourceCurrency === 'PERU' ? 'PEN' : (sourceCurrency === 'CHILE' ? 'CLP' : 'COP'))}
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
