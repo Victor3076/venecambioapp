@@ -24,7 +24,7 @@ export default function AdminTransactionsPage() {
     const [isReconciliationOpen, setIsReconciliationOpen] = useState(false)
     const [searchTerm, setSearchTerm] = useState("")
     const [matching, setMatching] = useState(false)
-    const [filterDate, setFilterDate] = useState("")
+    const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0])
     const [filterStatus, setFilterStatus] = useState<Transaction['status'] | 'all'>('all')
 
     useEffect(() => {
@@ -232,7 +232,7 @@ export default function AdminTransactionsPage() {
                         />
                     </div>
                     <div className="flex items-end">
-                        <Button variant="ghost" onClick={() => { setFilterDate(""); setFilterStatus("all"); setSearchTerm("") }}>
+                        <Button variant="ghost" onClick={() => { setFilterDate(new Date().toISOString().split('T')[0]); setFilterStatus("all"); setSearchTerm("") }}>
                             Limpiar
                         </Button>
                     </div>
