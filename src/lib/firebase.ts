@@ -29,7 +29,7 @@ export const requestPermission = async () => {
         const permission = await Notification.requestPermission();
         if (permission === 'granted') {
             const token = await getToken(messaging, {
-                vapidKey: 'YOUR_VAPID_PUBLIC_KEY' // This is the Web Push certificate Key
+                vapidKey: 'BNHpLPlpSVRXK73eeUBmIyEA7g1h-TNalsRUxav5N3ZVFd5a0B5CZx4CWhtGD-PzGWHAlKLbDMlmqZO4Ok3Xmj0' // This is the Web Push certificate Key
             });
             return token;
         }

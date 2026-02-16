@@ -18,8 +18,7 @@ export function FcmHandler() {
                 }
 
                 // 2. Get Token
-                // IMPORTANT: Replace with your actual VAPID key from Firebase Console
-                const vapidKey = "BNvXf_r9x_v7T_U8v8Vz_v8..."
+                const vapidKey = "BNHpLPlpSVRXK73eeUBmIyEA7g1h-TNalsRUxav5N3ZVFd5a0B5CZx4CWhtGD-PzGWHAlKLbDMlmqZO4Ok3Xmj0"
 
                 const token = await getToken(messaging, { vapidKey })
 
