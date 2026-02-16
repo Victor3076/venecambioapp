@@ -133,7 +133,7 @@ export default function Home() {
                 Envía dinero entre <span className="text-primary">Perú, Chile, Colombia, USA y Venezuela</span>
               </h1>
               <p className="text-muted-foreground text-xl">
-                Tus remesas llegan al instante. La mejor tasa del mercado garantizada.
+                Tus remesas Rápido y Seguro
               </p>
               <div className="flex gap-4">
                 <Button size="lg">Calcular Envío</Button>
