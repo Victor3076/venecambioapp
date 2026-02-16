@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation"
 
 import { NotificationBell } from "@/components/NotificationBell"
 import { Logo } from "@/components/logo"
+import { FcmHandler } from "@/components/FcmHandler"
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
     const router = useRouter()
@@ -48,6 +49,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
     return (
         <div className="flex min-h-screen bg-muted/30 text-foreground transition-colors">
+            <FcmHandler />
             {/* Sidebar */}
             <aside className="w-72 border-r bg-background hidden md:flex flex-col shadow-sm">
                 <div className="h-16 flex items-center px-6 border-b">
