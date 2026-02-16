@@ -53,16 +53,40 @@ export const BankDepositsService = {
     },
 
     async match(depositId: string, transactionId: string) {
-        // Step 1: Get transaction details to check for group_id
+        // Step 1: Get transaction details and calculate expected amount
         const { data: tx, error: fetchError } = await supabase
             .from('transactions')
-            .select('group_id')
+            .select('amount_sent, group_id, currency_sent')
             .eq('id', transactionId)
             .single()
 
         if (fetchError) throw fetchError
 
-        // Step 2: Update deposit
+        let expectedAmount = tx.amount_sent
+        if (tx.group_id) {
+            const { data: groupTxs, error: groupError } = await supabase
+                .from('transactions')
+                .select('amount_sent')
+                .eq('group_id', tx.group_id)
+            if (groupError) throw groupError
+            expectedAmount = groupTxs.reduce((sum, item) => sum + Number(item.amount_sent), 0)
+        }
+
+        // Step 2: Get deposit details and validate amount/currency
+        const { data: deposit, error: depFetchError } = await supabase
+            .from('bank_deposits')
+            .select('amount, currency, status')
+            .eq('id', depositId)
+            .single()
+
+        if (depFetchError) throw depFetchError
+        if (deposit.status !== 'available') throw new Error("El depósito ya no está disponible.")
+
+        if (Number(deposit.amount) !== expectedAmount) {
+            throw new Error(`El monto del depósito (${deposit.amount} ${deposit.currency}) no coincide con el total de la operación (${expectedAmount} ${tx.currency_sent}).`)
+        }
+
+        // Step 3: Update deposit
         const { error: depositError } = await supabase
             .from('bank_deposits')
             .update({
@@ -70,12 +94,10 @@ export const BankDepositsService = {
                 matched_transaction_id: transactionId
             })
             .eq('id', depositId)
-            .eq('status', 'available')
 
         if (depositError) throw depositError
 
-        // Step 3: Update transaction(s) status
-        // If it's part of a group, verify the whole group
+        // Step 4: Update transaction(s) status
         const updateQuery = supabase
             .from('transactions')
             .update({ status: 'verified' })
