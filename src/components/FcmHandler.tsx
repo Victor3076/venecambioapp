@@ -17,30 +17,36 @@ export function FcmHandler() {
                     return
                 }
 
-                // 2. Get Token
-                const vapidKey = "BNHpLPlpSVRXK73eeUBmIyEA7g1h-TNalsRUxav5N3ZVFd5a0B5CZx4CWhtGD-PzGWHAlKLbDMlmqZO4Ok3Xmj0"
+                // 2. Register Service Worker manually for Next.js consistency
+                if ('serviceWorker' in navigator) {
+                    const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
+                        scope: '/firebase-cloud-messaging-push-scope',
+                    });
 
-                const token = await getToken(messaging, { vapidKey })
+                    const vapidKey = "BNHpLPlpSVRXK73eeUBmIyEA7g1h-TNalsRUxav5N3ZVFd5a0B5CZx4CWhtGD-PzGWHAlKLbDMlmqZO4Ok3Xmj0"
+                    const token = await getToken(messaging, {
+                        vapidKey,
+                        serviceWorkerRegistration: registration
+                    })
 
-                if (token) {
-                    console.log("FCM Token obtained:", token)
+                    if (token) {
+                        console.log("FCM Token obtained:", token)
 
-                    // 3. Save to Supabase
-                    const { data: { user } } = await supabase.auth.getUser()
-                    if (user) {
-                        await supabase
-                            .from('profiles')
-                            .update({ fcm_token: token })
-                            .eq('id', user.id)
+                        // 3. Save to Supabase
+                        const { data: { user } } = await supabase.auth.getUser()
+                        if (user) {
+                            await supabase
+                                .from('profiles')
+                                .update({ fcm_token: token })
+                                .eq('id', user.id)
+                        }
                     }
+
+                    // 4. Listen for foreground messages
+                    onMessage(messaging, (payload) => {
+                        console.log("Message received in foreground:", payload)
+                    })
                 }
-
-                // 4. Listen for foreground messages
-                onMessage(messaging, (payload) => {
-                    console.log("Message received in foreground:", payload)
-                    // You could show a toast here
-                })
-
             } catch (error) {
                 console.error("Error setting up FCM:", error)
             }
