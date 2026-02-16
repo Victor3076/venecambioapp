@@ -8,6 +8,7 @@ import { RatesService, RatesData } from "@/services/rates"
 import { calculateRate, formatRate, getRateDecimals } from "@/lib/rates-utils"
 import Link from "next/link"
 import { CURRENCY_LABELS, SUPPORTED_REGIONS } from "@/lib/constants"
+import { Logo } from "@/components/logo"
 
 export default function Home() {
   const [rates, setRates] = useState<RatesData | null>(null)
@@ -92,7 +93,7 @@ export default function Home() {
     <div className="min-h-screen bg-background flex flex-col">
       <header className="border-b">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="font-bold text-2xl text-primary">Venecambio</div>
+          <Logo />
           <nav className="hidden md:flex gap-6">
             <a
               href="https://wa.me/584227173725"

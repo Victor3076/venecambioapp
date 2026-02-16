@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { supabase } from "@/lib/supabase"
 import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
+import { Logo } from "@/components/logo"
 
 export default function AdminLayout({
     children,
@@ -71,9 +72,7 @@ export default function AdminLayout({
         <div className="flex min-h-screen w-full flex-col bg-muted/40">
             <aside className="fixed inset-y-0 left-0 z-10 hidden w-16 flex-col border-r bg-background sm:flex shadow-sm">
                 <nav className="flex flex-col items-center gap-6 px-2 sm:py-8">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-primary text-lg font-bold text-primary-foreground shadow-lg">
-                        VG
-                    </div>
+                    <Logo collapsed={true} showText={false} />
                     {navItems.map((item) => (
                         <Link
                             key={item.href}

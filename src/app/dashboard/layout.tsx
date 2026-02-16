@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase"
 import { useRouter } from "next/navigation"
 
 import { NotificationBell } from "@/components/NotificationBell"
+import { Logo } from "@/components/logo"
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
     const router = useRouter()
@@ -49,8 +50,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         <div className="flex min-h-screen bg-muted/30 text-foreground transition-colors">
             {/* Sidebar */}
             <aside className="w-72 border-r bg-background hidden md:flex flex-col shadow-sm">
-                <div className="h-16 flex items-center px-6 border-b font-bold text-xl text-primary tracking-tight">
-                    Venecambio
+                <div className="h-16 flex items-center px-6 border-b">
+                    <Logo />
                 </div>
                 <div className="flex-1 overflow-y-auto">
                     <nav className="p-4 space-y-1">
