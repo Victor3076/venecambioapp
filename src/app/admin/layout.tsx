@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { BarChart3, List, Settings, LogOut, LayoutDashboard } from "lucide-react"
+import { BarChart3, List, Settings, LogOut, LayoutDashboard, Wallet, TrendingUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { supabase } from "@/lib/supabase"
 import { useRouter } from "next/navigation"
@@ -14,6 +14,7 @@ export default function AdminLayout({
 }) {
     const router = useRouter()
     const [authorized, setAuthorized] = useState<boolean | null>(null)
+    const [role, setRole] = useState<string | null>(null)
 
     useEffect(() => {
         const checkAdmin = async () => {
@@ -29,10 +30,11 @@ export default function AdminLayout({
                 .eq('id', user.id)
                 .single()
 
-            if (!profile || profile.role !== 'admin') {
+            if (!profile || (profile.role !== 'admin' && profile.role !== 'operator')) {
                 router.push("/dashboard")
                 setAuthorized(false)
             } else {
+                setRole(profile.role)
                 setAuthorized(true)
             }
         }
@@ -59,7 +61,9 @@ export default function AdminLayout({
         { href: "/admin/rates", icon: BarChart3, label: "Tasas" },
         { href: "/admin/users", icon: Settings, label: "Usuarios" },
         { href: "/admin/payment-methods", icon: LayoutDashboard, label: "Cuentas" },
-    ]
+        { href: "/admin/deposits", icon: Wallet, label: "Depósitos" },
+        { href: "/admin/profits", icon: TrendingUp, label: "Ganancias", adminOnly: true },
+    ].filter(item => !item.adminOnly || role === 'admin')
 
     return (
         <div className="flex min-h-screen w-full flex-col bg-muted/40">

@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Search, RefreshCw, Eye, Check, Upload } from "lucide-react"
+import { Search, RefreshCw, Eye, Check, Upload, TrendingUp } from "lucide-react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { CURRENCY_LABELS } from "@/lib/constants"
 
 type AdminTx = Transaction & { profiles: { email: string, full_name: string } }
@@ -59,6 +60,11 @@ export default function AdminDashboardPage() {
                     <p className="text-muted-foreground">Gestión de envíos y pagos.</p>
                 </div>
                 <div className="flex gap-2">
+                    <Link href="/admin/profits">
+                        <Button variant="outline" className="border-primary text-primary hover:bg-primary/5">
+                            <TrendingUp className="mr-2 h-4 w-4" /> Ver Ganancias
+                        </Button>
+                    </Link>
                     <Button variant="outline" onClick={loadTransactions}>
                         <RefreshCw className="mr-2 h-4 w-4" /> Actualizar Lista
                     </Button>

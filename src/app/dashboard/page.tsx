@@ -14,6 +14,13 @@ export default function DashboardPage() {
     const [accountsCount, setAccountsCount] = useState(0)
     const [loading, setLoading] = useState(true)
 
+    const statusLabels: Record<string, string> = {
+        verifying: "Verificando",
+        verified: "Verificado",
+        completed: "Completado",
+        rejected: "Rechazado"
+    }
+
     useEffect(() => {
         const loadData = async () => {
             try {
@@ -33,21 +40,26 @@ export default function DashboardPage() {
     }, [])
 
     const handleShare = async (tx: Transaction) => {
+        const publicLink = `${window.location.origin}/v/${tx.id}`
+
         const text = `*Venecambio - Detalle de Operación*\n\n` +
-            `🔹 *Estado:* ${tx.status.toUpperCase()}\n` +
+            `🔹 *Estado:* ${statusLabels[tx.status] || tx.status}\n` +
             `💵 *Enviado:* ${tx.amount_sent} ${tx.currency_sent}\n` +
             `💰 *Recibido:* ${tx.amount_received.toLocaleString()} ${tx.currency_received}\n` +
-            `📈 *Tasa:* ${tx.exchange_rate}\n` +
-            (tx.completion_proof_url ? `📄 *Comprobante:* ${tx.completion_proof_url}` : '')
+            `📈 *Tasa:* ${tx.exchange_rate}\n\n` +
+            `📄 *Ver Comprobante:* ${publicLink}`
 
         if (navigator.share) {
             try {
                 await navigator.share({
                     title: 'Operación Venecambio',
                     text: text,
+                    url: publicLink // Including URL explicitly helps social previews
                 })
             } catch (err) {
-                console.log('Error al compartir:', err)
+                if ((err as Error).name !== 'AbortError') {
+                    console.error('Error al compartir:', err)
+                }
             }
         } else {
             const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(text)}`
@@ -133,7 +145,7 @@ export default function DashboardPage() {
                                         </Button>
                                         <div className="flex items-center gap-3">
                                             <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${getStatusColor(tx.status)}`}>
-                                                {tx.status}
+                                                {statusLabels[tx.status] || tx.status}
                                             </span>
                                             {tx.completion_proof_url && (
                                                 <Button variant="outline" size="sm" asChild className="h-8 text-xs">

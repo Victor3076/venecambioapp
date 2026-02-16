@@ -7,15 +7,20 @@ import { Input } from "@/components/ui/input"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase"
 import { createUser, updateUser, deleteUser } from "./actions"
-import { User, Mail, UserPlus, Shield, Loader2, ArrowLeft, Search, Pencil, Trash2, X } from "lucide-react"
+import { User, Mail, UserPlus, Shield, Loader2, ArrowLeft, Search, Pencil, Trash2, X, Landmark, Plus } from "lucide-react"
+import { AddAccountDialog } from "@/components/admin/add-account-dialog"
 
 export default function AdminUsersPage() {
     const [users, setUsers] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
     const [isCreating, setIsCreating] = useState(false)
-    const [newUser, setNewUser] = useState({ phone: '', fullName: '', clientCode: '', role: 'user' as 'user' | 'admin' })
+    const [newUser, setNewUser] = useState({ phone: '', fullName: '', clientCode: '', role: 'user' as 'user' | 'admin' | 'operator' })
     const [editingUser, setEditingUser] = useState<any>(null)
     const [searchTerm, setSearchTerm] = useState('')
+
+    // Account Modal State
+    const [isAccountModalOpen, setIsAccountModalOpen] = useState(false)
+    const [selectedUserForAccount, setSelectedUserForAccount] = useState<any>(null)
 
     const loadUsers = async () => {
         setLoading(true)
@@ -79,6 +84,11 @@ export default function AdminUsersPage() {
     const cancelEditing = () => {
         setEditingUser(null)
         setNewUser({ phone: '', fullName: '', clientCode: '', role: 'user' })
+    }
+
+    const openAddAccount = (u: any) => {
+        setSelectedUserForAccount(u)
+        setIsAccountModalOpen(true)
     }
 
     const filteredUsers = users.filter(u => {
@@ -152,9 +162,10 @@ export default function AdminUsersPage() {
                                 <select
                                     className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
                                     value={newUser.role}
-                                    onChange={e => setNewUser({ ...newUser, role: e.target.value as 'user' | 'admin' })}
+                                    onChange={e => setNewUser({ ...newUser, role: e.target.value as 'user' | 'admin' | 'operator' })}
                                 >
                                     <option value="user">Usuario (Cliente)</option>
+                                    <option value="operator">Operador (Solo Clientes)</option>
                                     <option value="admin">Administrador (Manejador)</option>
                                 </select>
                             </div>
@@ -227,6 +238,17 @@ export default function AdminUsersPage() {
                                                     </div>
                                                 </div>
                                                 <div className="flex gap-1">
+                                                    {u.role !== 'admin' && (
+                                                        <Button
+                                                            size="icon"
+                                                            variant="ghost"
+                                                            className="h-8 w-8 text-muted-foreground hover:text-primary"
+                                                            onClick={() => openAddAccount(u)}
+                                                            title="Agregar Cuenta Bancaria"
+                                                        >
+                                                            <Landmark className="w-4 h-4" />
+                                                        </Button>
+                                                    )}
                                                     <Button
                                                         size="icon"
                                                         variant="ghost"
@@ -253,6 +275,21 @@ export default function AdminUsersPage() {
                     </CardContent>
                 </Card>
             </div>
+
+            {/* Modal de Agregar Cuenta */}
+            {selectedUserForAccount && (
+                <AddAccountDialog
+                    userId={selectedUserForAccount.id}
+                    isOpen={isAccountModalOpen}
+                    onClose={() => {
+                        setIsAccountModalOpen(false)
+                        setSelectedUserForAccount(null)
+                    }}
+                    onSuccess={() => {
+                        // Opcional: mostrar feedback adicional
+                    }}
+                />
+            )}
         </div>
     )
 }

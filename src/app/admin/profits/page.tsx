@@ -1,0 +1,172 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { TransactionsService, Transaction } from "@/services/transactions"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { ArrowLeft, TrendingUp, DollarSign, PieChart, Landmark } from "lucide-react"
+import Link from "next/link"
+import { CURRENCY_LABELS } from "@/lib/constants"
+
+export default function AdminProfitsPage() {
+    const [transactions, setTransactions] = useState<Transaction[]>([])
+    const [loading, setLoading] = useState(true)
+    const [filterDate, setFilterDate] = useState("")
+    const [stats, setStats] = useState<any>({ totalProfit: 0, volumeByCurrency: {}, profitByCurrency: {} })
+
+    useEffect(() => {
+        loadData()
+    }, [])
+
+    const loadData = async () => {
+        setLoading(true)
+        try {
+            const data = await TransactionsService.getAll()
+            // Filter by date if selected
+            let rawTxs = data as Transaction[]
+            if (filterDate) {
+                rawTxs = rawTxs.filter(tx => tx.created_at?.startsWith(filterDate))
+            }
+
+            // Only consider 'completed' transactions for real profit
+            const completed = rawTxs.filter(tx => tx.status === 'completed')
+
+            const summary = completed.reduce((acc: any, tx) => {
+                const currency = tx.currency_sent
+                const profit = tx.profit_amount || 0
+                const volume = tx.amount_sent || 0
+
+                acc.totalProfit += profit
+                acc.volumeByCurrency[currency] = (acc.volumeByCurrency[currency] || 0) + volume
+                acc.profitByCurrency[currency] = (acc.profitByCurrency[currency] || 0) + profit
+
+                return acc
+            }, { totalProfit: 0, volumeByCurrency: {}, profitByCurrency: {} })
+
+            setTransactions(completed)
+            setStats(summary)
+        } catch (error) {
+            console.error("Error loading profits:", error)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    return (
+        <div className="space-y-6 p-4 sm:p-8 max-w-6xl mx-auto">
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                    <Link href="/admin">
+                        <Button variant="ghost" size="icon">
+                            <ArrowLeft className="h-5 w-5" />
+                        </Button>
+                    </Link>
+                    <div>
+                        <h1 className="text-3xl font-bold">Manejo de Ganancias</h1>
+                        <p className="text-muted-foreground">Resumen de volumen y margen generado por moneda.</p>
+                    </div>
+                </div>
+                <div className="flex items-center gap-3">
+                    <input
+                        type="date"
+                        className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        value={filterDate}
+                        onChange={(e) => setFilterDate(e.target.value)}
+                    />
+                    <Button variant="outline" onClick={() => setFilterDate("")} disabled={!filterDate}>Limpiar</Button>
+                    <Button onClick={loadData}>Filtrar / Actualizar</Button>
+                </div>
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-3">
+                <Card className="bg-primary/5 border-primary/20">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium flex items-center gap-2">
+                            <DollarSign className="w-4 h-4 text-primary" /> Ganancia Total Estimada
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-primary">
+                            USDT {stats.totalProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">Basado en transacciones completadas.</p>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium flex items-center gap-2">
+                            <TrendingUp className="w-4 h-4 text-green-600" /> Operaciones Exitosas
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{transactions.length}</div>
+                        <p className="text-xs text-muted-foreground mt-1">Total acumulado histórico.</p>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium flex items-center gap-2">
+                            <PieChart className="w-4 h-4 text-orange-500" /> Moneda Top
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">
+                            {Object.entries(stats.volumeByCurrency).length > 0
+                                ? Object.entries(stats.volumeByCurrency).sort((a: any, b: any) => b[1] - a[1])[0][0]
+                                : "---"}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">Mayor volumen de envío.</p>
+                    </CardContent>
+                </Card>
+            </div>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Desglose por Moneda</CardTitle>
+                    <CardDescription>Volumen total y ganancia estimada retenida.</CardDescription>
+                </CardHeader>
+                <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm text-left">
+                            <thead className="bg-muted text-muted-foreground font-medium border-b">
+                                <tr>
+                                    <th className="p-4">Moneda (Origen)</th>
+                                    <th className="p-4">Volumen Enviado</th>
+                                    <th className="p-4 text-green-600">Ganancia (USDT)</th>
+                                    <th className="p-4 text-muted-foreground">Margen</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y bg-background">
+                                {loading ? (
+                                    <tr><td colSpan={4} className="p-8 text-center text-muted-foreground">Calculando estadísticas...</td></tr>
+                                ) : Object.keys(stats.volumeByCurrency).length === 0 ? (
+                                    <tr><td colSpan={4} className="p-8 text-center text-muted-foreground">No hay datos para mostrar.</td></tr>
+                                ) : Object.keys(stats.volumeByCurrency).map(curr => (
+                                    <tr key={curr} className="hover:bg-muted/30 transition-colors">
+                                        <td className="p-4 font-bold">{CURRENCY_LABELS[curr as keyof typeof CURRENCY_LABELS] || curr}</td>
+                                        <td className="p-4">{stats.volumeByCurrency[curr].toLocaleString()} {curr}</td>
+                                        <td className="p-4 text-green-600 font-bold">+{stats.profitByCurrency[curr].toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                        <td className="p-4 text-muted-foreground">
+                                            {stats.volumeByCurrency[curr] > 0
+                                                ? (stats.profitByCurrency[curr] / (stats.totalProfit || 1) * 100).toFixed(1) + "% de ganancia"
+                                                : "0"}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg flex gap-3 text-yellow-800">
+                <PieChart className="w-5 h-5 mt-0.5 shrink-0" />
+                <div className="text-sm">
+                    <strong>Nota sobre Cálculos:</strong> La ganancia estimada se calcula multiplicando el monto enviado por el margen configurado en el momento de la creación de la orden. Para transacciones pasadas sin estos datos, el valor aparecerá como cero.
+                </div>
+            </div>
+        </div>
+    )
+}

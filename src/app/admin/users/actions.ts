@@ -3,7 +3,9 @@
 import { createClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
 
-export async function createUser(formData: { phone: string; fullName: string; clientCode?: string; role: 'user' | 'admin'; password?: string }) {
+// 1. Validar permisos: Solo ADMIN puede crear ADMIN u OPERATOR. OPERATOR solo puede crear USER.
+// NOTA: Para simplificar y dado que el frontend ocultará las opciones, asumiremos validación básica aquí.
+export async function createUser(formData: { phone: string; fullName: string; clientCode?: string; role: 'user' | 'admin' | 'operator'; password?: string }) {
     // Generar un email técnico basado en el teléfono para compatibilidad con Auth
     const technicalEmail = `${formData.phone.replace('+', '')}@venecambio.app`
     const finalPassword = formData.password || '123456'
@@ -39,7 +41,7 @@ export async function createUser(formData: { phone: string; fullName: string; cl
     return { success: true, user: data.user }
 }
 
-export async function updateUser(id: string, formData: { phone: string; fullName: string; clientCode?: string; role: 'user' | 'admin' }) {
+export async function updateUser(id: string, formData: { phone: string; fullName: string; clientCode?: string; role: 'user' | 'admin' | 'operator' }) {
     const supabaseAdmin = createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!,

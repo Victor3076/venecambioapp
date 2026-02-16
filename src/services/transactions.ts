@@ -12,11 +12,36 @@ export interface Transaction {
     reference_id?: string
     payment_proof_url?: string
     completion_proof_url?: string
+    beneficiary_data?: any // JSON snapshot of the account
+    profit_percentage?: number
+    profit_amount?: number
+    group_id?: string
     created_at?: string
     updated_at?: string
 }
 
 export const TransactionsService = {
+    async createBulk(items: Omit<Transaction, 'id' | 'user_id' | 'status' | 'created_at' | 'updated_at'>[]) {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) throw new Error("No user authenticated")
+
+        const groupId = crypto.randomUUID()
+        const txsToInsert = items.map(tx => ({
+            ...tx,
+            user_id: user.id,
+            status: 'verifying',
+            group_id: groupId
+        }))
+
+        const { data, error } = await supabase
+            .from('transactions')
+            .insert(txsToInsert)
+            .select()
+
+        if (error) throw error
+        return data
+    },
+
     async create(tx: Omit<Transaction, 'id' | 'user_id' | 'status' | 'created_at' | 'updated_at'>) {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) throw new Error("No user authenticated")
@@ -72,10 +97,16 @@ export const TransactionsService = {
 
         const publicUrl = data.publicUrl
 
+        const { data: currentTx } = await supabase
+            .from('transactions')
+            .select('group_id')
+            .eq('id', transactionId)
+            .single()
+
         const { error: updateError } = await supabase
             .from('transactions')
             .update({ payment_proof_url: publicUrl })
-            .eq('id', transactionId)
+            .or(`id.eq.${transactionId}${currentTx?.group_id ? `,group_id.eq.${currentTx.group_id}` : ''}`)
 
         if (updateError) throw updateError
 
@@ -123,6 +154,21 @@ export const TransactionsService = {
             .eq('id', id)
 
         if (error) throw error
+    },
+
+    async getPublicById(id: string) {
+        const { data, error } = await supabase
+            .from('transactions')
+            .select('*')
+            .eq('id', id)
+            .single()
+
+        if (error) {
+            console.error('Error fetching public transaction:', error)
+            return null
+        }
+
+        return data as Transaction
     }
 }
 

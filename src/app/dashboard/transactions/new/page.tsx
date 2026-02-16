@@ -26,14 +26,14 @@ export default function NewTransactionPage() {
     const [targetCurrency, setTargetCurrency] = useState("VES")
     const [rates, setRates] = useState<RatesData | null>(null)
 
-    // Data from Step 2
+    // Data from Step 1-2
+    const [pendingTransfers, setPendingTransfers] = useState<{ account: UserAccount, amountSent: number, rate: number, amountReceived: number }[]>([])
     const [accounts, setAccounts] = useState<UserAccount[]>([])
     const [companyAccounts, setCompanyAccounts] = useState<PaymentMethod[]>([])
     const [selectedAccount, setSelectedAccount] = useState<UserAccount | null>(null)
-
-    // Data from Step 3
     const [file, setFile] = useState<File | null>(null)
     const [createdTxId, setCreatedTxId] = useState<string | null>(null)
+    const [createdTxIds, setCreatedTxIds] = useState<string[]>([])
 
     useEffect(() => {
         const loadInitial = async () => {
@@ -153,22 +153,60 @@ export default function NewTransactionPage() {
 
     const { rate, received } = getSnapshot()
 
+    const handleConfirmTransfer = () => {
+        if (!selectedAccount || !rates) return
+        setPendingTransfers([...pendingTransfers, {
+            account: selectedAccount,
+            amountSent,
+            rate,
+            amountReceived: received
+        }])
+        // Reset only beneficiary/amount for next add, but keep source currency?
+        // Actually the user might want to go to Step 3 directly now.
+        setSelectedAccount(null)
+        setAmountInput("100")
+        setStep(1) // Go back to cotizacion for the next one or use a more fluid UI
+    }
+
+    const totalToPay = pendingTransfers.reduce((sum, t) => sum + t.amountSent, 0)
+
     const handleCreateTransaction = async () => {
-        if (!selectedAccount) return
+        if (pendingTransfers.length === 0 || !rates) return
         setLoading(true)
         try {
-            const tx = await TransactionsService.create({
-                amount_sent: amountSent,
+            const marginKey = `${sourceCurrency}_${targetCurrency}`
+            const profit_percentage = rates.margins[marginKey] || rates.margins["GENERIC"] || 0
+
+            const getPrice = (code: string) => {
+                const key = code === 'VES' ? 'VENEZUELA' : code
+                return rates.usdt_prices[key as keyof typeof rates.usdt_prices] || 1
+            }
+            const sourceUsdtPrice = getPrice(sourceCurrency)
+
+            const txs = pendingTransfers.map(t => ({
+                amount_sent: t.amountSent,
                 currency_sent: sourceCurrency,
-                amount_received: received,
+                amount_received: t.amountReceived,
                 currency_received: targetCurrency,
-                exchange_rate: rate,
-            })
-            setCreatedTxId(tx.id!)
+                exchange_rate: t.rate,
+                profit_percentage,
+                profit_amount: ((t.amountSent * profit_percentage) / 100) / sourceUsdtPrice,
+                beneficiary_data: {
+                    alias: t.account.alias,
+                    country: t.account.country,
+                    bank_name: t.account.bank_name,
+                    account_number: t.account.account_number,
+                    details: t.account.details
+                }
+            }))
+
+            const created = await TransactionsService.createBulk(txs)
+            setCreatedTxIds(created.map((t: any) => t.id))
+            setCreatedTxId(created[0].id) // For the upload proof logic which takes one (handles group)
             setStep(3)
         } catch (error) {
             console.error(error)
-            alert("Error al crear transacción")
+            alert("Error al crear transacciones")
         } finally {
             setLoading(false)
         }
@@ -256,8 +294,35 @@ export default function NewTransactionPage() {
                             </span>
                         </div>
                     </CardContent>
-                    <CardFooter>
-                        <Button className="w-full" onClick={() => setStep(2)}>Continuar <ChevronRight className="ml-2 w-4 h-4" /></Button>
+                    <CardFooter className="flex-col gap-3">
+                        {pendingTransfers.length > 0 && (
+                            <div className="w-full space-y-2 mb-2">
+                                <h4 className="text-xs font-bold uppercase text-muted-foreground">Envíos en este depósito:</h4>
+                                {pendingTransfers.map((t, i) => (
+                                    <div key={i} className="flex justify-between items-center text-sm p-2 bg-muted rounded-md border">
+                                        <div className="flex flex-col">
+                                            <span className="font-bold">{t.account.alias}</span>
+                                            <span className="text-[10px] text-muted-foreground">{t.amountSent} {CURRENCY_LABELS[sourceCurrency]}</span>
+                                        </div>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500" onClick={() => setPendingTransfers(pendingTransfers.filter((_, idx) => idx !== i))}>
+                                            <Landmark className="w-3 h-3" />
+                                        </Button>
+                                    </div>
+                                ))}
+                                <div className="pt-1 border-t flex justify-between font-bold text-sm">
+                                    <span>Total Parcial:</span>
+                                    <span>{totalToPay} {CURRENCY_LABELS[sourceCurrency]}</span>
+                                </div>
+                            </div>
+                        )}
+                        <Button className="w-full" onClick={() => setStep(2)}>
+                            {pendingTransfers.length > 0 ? "Añadir otro destinatario" : "Continuar"} <ChevronRight className="ml-2 w-4 h-4" />
+                        </Button>
+                        {pendingTransfers.length > 0 && (
+                            <Button className="w-full bg-green-600 hover:bg-green-700" onClick={handleCreateTransaction} disabled={loading}>
+                                {loading ? "Procesando..." : `Finalizar y depositar ${totalToPay} ${CURRENCY_LABELS[sourceCurrency]}`}
+                            </Button>
+                        )}
                     </CardFooter>
                 </Card>
             )}
@@ -299,8 +364,8 @@ export default function NewTransactionPage() {
                         )}
                     </CardContent>
                     <CardFooter>
-                        <Button className="w-full" disabled={!selectedAccount || loading} onClick={handleCreateTransaction}>
-                            {loading ? "Iniciando..." : "Confirmar y Continuar"} <ChevronRight className="ml-2 w-4 h-4" />
+                        <Button className="w-full" disabled={!selectedAccount || loading} onClick={handleConfirmTransfer}>
+                            Confirmar y Añadir a Lista <ChevronRight className="ml-2 w-4 h-4" />
                         </Button>
                     </CardFooter>
                 </Card>
@@ -335,7 +400,10 @@ export default function NewTransactionPage() {
                                 )}
 
                                 <div className="mt-4 p-3 bg-primary text-white rounded-md font-bold text-center text-xl shadow-md">
-                                    Total a pagar: {amountSent} {CURRENCY_LABELS[sourceCurrency] || sourceCurrency}
+                                    Total a pagar: {totalToPay} {CURRENCY_LABELS[sourceCurrency] || sourceCurrency}
+                                </div>
+                                <div className="text-[10px] text-blue-800 text-center mt-2 italic">
+                                    Este depósito cubrirá {pendingTransfers.length} transferencia(s).
                                 </div>
                             </div>
                         </div>
