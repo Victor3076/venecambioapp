@@ -1,7 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getMessaging, getToken, onMessage, Messaging } from "firebase/messaging";
 
-// Firebase config provided by the user
+// Firebase configuration updated with real credentials.
 const firebaseConfig = {
     apiKey: "AIzaSyCYU2Ys7VgIvuKyj6Q6HaBrhbnx-RtrrxI",
     authDomain: "venecambio1pp.firebaseapp.com",
