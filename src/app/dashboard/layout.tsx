@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button"
 import { supabase } from "@/lib/supabase"
 import { useRouter } from "next/navigation"
 
+import { NotificationBell } from "@/components/NotificationBell"
+
 export default function DashboardLayout({ children }: { children: ReactNode }) {
     const router = useRouter()
     const [profile, setProfile] = useState<{ full_name: string, role: string } | null>(null)
@@ -101,6 +103,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                         {isAdmin && <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-bold uppercase tracking-tighter">Admin</span>}
                     </div>
                     <div className="flex items-center gap-4">
+                        <NotificationBell />
                         <div className="text-right hidden sm:block">
                             <p className="text-sm font-bold leading-none">{profile?.full_name}</p>
                             <p className="text-[10px] text-muted-foreground uppercase mt-0.5">{profile?.role}</p>

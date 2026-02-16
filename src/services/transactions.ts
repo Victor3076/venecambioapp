@@ -170,6 +170,49 @@ export const TransactionsService = {
 
         const { error } = await query
         if (error) throw error
+
+        // Notify user about status change
+        try {
+            // Get all affected transactions to notify their respective owners
+            const { data: affectedTxs } = await supabase
+                .from('transactions')
+                .select('id, user_id, amount_received, currency_received, amount_sent, currency_sent')
+                .eq(status === 'verified' && tx?.group_id ? 'group_id' : 'id', status === 'verified' && tx?.group_id ? tx.group_id : id)
+
+            if (affectedTxs) {
+                const statusInfo: Record<string, { title: string, message: (tx: any) => string }> = {
+                    verified: {
+                        title: 'Fondos Verificados',
+                        message: (tx) => `Hemos recibido tus ${tx.amount_sent} ${tx.currency_sent}. Tu transferencia de ${tx.amount_received} ${tx.currency_received} está en proceso.`
+                    },
+                    completed: {
+                        title: 'Operación Finalizada',
+                        message: (tx) => `¡Listo! Tus ${tx.amount_received} ${tx.currency_received} han sido enviados. Revisa el comprobante en los detalles.`
+                    },
+                    rejected: {
+                        title: 'Operación Rechazada',
+                        message: (tx) => `Ha habido un problema con tu operación de ${tx.amount_sent} ${tx.currency_sent}. Por favor revisa los detalles o contáctanos.`
+                    }
+                }
+
+                const config = statusInfo[status]
+                if (config) {
+                    const { NotificationsService } = await import('./notifications')
+                    await Promise.all(affectedTxs.map(t =>
+                        NotificationsService.create({
+                            user_id: t.user_id,
+                            title: config.title,
+                            message: config.message(t),
+                            type: 'status_update',
+                            data: { transaction_id: t.id }
+                        })
+                    ))
+                }
+            }
+        } catch (notifyError) {
+            console.error("Failed to create in-app notification:", notifyError)
+            // Don't fail the status update if notification fails
+        }
     },
 
     async getPublicById(id: string) {
