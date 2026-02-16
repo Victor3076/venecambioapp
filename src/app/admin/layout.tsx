@@ -1,7 +1,8 @@
 "use client"
 
 import Link from "next/link"
-import { BarChart3, List, Settings, LogOut, LayoutDashboard, Wallet, TrendingUp } from "lucide-react"
+import { BarChart3, List, Settings, LogOut, LayoutDashboard, Wallet, TrendingUp, Bell } from "lucide-react"
+import { NotificationBell } from "@/components/NotificationBell"
 import { Button } from "@/components/ui/button"
 import { supabase } from "@/lib/supabase"
 import { useRouter } from "next/navigation"
@@ -62,6 +63,7 @@ export default function AdminLayout({
         { href: "/admin/users", icon: Settings, label: "Usuarios" },
         { href: "/admin/payment-methods", icon: LayoutDashboard, label: "Cuentas" },
         { href: "/admin/deposits", icon: Wallet, label: "Depósitos" },
+        { href: "/admin/notifications", icon: Bell, label: "Notificaciones" },
         { href: "/admin/profits", icon: TrendingUp, label: "Ganancias", adminOnly: true },
     ].filter(item => !item.adminOnly || role === 'admin')
 
@@ -99,8 +101,17 @@ export default function AdminLayout({
                     </button>
                 </nav>
             </aside>
-            <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-16">
-                <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
+            <div className="flex flex-col sm:pl-16">
+                <header className="h-16 border-b bg-background/80 backdrop-blur-md flex items-center justify-between px-6 sticky top-0 z-20">
+                    <div className="flex items-center gap-4">
+                        <h2 className="text-lg font-bold text-foreground uppercase tracking-tight">Administración</h2>
+                        <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold">{role}</span>
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <NotificationBell />
+                    </div>
+                </header>
+                <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-6 md:gap-8">
                     {children}
                 </main>
             </div>
