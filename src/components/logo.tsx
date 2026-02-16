@@ -1,6 +1,5 @@
-"use client"
-
 import Link from "next/link"
+import Image from "next/image"
 import { cn } from "@/lib/utils"
 
 interface LogoProps {
@@ -21,39 +20,21 @@ export function Logo({ className, showText = true, variant = 'primary', collapse
     return (
         <Link href="/" className={cn("flex items-center gap-2 group transition-all", className)}>
             {/* Logo Icon Container */}
-            <div className="relative w-8 h-8 flex items-center justify-center bg-primary rounded-lg shadow-md group-hover:scale-105 transition-transform overflow-hidden">
-                {/* Fallback SVG Icon if no image */}
-                <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="w-5 h-5 text-white"
-                >
-                    <path
-                        d="M12 2L2 7L12 12L22 7L12 2Z"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                    />
-                    <path
-                        d="M2 17L12 22L22 17"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                    />
-                    <path
-                        d="M2 12L12 17L22 12"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                    />
-                </svg>
+            <div className={cn(
+                "relative flex items-center justify-center transition-transform group-hover:scale-105",
+                collapsed ? "w-10 h-10" : "w-8 h-8"
+            )}>
+                <Image
+                    src="/logo.png"
+                    alt="Venecambio Logo"
+                    width={40}
+                    height={40}
+                    className="object-contain"
+                    priority
+                />
             </div>
 
-            {showText && (
+            {showText && !collapsed && (
                 <span className={cn(
                     "font-bold text-xl tracking-tight",
                     textColors[variant]
