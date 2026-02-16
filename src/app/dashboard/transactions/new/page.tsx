@@ -202,11 +202,11 @@ export default function NewTransactionPage() {
 
             const created = await TransactionsService.createBulk(txs)
             setCreatedTxIds(created.map((t: any) => t.id))
-            setCreatedTxId(created[0].id) // For the upload proof logic which takes one (handles group)
+            setCreatedTxId(created[0].id)
             setStep(3)
-        } catch (error) {
+        } catch (error: any) {
             console.error(error)
-            alert("Error al crear transacciones")
+            alert(`Error al crear transacciones: ${error.message || 'Error desconocido'}`)
         } finally {
             setLoading(false)
         }
@@ -258,7 +258,12 @@ export default function NewTransactionPage() {
                                         onChange={e => updateCalculation(e.target.value, 'sent')}
                                         onClick={(e) => (e.target as HTMLInputElement).select()}
                                     />
-                                    <select value={sourceCurrency} onChange={e => setSourceCurrency(e.target.value)} className="h-10 border rounded-md px-2 bg-background text-sm">
+                                    <select
+                                        value={sourceCurrency}
+                                        onChange={e => setSourceCurrency(e.target.value)}
+                                        disabled={pendingTransfers.length > 0}
+                                        className={`h-10 border rounded-md px-2 bg-background text-sm ${pendingTransfers.length > 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    >
                                         {SUPPORTED_REGIONS.filter(r => r !== 'VENEZUELA').map(region => (
                                             <option key={region} value={region}>
                                                 {CURRENCY_LABELS[region]}
@@ -266,6 +271,11 @@ export default function NewTransactionPage() {
                                         ))}
                                     </select>
                                 </div>
+                                {pendingTransfers.length > 0 && (
+                                    <p className="text-[10px] text-primary font-bold mt-1">
+                                        * La moneda de origen está bloqueada para este grupo de transferencias.
+                                    </p>
+                                )}
                             </div>
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Reciben</label>

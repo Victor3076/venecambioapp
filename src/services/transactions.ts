@@ -25,7 +25,10 @@ export const TransactionsService = {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) throw new Error("No user authenticated")
 
-        const groupId = crypto.randomUUID()
+        const groupId = typeof crypto !== 'undefined' && crypto.randomUUID
+            ? crypto.randomUUID()
+            : Math.random().toString(36).substring(2) + Date.now().toString(36);
+
         const txsToInsert = items.map(tx => ({
             ...tx,
             user_id: user.id,
