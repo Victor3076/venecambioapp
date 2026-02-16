@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase"
 import { useRouter } from "next/navigation"
+import { ArrowLeft } from "lucide-react"
 
 export default function LoginPage() {
     const router = useRouter()
@@ -68,7 +69,12 @@ export default function LoginPage() {
             <Card className="w-full max-w-sm">
                 <form onSubmit={handleLogin}>
                     <CardHeader>
-                        <CardTitle className="text-2xl">Iniciar Sesión</CardTitle>
+                        <div className="flex items-center gap-2 mb-2">
+                            <Button variant="ghost" size="sm" type="button" onClick={() => router.push('/')}>
+                                <ArrowLeft className="w-4 h-4" />
+                            </Button>
+                            <CardTitle className="text-2xl">Iniciar Sesión</CardTitle>
+                        </div>
                         <CardDescription>
                             Ingresa tu teléfono y contraseña para acceder.
                         </CardDescription>

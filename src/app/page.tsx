@@ -259,7 +259,14 @@ export default function Home() {
                 </div>
               </CardContent>
               <CardFooter>
-                <Button className="w-full text-lg" size="lg">Enviar Ahora</Button>
+                <Button
+                  className="w-full text-lg"
+                  size="lg"
+                  disabled={isBelowMin}
+                  asChild={!isBelowMin}
+                >
+                  {isBelowMin ? "Monto insuficiente" : <Link href="/login">Enviar Ahora</Link>}
+                </Button>
               </CardFooter>
             </Card>
           </div>
