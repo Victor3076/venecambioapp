@@ -18,7 +18,8 @@ export default function DashboardPage() {
         verifying: "Verificando",
         verified: "Verificado",
         completed: "Completado",
-        rejected: "Rechazado"
+        rejected: "Rechazado",
+        pending: "Pendiente"
     }
 
     useEffect(() => {
@@ -70,7 +71,8 @@ export default function DashboardPage() {
     const getStatusColor = (status: string) => {
         switch (status) {
             case 'completed': return 'text-green-600 bg-green-50'
-            case 'verifying': return 'text-blue-600 bg-blue-50'
+            case 'verified': return 'text-blue-600 bg-blue-50'
+            case 'verifying': return 'text-yellow-600 bg-yellow-50'
             case 'rejected': return 'text-red-600 bg-red-50'
             default: return 'text-muted-foreground bg-muted'
         }
