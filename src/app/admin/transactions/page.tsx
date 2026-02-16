@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Eye, Check, X, ImageIcon, Upload, ClipboardPaste, ArrowLeft, Copy, User, Landmark, CreditCard, Mail, Phone, Hash, Search } from "lucide-react"
+import { Eye, Check, X, ImageIcon, Upload, ClipboardPaste, ArrowLeft, Copy, User, Landmark, CreditCard, Mail, Phone, Hash, Search, FileUp } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import Link from "next/link"
 
@@ -390,6 +390,36 @@ export default function AdminTransactionsPage() {
 
                                         <div className="space-y-4">
                                             <h3 className="font-bold text-sm uppercase tracking-wider text-muted-foreground border-b pb-1">Acciones Operador</h3>
+
+                                            {/* Completion Proof Upload */}
+                                            {selectedTx.status !== 'completed' && selectedTx.status !== 'rejected' && (
+                                                <div className="bg-blue-50/50 p-3 rounded-lg border border-blue-100 flex items-center justify-between mb-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <FileUp className="w-4 h-4 text-blue-600" />
+                                                        <span className="text-xs font-medium text-blue-800">
+                                                            {completionFile ? completionFile.name : "Subir comprobante de pago"}
+                                                        </span>
+                                                    </div>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="h-7 text-[10px]"
+                                                        onClick={() => document.getElementById('admin-completion-upload')?.click()}
+                                                    >
+                                                        {completionFile ? "Cambiar" : "Seleccionar"}
+                                                    </Button>
+                                                    <input
+                                                        type="file"
+                                                        id="admin-completion-upload"
+                                                        className="hidden"
+                                                        onChange={(e) => {
+                                                            const file = e.target.files?.[0]
+                                                            if (file) setCompletionFile(file)
+                                                        }}
+                                                    />
+                                                </div>
+                                            )}
+
                                             <div className="grid grid-cols-2 gap-3">
                                                 <Button className="bg-green-600 hover:bg-green-700 h-11" onClick={() => handleStatusUpdate(selectedTx.id!, 'completed')} disabled={selectedTx.status === 'completed' || isUploading}>
                                                     <Check className="w-4 h-4 mr-2" /> Completar
