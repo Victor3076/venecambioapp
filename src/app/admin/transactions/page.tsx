@@ -29,7 +29,7 @@ export default function AdminTransactionsPage() {
 
     useEffect(() => {
         if (selectedTx && selectedTx.status === 'verifying') {
-            BankDepositsService.findPotentialMatches(selectedTx.amount_sent, selectedTx.currency_sent)
+            BankDepositsService.findPotentialMatches(selectedTx.id!)
                 .then(data => setPotentialMatches(data || []))
                 .catch(err => console.error(err))
         } else {

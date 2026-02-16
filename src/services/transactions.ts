@@ -142,6 +142,13 @@ export const TransactionsService = {
     },
 
     async updateStatus(id: string, status: Transaction['status'], completionProofUrl?: string) {
+        // First check if it belongs to a group, especially for 'verified' status
+        const { data: tx } = await supabase
+            .from('transactions')
+            .select('group_id')
+            .eq('id', id)
+            .single()
+
         const updateData: any = {
             status: status,
             updated_at: new Date().toISOString()
@@ -151,11 +158,17 @@ export const TransactionsService = {
             updateData.completion_proof_url = completionProofUrl
         }
 
-        const { error } = await supabase
+        const query = supabase
             .from('transactions')
             .update(updateData)
-            .eq('id', id)
 
+        if (status === 'verified' && tx?.group_id) {
+            query.eq('group_id', tx.group_id)
+        } else {
+            query.eq('id', id)
+        }
+
+        const { error } = await query
         if (error) throw error
     },
 

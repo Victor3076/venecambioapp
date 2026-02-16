@@ -53,8 +53,16 @@ export const BankDepositsService = {
     },
 
     async match(depositId: string, transactionId: string) {
-        // Start a "transaction" via RPC if possible, but for now we do it in two steps.
-        // Step 1: Update deposit
+        // Step 1: Get transaction details to check for group_id
+        const { data: tx, error: fetchError } = await supabase
+            .from('transactions')
+            .select('group_id')
+            .eq('id', transactionId)
+            .single()
+
+        if (fetchError) throw fetchError
+
+        // Step 2: Update deposit
         const { error: depositError } = await supabase
             .from('bank_deposits')
             .update({
@@ -62,33 +70,61 @@ export const BankDepositsService = {
                 matched_transaction_id: transactionId
             })
             .eq('id', depositId)
-            .eq('status', 'available') // Ensure it wasn't matched just now
+            .eq('status', 'available')
 
         if (depositError) throw depositError
 
-        // Step 2: Update transaction status
-        const { error: txError } = await supabase
+        // Step 3: Update transaction(s) status
+        // If it's part of a group, verify the whole group
+        const updateQuery = supabase
             .from('transactions')
             .update({ status: 'verified' })
-            .eq('id', transactionId)
+
+        if (tx.group_id) {
+            updateQuery.eq('group_id', tx.group_id)
+        } else {
+            updateQuery.eq('id', transactionId)
+        }
+
+        const { error: txError } = await updateQuery
 
         if (txError) {
-            // Rollback deposit logic would be complex without backend functions, 
-            // but we alert the admin.
             console.error("Failed to update transaction status after matching deposit")
             throw txError
         }
     },
 
     // Helper to find potential matches for a transaction
-    async findPotentialMatches(amount: number, currency: string) {
-        // Find deposits with exact amount and currency
+    async findPotentialMatches(transactionId: string) {
+        // 1. Get transaction info
+        const { data: tx, error: txError } = await supabase
+            .from('transactions')
+            .select('amount_sent, currency_sent, group_id')
+            .eq('id', transactionId)
+            .single()
+
+        if (txError) throw txError
+
+        let matchAmount = tx.amount_sent
+
+        // 2. If grouped, get total amount for the group
+        if (tx.group_id) {
+            const { data: groupTxs, error: groupError } = await supabase
+                .from('transactions')
+                .select('amount_sent')
+                .eq('group_id', tx.group_id)
+
+            if (groupError) throw groupError
+            matchAmount = groupTxs.reduce((sum, item) => sum + Number(item.amount_sent), 0)
+        }
+
+        // 3. Find deposits with exact total amount and currency
         const { data, error } = await supabase
             .from('bank_deposits')
             .select('*')
             .eq('status', 'available')
-            .eq('currency', currency)
-            .eq('amount', amount)
+            .eq('currency', tx.currency_sent)
+            .eq('amount', matchAmount)
 
         if (error) throw error
         return data as BankDeposit[]
