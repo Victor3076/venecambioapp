@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { adminMessaging } from "@/lib/firebase-admin";
+import { getAdminMessaging } from "@/lib/firebase-admin";
 import { createClient } from "@supabase/supabase-js";
+
+export const dynamic = 'force-dynamic';
 
 // Use service role key to bypass RLS and get tokens
 const supabaseAdmin = createClient(
@@ -10,6 +12,7 @@ const supabaseAdmin = createClient(
 
 export async function POST(req: NextRequest) {
     try {
+        const adminMessaging = getAdminMessaging();
         // 1. Basic Security Check (Optional: Add a specialized webhook secret)
         const authHeader = req.headers.get('authorization');
         if (process.env.WEBHOOK_SECRET && authHeader !== `Bearer ${process.env.WEBHOOK_SECRET}`) {
