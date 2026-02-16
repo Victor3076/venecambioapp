@@ -2,7 +2,7 @@
 
 import { ReactNode, useState, useEffect } from "react"
 import Link from "next/link"
-import { Home, User, History, LogOut, Shield, BarChart3, List, Globe, UserPlus } from "lucide-react"
+import { Home, User, History, LogOut, Shield, BarChart3, List, Globe, UserPlus, Bell } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { supabase } from "@/lib/supabase"
 import { useRouter } from "next/navigation"
@@ -81,6 +81,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                                 </Link>
                                 <Link href="/admin/payment-methods" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-primary/10 font-medium text-foreground transition-all group">
                                     <Globe className="w-4 h-4 text-primary" /> Cuentas Empresa
+                                </Link>
+                                <Link href="/admin/notifications" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-primary/10 font-medium text-foreground transition-all group">
+                                    <Bell className="w-4 h-4 text-primary" /> Notificaciones
                                 </Link>
                             </>
                         )}
