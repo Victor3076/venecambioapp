@@ -106,66 +106,74 @@ export default function Home() {
     const rate = calculateRate(targetCurrency, sourceCurrency, targetPrice, sourcePrice, margin)
 
     // Use short codes for the rate display ticker
-    const sourceShort = sourceCurrency === 'VENEZUELA' ? 'VES' : (sourceCurrency === 'PERU' ? 'PEN' : (sourceCurrency === 'CHILE' ? 'CLP' : (sourceCurrency === 'COLOMBIA' ? 'COP' : 'USD')))
-    const targetShort = targetCurrency === 'VENEZUELA' ? 'VES' : (targetCurrency === 'PERU' ? 'PEN' : (targetCurrency === 'CHILE' ? 'CLP' : (targetCurrency === 'COLOMBIA' ? 'COP' : 'USD')))
+    const sourceShort = sourceCurrency === 'USA' ? 'USD' : (sourceCurrency === 'PERU' ? 'PEN' : (sourceCurrency === 'CHILE' ? 'CLP' : (sourceCurrency === 'COLOMBIA' ? 'COP' : sourceCurrency)))
+    const targetShort = targetCurrency === 'VES' ? 'VES' : (targetCurrency === 'USA' ? 'USD' : (targetCurrency === 'PERU' ? 'PEN' : (targetCurrency === 'CHILE' ? 'CLP' : (targetCurrency === 'COLOMBIA' ? 'COP' : targetCurrency))))
 
     return `1 ${sourceShort} = ${formatRate(rate, targetCurrency, sourceCurrency)} ${targetShort}`
   }
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <header className="border-b">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+      <header className="border-b bg-background/95 backdrop-blur-md sticky top-0 z-50">
+        <div className="container mx-auto px-4 h-16 md:h-20 flex items-center justify-between">
           <Logo />
-          <nav className="hidden md:flex gap-6">
+          <nav className="hidden md:flex gap-8">
             <a
               href="https://wa.me/584227173725"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm font-medium hover:text-primary flex items-center gap-2"
+              className="text-sm font-semibold hover:text-primary transition-colors flex items-center gap-2"
             >
-              <svg
-                viewBox="0 0 24 24"
-                width="18"
-                height="18"
-                stroke="currentColor"
-                strokeWidth="2"
-                fill="none"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="text-green-600"
-              >
-                <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 1 1-7.6-12.2 8.38 8.38 0 0 1 3.8.9L21 3z"></path>
-              </svg>
-              Contacto
+              <div className="w-8 h-8 rounded-full bg-green-50 flex items-center justify-center text-green-600">
+                <svg
+                  viewBox="0 0 24 24"
+                  width="18"
+                  height="18"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  fill="none"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 1 1-7.6-12.2 8.38 8.38 0 0 1 3.8.9L21 3z"></path>
+                </svg>
+              </div>
+              Contacto WhatsApp
             </a>
           </nav>
-          <div className="flex gap-2">
-            <Button variant="outline" asChild>
-              <Link href="/login">Iniciar Sesión</Link>
+          <div className="flex gap-3">
+            <Button variant="ghost" asChild className="hidden sm:inline-flex">
+              <Link href="/login">Ingresar</Link>
+            </Button>
+            <Button asChild>
+              <Link href="/register">Crear Cuenta</Link>
             </Button>
           </div>
         </div>
       </header>
 
       <main className="flex-1">
-        <section className="py-12 md:py-24 lg:py-32 bg-secondary/30">
-          <div className="container mx-auto px-4 grid md:grid-cols-2 gap-8 items-center">
-            <div className="space-y-4">
-              <h1 className="text-4xl md:text-6xl font-bold tracking-tighter">
-                Envía dinero entre <span className="text-primary">Perú, Chile, Colombia, USA y Venezuela</span>
+        <section className="relative overflow-hidden py-10 md:py-20 lg:py-28 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-50 via-background to-background">
+          <div className="container mx-auto px-4 grid lg:grid-cols-2 gap-12 items-center">
+            <div className="space-y-6 max-w-2xl">
+              <h1 className="text-balance text-[clamp(2rem,6vw,4rem)] font-extrabold tracking-tight leading-[1.1]">
+                Envía dinero entre <br />
+                <span className="text-primary bg-clip-text">Perú, Chile, Colombia, USA y Venezuela</span>
               </h1>
-              <p className="text-muted-foreground text-xl">
-                Tus remesas Rápido y Seguro
+              <p className="text-muted-foreground text-lg md:text-xl max-w-[500px]">
+                Envía tus remesas de forma **Rápida, Segura y con la mejor tasa** del mercado.
               </p>
-              <div className="flex gap-4">
-                <Button size="lg" disabled={isBelowMin} asChild={!isBelowMin}>
-                  {isBelowMin ? "Monto insuficiente" : <Link href="/login">Continuar</Link>}
+              <div className="flex flex-wrap gap-4 pt-4">
+                <Button size="lg" disabled={isBelowMin} asChild={!isBelowMin} className="px-8 h-12 text-base font-bold shadow-lg shadow-primary/25">
+                  {isBelowMin ? "Monto insuficiente" : <Link href="/login">Empezar ahora</Link>}
+                </Button>
+                <Button size="lg" variant="outline" className="h-12 text-base" asChild>
+                  <Link href="/register">Ver Tasas</Link>
                 </Button>
               </div>
             </div>
 
-            <Card className="w-full max-w-md mx-auto shadow-lg border-2">
+            <Card className="w-full max-w-md mx-auto shadow-2xl border-none ring-1 ring-black/5 bg-white/70 backdrop-blur-xl rounded-2xl overflow-hidden">
               <CardHeader>
                 <CardTitle>Calculadora de Envío</CardTitle>
                 <CardDescription>Cotiza tu envío en segundos</CardDescription>
