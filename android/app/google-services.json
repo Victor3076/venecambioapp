@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "71308474303",
+    "project_id": "venecambio1pp",
+    "storage_bucket": "venecambio1pp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:71308474303:android:5faf5f284b82219e6f130a",
+        "android_client_info": {
+          "package_name": "com.venecambio.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBdpskvceQ2Qr5zHgh_GN1x0cIxFcOs_Qc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
