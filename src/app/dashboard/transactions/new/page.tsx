@@ -523,8 +523,6 @@ export default function NewTransactionPage() {
                                         key={acc.id}
                                         onClick={() => {
                                             setSelectedAccount(acc)
-                                            // Immediate advance when clicking an existing account
-                                            handleConfirmTransfer(acc, true)
                                         }}
                                         className={`p-4 border rounded-lg cursor-pointer transition-all flex items-center gap-4 ${selectedAccount?.id === acc.id ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:bg-muted bg-background font-medium'}`}
                                     >
