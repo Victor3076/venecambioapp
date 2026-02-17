@@ -230,13 +230,15 @@ export default function NewTransactionPage() {
             })
 
             setAccounts([acc, ...accounts])
+            // Pass the new account directly to advance to step 3
             handleConfirmTransfer(acc, shouldFinish)
         } catch (error: any) {
             console.error(error)
             alert("Error al guardar la cuenta")
-        } finally {
-            setLoading(false)
+            setLoading(false) // Only stop loading on error if we are not advancing
         }
+        // Notice we don't have a finally { setLoading(false) } here 
+        // because handleConfirmTransfer -> handleCreateTransaction will handle it
     }
 
     const totalToPay = pendingTransfers.reduce((sum, t) => sum + t.amountSent, 0)
@@ -438,7 +440,7 @@ export default function NewTransactionPage() {
                             {pendingTransfers.length > 0 ? "Añadir otro destinatario" : "Continuar"} <ChevronRight className="ml-2 w-4 h-4" />
                         </Button>
                         {pendingTransfers.length > 0 && !isBelowMin && (
-                            <Button className="w-full bg-green-600 hover:bg-green-700" onClick={handleCreateTransaction} disabled={loading}>
+                            <Button className="w-full bg-green-600 hover:bg-green-700" onClick={() => handleCreateTransaction()} disabled={loading}>
                                 {loading ? "Procesando..." : `Finalizar y depositar ${totalToPay} ${CURRENCY_LABELS[sourceCurrency]}`}
                             </Button>
                         )}
@@ -517,7 +519,11 @@ export default function NewTransactionPage() {
                                 {accounts.map(acc => (
                                     <div
                                         key={acc.id}
-                                        onClick={() => setSelectedAccount(acc)}
+                                        onClick={() => {
+                                            setSelectedAccount(acc)
+                                            // Immediate advance when clicking an existing account
+                                            handleConfirmTransfer(acc, true)
+                                        }}
                                         className={`p-4 border rounded-lg cursor-pointer transition-all flex items-center gap-4 ${selectedAccount?.id === acc.id ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:bg-muted bg-background font-medium'}`}
                                     >
                                         <div className="bg-primary/10 p-2 rounded-full text-primary">
