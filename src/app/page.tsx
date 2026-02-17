@@ -180,7 +180,7 @@ export default function Home() {
             </div>
 
             <div className="relative">
-              {!adminSettings?.is_open && adminSettings !== null && (
+              {adminSettings?.is_open === false && (
                 <div className="absolute inset-0 z-10 bg-white/40 backdrop-blur-[2px] rounded-2xl flex items-center justify-center p-6 text-center animate-in fade-in duration-500">
                   <div className="bg-white shadow-2xl rounded-xl p-8 border border-red-100 max-w-sm space-y-4">
                     <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center text-red-600 mx-auto">

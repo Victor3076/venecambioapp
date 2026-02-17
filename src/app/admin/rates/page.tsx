@@ -59,6 +59,14 @@ export default function RatesPage() {
 
                 if (settingsData) {
                     setAdminSettings(settingsData)
+                } else {
+                    // Fallback to default if loading failed (though service now handles missing rows)
+                    setAdminSettings({
+                        id: 'default',
+                        is_open: true,
+                        closed_message: 'Nuestro horario de atención es de 10:00 AM a 8:00 PM (Hora Venezuela). Regresa pronto para realizar tus operaciones.',
+                        updated_at: new Date().toISOString()
+                    })
                 }
             } catch (error) {
                 console.error("Failed to load settings data", error)
@@ -314,14 +322,14 @@ export default function RatesPage() {
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-bold text-muted-foreground uppercase">Mensaje de Cierre</label>
                                     <textarea
-                                        className="w-full min-h-[60px] text-xs p-2 rounded-md border"
+                                        className="w-full min-h-[80px] text-xs p-2 rounded-md border text-foreground bg-background"
                                         value={adminSettings?.closed_message || ""}
                                         placeholder="Escribe el mensaje que verán los clientes cuando el sistema esté cerrado..."
                                         onChange={(e) => {
                                             const val = e.target.value;
                                             setAdminSettings(prev => prev ? { ...prev, closed_message: val } : {
-                                                id: '',
-                                                is_open: false,
+                                                id: 'default',
+                                                is_open: true,
                                                 closed_message: val,
                                                 updated_at: new Date().toISOString()
                                             });
