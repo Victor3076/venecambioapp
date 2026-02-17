@@ -39,6 +39,15 @@ export default function NewTransactionPage() {
     const [createdTxId, setCreatedTxId] = useState<string | null>(null)
     const [createdTxIds, setCreatedTxIds] = useState<string[]>([])
 
+    // State for New Account form
+    const [isAddingAccount, setIsAddingAccount] = useState(false)
+    const [newAccount, setNewAccount] = useState({
+        alias: '',
+        bank_name: '',
+        account_number: '',
+        details: ''
+    })
+
     useEffect(() => {
         const loadInitial = async () => {
             const [r, a, { data: { user } }] = await Promise.all([
@@ -48,7 +57,10 @@ export default function NewTransactionPage() {
             ])
 
             if (r) setRates(r)
-            if (a) setAccounts(a)
+            if (a) {
+                setAccounts(a)
+                if (a.length === 0) setIsAddingAccount(true)
+            }
 
             if (user) {
                 const { data: profile } = await supabase
@@ -178,25 +190,61 @@ export default function NewTransactionPage() {
 
     const { rate, received } = getSnapshot()
 
-    const handleConfirmTransfer = () => {
-        if (!selectedAccount || !rates) return
-        setPendingTransfers([...pendingTransfers, {
-            account: selectedAccount,
+    const handleConfirmTransfer = (accOverride?: UserAccount, shouldFinish?: boolean) => {
+        const account = accOverride || selectedAccount
+        if (!account || !rates) return
+
+        const newTransfer = {
+            account: account,
             amountSent,
             rate,
             amountReceived: received
-        }])
-        // Reset only beneficiary/amount for next add, but keep source currency?
-        // Actually the user might want to go to Step 3 directly now.
-        setSelectedAccount(null)
-        setAmountInput("100")
-        setStep(1) // Go back to cotizacion for the next one or use a more fluid UI
+        }
+
+        const updatedTransfers = [...pendingTransfers, newTransfer]
+        setPendingTransfers(updatedTransfers)
+
+        if (shouldFinish) {
+            handleCreateTransaction(updatedTransfers)
+        } else {
+            setSelectedAccount(null)
+            setAmountInput("100")
+            setStep(1)
+        }
+    }
+
+    const handleSaveNewAccount = async (shouldFinish: boolean) => {
+        if (!newAccount.alias || !newAccount.bank_name || !newAccount.account_number) {
+            alert("Por favor completa los campos obligatorios")
+            return
+        }
+
+        setLoading(true)
+        try {
+            const acc = await AccountsService.createAccount({
+                alias: newAccount.alias,
+                country: targetCurrency,
+                bank_name: newAccount.bank_name,
+                account_number: newAccount.account_number,
+                details: { info: newAccount.details }
+            })
+
+            setAccounts([acc, ...accounts])
+            handleConfirmTransfer(acc, shouldFinish)
+        } catch (error: any) {
+            console.error(error)
+            alert("Error al guardar la cuenta")
+        } finally {
+            setLoading(false)
+        }
     }
 
     const totalToPay = pendingTransfers.reduce((sum, t) => sum + t.amountSent, 0)
 
-    const handleCreateTransaction = async () => {
-        if (pendingTransfers.length === 0 || !rates) return
+    const handleCreateTransaction = async (transfersOverride?: any[]) => {
+        const transfersToProcess = transfersOverride || pendingTransfers
+        if (transfersToProcess.length === 0 || !rates) return
+
         setLoading(true)
         try {
             const marginKey = `${sourceCurrency}_${targetCurrency}`
@@ -208,7 +256,7 @@ export default function NewTransactionPage() {
             }
             const sourceUsdtPrice = getPrice(sourceCurrency)
 
-            const txs = pendingTransfers.map(t => ({
+            const txs = transfersToProcess.map(t => ({
                 amount_sent: t.amountSent,
                 currency_sent: sourceCurrency,
                 amount_received: t.amountReceived,
@@ -401,17 +449,68 @@ export default function NewTransactionPage() {
             {step === 2 && (
                 <Card className="border-2">
                     <CardHeader>
-                        <div className="flex items-center gap-2 mb-2">
-                            <Button variant="ghost" size="sm" onClick={() => setStep(1)}><ArrowLeft className="w-4 h-4" /></Button>
-                            <CardTitle>Paso 2: Beneficiario</CardTitle>
+                        <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                                <Button variant="ghost" size="sm" onClick={() => setStep(1)}><ArrowLeft className="w-4 h-4" /></Button>
+                                <CardTitle>Paso 2: Beneficiario</CardTitle>
+                            </div>
+                            {accounts.length > 0 && (
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setIsAddingAccount(!isAddingAccount)}
+                                    className={isAddingAccount ? "text-primary border-primary" : ""}
+                                >
+                                    {isAddingAccount ? "Ver mis cuentas" : "Nueva Cuenta"}
+                                </Button>
+                            )}
                         </div>
-                        <CardDescription>Selecciona a quién envías el dinero.</CardDescription>
+                        <CardDescription>
+                            {isAddingAccount ? "Ingresa los datos del nuevo destinatario." : "Selecciona a quién envías el dinero."}
+                        </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        {accounts.length === 0 ? (
+                        {isAddingAccount ? (
+                            <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium">Alias (Ej: Mi Mamá, Juan Pérez)</label>
+                                    <Input
+                                        placeholder="Alias de la cuenta"
+                                        value={newAccount.alias}
+                                        onChange={e => setNewAccount({ ...newAccount, alias: e.target.value })}
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium">Banco</label>
+                                        <Input
+                                            placeholder="Nombre del banco"
+                                            value={newAccount.bank_name}
+                                            onChange={e => setNewAccount({ ...newAccount, bank_name: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium">Número de Cuenta</label>
+                                        <Input
+                                            placeholder="1234..."
+                                            value={newAccount.account_number}
+                                            onChange={e => setNewAccount({ ...newAccount, account_number: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium">Detalles adicionales (Opcional)</label>
+                                    <Input
+                                        placeholder="Cédula, correo, etc."
+                                        value={newAccount.details}
+                                        onChange={e => setNewAccount({ ...newAccount, details: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+                        ) : accounts.length === 0 ? (
                             <div className="text-center py-6 border rounded-lg border-dashed">
                                 <p className="text-muted-foreground mb-4">No tienes cuentas guardadas.</p>
-                                <Button onClick={() => router.push('/dashboard/accounts')}>Agregar Cuenta</Button>
+                                <Button onClick={() => setIsAddingAccount(true)}>Agregar Cuenta</Button>
                             </div>
                         ) : (
                             <div className="grid gap-3 max-h-[400px] overflow-y-auto pr-2">
@@ -434,10 +533,44 @@ export default function NewTransactionPage() {
                             </div>
                         )}
                     </CardContent>
-                    <CardFooter>
-                        <Button className="w-full" disabled={!selectedAccount || loading} onClick={handleConfirmTransfer}>
-                            Confirmar y Añadir a Lista <ChevronRight className="ml-2 w-4 h-4" />
-                        </Button>
+                    <CardFooter className="flex flex-col gap-3">
+                        {isAddingAccount ? (
+                            <>
+                                <Button
+                                    className="w-full bg-green-600 hover:bg-green-700"
+                                    disabled={loading}
+                                    onClick={() => handleSaveNewAccount(true)}
+                                >
+                                    {loading ? "Guardando..." : "Guardar y Continuar al Pago"} <ChevronRight className="ml-2 w-4 h-4" />
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    className="w-full"
+                                    disabled={loading}
+                                    onClick={() => handleSaveNewAccount(false)}
+                                >
+                                    {loading ? "Guardando..." : "Añadir otro destinatario"}
+                                </Button>
+                            </>
+                        ) : (
+                            <>
+                                <Button
+                                    className="w-full bg-green-600 hover:bg-green-700"
+                                    disabled={!selectedAccount || loading}
+                                    onClick={() => handleConfirmTransfer(undefined, true)}
+                                >
+                                    Continuar al Pago <ChevronRight className="ml-2 w-4 h-4" />
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    className="w-full"
+                                    disabled={!selectedAccount || loading}
+                                    onClick={() => handleConfirmTransfer(undefined, false)}
+                                >
+                                    Añadir otro destinatario
+                                </Button>
+                            </>
+                        )}
                     </CardFooter>
                 </Card>
             )}
