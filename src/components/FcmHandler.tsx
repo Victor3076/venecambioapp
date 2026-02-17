@@ -5,6 +5,7 @@ import { messaging, getToken, onMessage } from "@/lib/firebase"
 import { supabase } from "@/lib/supabase"
 import { Capacitor } from "@capacitor/core"
 import { PushNotifications } from "@capacitor/push-notifications"
+import { LocalNotifications } from "@capacitor/local-notifications"
 
 export function FcmHandler() {
     useEffect(() => {
@@ -15,6 +16,7 @@ export function FcmHandler() {
             try {
                 if (isNative) {
                     console.log("Native: Checking permissions...")
+                    await LocalNotifications.requestPermissions()
                     // 1. Request Permission Natively
                     let permStatus = await PushNotifications.checkPermissions()
                     console.log("Native: Current permission status:", permStatus)
@@ -39,7 +41,7 @@ export function FcmHandler() {
                     PushNotifications.addListener('registration', async (res: { value: string }) => {
                         const token = res.value
                         console.log("Native FCM Token obtained:", token)
-                        await saveTokenToSupabase(token)
+                        await saveTokenToSupabase(token, isNative ? Capacitor.getPlatform() : 'web')
                     })
 
                     // 4. Listen for errors
@@ -48,8 +50,22 @@ export function FcmHandler() {
                     })
 
                     // 5. Listen for foreground notifications
-                    PushNotifications.addListener('pushNotificationReceived', (notification: any) => {
-                        console.log("Native push received:", notification)
+                    PushNotifications.addListener('pushNotificationReceived', async (notification: any) => {
+                        console.log("Native push received in FOREGROUND:", notification)
+
+                        // Show as a local notification so it appears in the system tray while app is open
+                        await LocalNotifications.schedule({
+                            notifications: [
+                                {
+                                    title: notification.title || "Venecambio",
+                                    body: notification.body || "",
+                                    id: Math.floor(Math.random() * 1000000),
+                                    extra: notification.data,
+                                    smallIcon: 'ic_stat_name',
+                                    iconColor: '#eab308'
+                                }
+                            ]
+                        })
                     })
                 } else if (messaging) {
                     // Web Implementation
@@ -72,7 +88,7 @@ export function FcmHandler() {
 
                         if (token) {
                             console.log("Web FCM Token obtained:", token)
-                            await saveTokenToSupabase(token)
+                            await saveTokenToSupabase(token, 'web')
                         }
 
                         onMessage(messaging, (payload) => {
@@ -85,12 +101,16 @@ export function FcmHandler() {
             }
         }
 
-        const saveTokenToSupabase = async (token: string) => {
+        const saveTokenToSupabase = async (token: string, platform: string) => {
             const { data: { user } } = await supabase.auth.getUser()
             if (user) {
+                console.log(`Saving ${platform} token to database...`)
                 await supabase
                     .from('profiles')
-                    .update({ fcm_token: token })
+                    .update({
+                        fcm_token: token,
+                        fcm_platform: platform
+                    })
                     .eq('id', user.id)
             }
         }
