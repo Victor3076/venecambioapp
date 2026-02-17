@@ -314,9 +314,18 @@ export default function RatesPage() {
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-bold text-muted-foreground uppercase">Mensaje de Cierre</label>
                                     <textarea
-                                        className="w-full min-h-[60px] text-[10px] p-2 rounded-md border"
+                                        className="w-full min-h-[60px] text-xs p-2 rounded-md border"
                                         value={adminSettings?.closed_message || ""}
-                                        onChange={(e) => setAdminSettings(prev => prev ? { ...prev, closed_message: e.target.value } : null)}
+                                        placeholder="Escribe el mensaje que verán los clientes cuando el sistema esté cerrado..."
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            setAdminSettings(prev => prev ? { ...prev, closed_message: val } : {
+                                                id: '',
+                                                is_open: false,
+                                                closed_message: val,
+                                                updated_at: new Date().toISOString()
+                                            });
+                                        }}
                                     />
                                     <Button variant="outline" size="sm" className="w-full h-7 text-[10px]" onClick={updateClosedMessage} disabled={updatingSettings}>
                                         Actualizar Mensaje
