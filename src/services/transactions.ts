@@ -173,6 +173,14 @@ export const TransactionsService = {
 
         // Notify user about status change
         try {
+            // Helper to format amounts consistently with the dashboard
+            const fmt = (val: number) => {
+                return new Intl.NumberFormat('es-VE', {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 2
+                }).format(val)
+            }
+
             // Get all affected transactions to notify their respective owners
             const { data: affectedTxs } = await supabase
                 .from('transactions')
@@ -183,15 +191,15 @@ export const TransactionsService = {
                 const statusInfo: Record<string, { title: string, message: (tx: any) => string }> = {
                     verified: {
                         title: 'Fondos Verificados',
-                        message: (tx) => `Hemos recibido tus ${tx.amount_sent} ${tx.currency_sent}. Tu transferencia de ${tx.amount_received} ${tx.currency_received} está en proceso.`
+                        message: (tx) => `Hemos recibido tus ${fmt(tx.amount_sent)} ${tx.currency_sent}. Tu transferencia de ${fmt(tx.amount_received)} ${tx.currency_received} está en proceso.`
                     },
                     completed: {
                         title: 'Operación Finalizada',
-                        message: (tx) => `¡Listo! Tus ${tx.amount_received} ${tx.currency_received} han sido enviados. Revisa el comprobante en los detalles.`
+                        message: (tx) => `¡Listo! Tus ${fmt(tx.amount_received)} ${tx.currency_received} han sido enviados. Revisa el comprobante en los detalles.`
                     },
                     rejected: {
                         title: 'Operación Rechazada',
-                        message: (tx) => `Ha habido un problema con tu operación de ${tx.amount_sent} ${tx.currency_sent}. Por favor revisa los detalles o contáctanos.`
+                        message: (tx) => `Ha habido un problema con tu operación de ${fmt(tx.amount_sent)} ${tx.currency_sent}. Por favor revisa los detalles o contáctanos.`
                     }
                 }
 
