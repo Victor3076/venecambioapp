@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">VeneCambio</string>
+    <string name="title_activity_main">VeneCambio</string>
+    <string name="package_name">com.venecambio.app</string>
+    <string name="custom_url_scheme">com.venecambio.app</string>
+</resources>

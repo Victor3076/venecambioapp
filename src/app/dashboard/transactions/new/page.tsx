@@ -11,8 +11,9 @@ import { calculateRate, formatRate, getRateDecimals } from "@/lib/rates-utils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Landmark, Upload, Info, ArrowLeft, Check, ChevronRight, AlertCircle } from "lucide-react"
+import { Landmark, Upload, Info, ArrowLeft, Check, ChevronRight, AlertCircle, Plus } from "lucide-react"
 import { CURRENCY_LABELS, SUPPORTED_REGIONS, MINIMUM_AMOUNTS } from "@/lib/constants"
+import { BeneficiaryForm, BeneficiaryData } from "@/components/BeneficiaryForm"
 
 export default function NewTransactionPage() {
     const router = useRouter()
@@ -41,11 +42,12 @@ export default function NewTransactionPage() {
 
     // State for New Account form
     const [isAddingAccount, setIsAddingAccount] = useState(false)
-    const [newAccount, setNewAccount] = useState({
+    const [newAccount, setNewAccount] = useState<BeneficiaryData>({
         alias: '',
+        country: 'VENEZUELA',
         bank_name: '',
         account_number: '',
-        details: ''
+        details: {}
     })
 
     useEffect(() => {
@@ -169,6 +171,15 @@ export default function NewTransactionPage() {
         }
     }, [sourceCurrency, targetCurrency, rates])
 
+    // Sync newAccount country when targetCurrency changes
+    useEffect(() => {
+        const country = targetCurrency === 'VES' ? 'VENEZUELA' : targetCurrency
+        setNewAccount(prev => ({
+            ...prev,
+            country: country
+        }))
+    }, [targetCurrency])
+
     // Re-calculating derived values for display
     const getSnapshot = () => {
         if (!rates) return { rate: 0, received: 0 }
@@ -221,13 +232,7 @@ export default function NewTransactionPage() {
 
         setLoading(true)
         try {
-            const acc = await AccountsService.createAccount({
-                alias: newAccount.alias,
-                country: targetCurrency,
-                bank_name: newAccount.bank_name,
-                account_number: newAccount.account_number,
-                details: { info: newAccount.details }
-            })
+            const acc = await AccountsService.createAccount(newAccount)
 
             setAccounts([acc, ...accounts])
             // Pass the new account directly to advance to step 3
@@ -474,40 +479,11 @@ export default function NewTransactionPage() {
                     <CardContent className="space-y-4">
                         {isAddingAccount ? (
                             <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium">Alias (Ej: Mi Mamá, Juan Pérez)</label>
-                                    <Input
-                                        placeholder="Alias de la cuenta"
-                                        value={newAccount.alias}
-                                        onChange={e => setNewAccount({ ...newAccount, alias: e.target.value })}
-                                    />
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <label className="text-sm font-medium">Banco</label>
-                                        <Input
-                                            placeholder="Nombre del banco"
-                                            value={newAccount.bank_name}
-                                            onChange={e => setNewAccount({ ...newAccount, bank_name: e.target.value })}
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label className="text-sm font-medium">Número de Cuenta</label>
-                                        <Input
-                                            placeholder="1234..."
-                                            value={newAccount.account_number}
-                                            onChange={e => setNewAccount({ ...newAccount, account_number: e.target.value })}
-                                        />
-                                    </div>
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium">Detalles adicionales (Opcional)</label>
-                                    <Input
-                                        placeholder="Cédula, correo, etc."
-                                        value={newAccount.details}
-                                        onChange={e => setNewAccount({ ...newAccount, details: e.target.value })}
-                                    />
-                                </div>
+                                <BeneficiaryForm
+                                    data={newAccount}
+                                    onChange={setNewAccount}
+                                    fixedCountry={targetCurrency === 'VES' ? 'VENEZUELA' : targetCurrency}
+                                />
                             </div>
                         ) : accounts.length === 0 ? (
                             <div className="text-center py-6 border rounded-lg border-dashed">
