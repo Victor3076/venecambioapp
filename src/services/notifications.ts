@@ -75,5 +75,15 @@ export const NotificationsService = {
 
         if (error) throw error
         return data as Notification
+    },
+
+    async broadcast(title: string, message: string, type: string = 'info') {
+        const { error } = await supabase.rpc('broadcast_notification', {
+            p_title: title,
+            p_message: message,
+            p_type: type
+        })
+
+        if (error) throw error
     }
 }

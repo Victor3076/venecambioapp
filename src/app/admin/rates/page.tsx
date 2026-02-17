@@ -6,13 +6,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
-import { Save, Calculator, RefreshCw, ArrowLeft } from "lucide-react"
+import { Save, Calculator, RefreshCw, ArrowLeft, Bell, Power, AlertTriangle, MessageSquare } from "lucide-react"
 import { RatesService } from "@/services/rates"
+import { NotificationsService } from "@/services/notifications"
+import { AdminSettingsService, AdminSettings } from "@/services/admin-settings"
 import { calculateRate, formatRate } from "@/lib/rates-utils"
 
 export default function RatesPage() {
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
+
+    // State for Admin Settings (Open/Closed)
+    const [adminSettings, setAdminSettings] = useState<AdminSettings | null>(null)
+    const [broadcasting, setBroadcasting] = useState(false)
+    const [updatingSettings, setUpdatingSettings] = useState(false)
+    const [broadcastMessage, setBroadcastMessage] = useState("¡Nuevas tasas de cambio disponibles! Revisa los precios actualizados en la calculadora.")
 
     // State for USDT base prices
     const [usdtPrices, setUsdtPrices] = useState({
@@ -37,33 +45,91 @@ export default function RatesPage() {
 
     // Load initial data
     useEffect(() => {
-        const loadRates = async () => {
+        const loadData = async () => {
             try {
-                const data = await RatesService.getLatest()
-                if (data) {
-                    // Update state with DB data, merging with defaults to be safe
-                    if (data.usdt_prices) setUsdtPrices(prev => ({ ...prev, ...data.usdt_prices }))
-                    if (data.margins) setPercentages(prev => ({ ...prev, ...data.margins }))
+                const [ratesData, settingsData] = await Promise.all([
+                    RatesService.getLatest(),
+                    AdminSettingsService.getSettings()
+                ])
+
+                if (ratesData) {
+                    if (ratesData.usdt_prices) setUsdtPrices(prev => ({ ...prev, ...ratesData.usdt_prices }))
+                    if (ratesData.margins) setPercentages(prev => ({ ...prev, ...ratesData.margins }))
+                }
+
+                if (settingsData) {
+                    setAdminSettings(settingsData)
                 }
             } catch (error) {
-                console.error("Failed to load rates", error)
+                console.error("Failed to load settings data", error)
             } finally {
                 setLoading(false)
             }
         }
-        loadRates()
+        loadData()
     }, [])
 
     const handleSave = async () => {
         setSaving(true)
         try {
             await RatesService.update(usdtPrices, percentages)
-            alert("Tasas actualizadas correctamente en la base de datos.")
+            alert("Tasas actualizadas correctamente.")
         } catch (error: any) {
             console.error("Error saving rates:", error)
             alert(`Error al guardar: ${error.message || "Error desconocido"}`)
         } finally {
             setSaving(false)
+        }
+    }
+
+    const handleBroadcast = async () => {
+        if (!confirm("¿Enviar notificación de cambio de tasas a TODOS los clientes?")) return
+        setBroadcasting(true)
+        try {
+            await NotificationsService.broadcast(
+                "📈 Tasas Actualizadas",
+                broadcastMessage,
+                'info'
+            )
+            alert("Notificación enviada a todos los clientes exitosamente.")
+        } catch (error: any) {
+            console.error("Broadcast error:", error)
+            alert("Error al enviar notificación masiva.")
+        } finally {
+            setBroadcasting(false)
+        }
+    }
+
+    const toggleOperations = async () => {
+        if (!adminSettings) return
+        const newStatus = !adminSettings.is_open
+        if (!confirm(`¿Estás seguro de que deseas ${newStatus ? 'ABRIR' : 'CERRAR'} las operaciones?`)) return
+
+        setUpdatingSettings(true)
+        try {
+            const updated = await AdminSettingsService.updateSettings({ is_open: newStatus })
+            setAdminSettings(updated)
+            alert(`Operaciones ${newStatus ? 'abiertas' : 'cerradas'} correctamente.`)
+        } catch (error) {
+            console.error(error)
+            alert("Error al actualizar estado de operaciones.")
+        } finally {
+            setUpdatingSettings(false)
+        }
+    }
+
+    const updateClosedMessage = async () => {
+        if (!adminSettings) return
+        setUpdatingSettings(true)
+        try {
+            const updated = await AdminSettingsService.updateSettings({ closed_message: adminSettings.closed_message })
+            setAdminSettings(updated)
+            alert("Mensaje de cierre actualizado.")
+        } catch (error) {
+            console.error(error)
+            alert("Error al actualizar mensaje.")
+        } finally {
+            setUpdatingSettings(false)
         }
     }
 
@@ -197,11 +263,77 @@ export default function RatesPage() {
                 </div>
 
                 {/* COL 2 & 3: OUTPUT MATRIX */}
-                <div className="lg:col-span-2 grid sm:grid-cols-2 gap-4">
-                    <RateGroup title="Perú (Soles)" flag="🇵🇪" currencyCode="PERU" basePrice={usdtPrices.PERU} />
-                    <RateGroup title="Chile (Pesos)" flag="🇨🇱" currencyCode="CHILE" basePrice={usdtPrices.CHILE} />
-                    <RateGroup title="Colombia (Pesos)" flag="🇨🇴" currencyCode="COLOMBIA" basePrice={usdtPrices.COLOMBIA} />
-                    <RateGroup title="Zelle (USA)" flag="🇺🇸" currencyCode="USA" basePrice={usdtPrices.USA} />
+                <div className="lg:col-span-2 space-y-6">
+                    <div className="grid sm:grid-cols-2 gap-4">
+                        <RateGroup title="Perú (Soles)" flag="🇵🇪" currencyCode="PERU" basePrice={usdtPrices.PERU} />
+                        <RateGroup title="Chile (Pesos)" flag="🇨🇱" currencyCode="CHILE" basePrice={usdtPrices.CHILE} />
+                        <RateGroup title="Colombia (Pesos)" flag="🇨🇴" currencyCode="COLOMBIA" basePrice={usdtPrices.COLOMBIA} />
+                        <RateGroup title="Zelle (USA)" flag="🇺🇸" currencyCode="USA" basePrice={usdtPrices.USA} />
+                    </div>
+
+                    {/* CONTROL PANEL */}
+                    <div className="grid sm:grid-cols-2 gap-6 pt-4 border-t">
+                        <Card className="border-primary/20 shadow-md">
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-sm flex items-center gap-2">
+                                    <Bell className="w-4 h-4 text-primary" /> Difusión de Tasas
+                                </CardTitle>
+                                <CardDescription className="text-xs">Notifica a todos los clientes por push.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <textarea
+                                    className="w-full min-h-[80px] text-xs p-2 rounded-md border bg-muted/20"
+                                    value={broadcastMessage}
+                                    onChange={(e) => setBroadcastMessage(e.target.value)}
+                                />
+                                <Button
+                                    className="w-full h-10 gap-2"
+                                    onClick={handleBroadcast}
+                                    disabled={broadcasting}
+                                >
+                                    {broadcasting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Bell className="w-4 h-4" />}
+                                    Notificar a Todos
+                                </Button>
+                            </CardContent>
+                        </Card>
+
+                        <Card className={`border-2 transition-colors ${adminSettings?.is_open ? 'border-green-100' : 'border-red-200 bg-red-50/10'}`}>
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-sm flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <Power className={`w-4 h-4 ${adminSettings?.is_open ? 'text-green-600' : 'text-red-600'}`} />
+                                        Disponibilidad
+                                    </div>
+                                    <Badge variant={adminSettings?.is_open ? "default" : "destructive"} className="text-[10px] h-5">
+                                        {adminSettings?.is_open ? 'ABIERTO' : 'CERRADO'}
+                                    </Badge>
+                                </CardTitle>
+                                <CardDescription className="text-xs">Control de operaciones del sistema.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold text-muted-foreground uppercase">Mensaje de Cierre</label>
+                                    <textarea
+                                        className="w-full min-h-[60px] text-[10px] p-2 rounded-md border"
+                                        value={adminSettings?.closed_message || ""}
+                                        onChange={(e) => setAdminSettings(prev => prev ? { ...prev, closed_message: e.target.value } : null)}
+                                    />
+                                    <Button variant="outline" size="sm" className="w-full h-7 text-[10px]" onClick={updateClosedMessage} disabled={updatingSettings}>
+                                        Actualizar Mensaje
+                                    </Button>
+                                </div>
+                                <Button
+                                    variant={adminSettings?.is_open ? "destructive" : "default"}
+                                    className="w-full h-10 gap-2 font-bold"
+                                    onClick={toggleOperations}
+                                    disabled={updatingSettings}
+                                >
+                                    {updatingSettings ? <RefreshCw className="w-4 h-4 animate-spin" /> : <AlertTriangle className="w-4 h-4" />}
+                                    {adminSettings?.is_open ? 'CERRAR OPERACIONES' : 'ABRIR OPERACIONES'}
+                                </Button>
+                            </CardContent>
+                        </Card>
+                    </div>
                 </div>
             </div>
         </div>

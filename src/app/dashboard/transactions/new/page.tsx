@@ -7,11 +7,12 @@ import { RatesService, RatesData } from "@/services/rates"
 import { AccountsService, UserAccount } from "@/services/accounts"
 import { PaymentMethodsService, PaymentMethod } from "@/services/payment-methods"
 import { TransactionsService } from "@/services/transactions"
+import { AdminSettingsService, AdminSettings } from "@/services/admin-settings"
 import { calculateRate, formatRate, getRateDecimals } from "@/lib/rates-utils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Landmark, Upload, Info, ArrowLeft, Check, ChevronRight, AlertCircle, Plus } from "lucide-react"
+import { Landmark, Upload, Info, ArrowLeft, Check, ChevronRight, AlertCircle, Plus, Clock } from "lucide-react"
 import { CURRENCY_LABELS, SUPPORTED_REGIONS, MINIMUM_AMOUNTS } from "@/lib/constants"
 import { BeneficiaryForm, BeneficiaryData } from "@/components/BeneficiaryForm"
 
@@ -27,6 +28,7 @@ export default function NewTransactionPage() {
     const [sourceCurrency, setSourceCurrency] = useState("PERU")
     const [targetCurrency, setTargetCurrency] = useState("VES")
     const [rates, setRates] = useState<RatesData | null>(null)
+    const [adminSettings, setAdminSettings] = useState<AdminSettings | null>(null)
 
     const minAmount = MINIMUM_AMOUNTS[sourceCurrency] || 0
     const isBelowMin = amountSent < minAmount
@@ -52,12 +54,14 @@ export default function NewTransactionPage() {
 
     useEffect(() => {
         const loadInitial = async () => {
-            const [r, a, { data: { user } }] = await Promise.all([
+            const [r, a, { data: { user } }, settings] = await Promise.all([
                 RatesService.getLatest(),
                 AccountsService.getMyAccounts(),
-                supabase.auth.getUser()
+                supabase.auth.getUser(),
+                AdminSettingsService.getSettings()
             ])
 
+            if (settings) setAdminSettings(settings)
             if (r) setRates(r)
             if (a) {
                 setAccounts(a)
@@ -307,6 +311,28 @@ export default function NewTransactionPage() {
     }
 
     // Render Steps
+    // If closed, show a professional blocked screen
+    if (adminSettings?.is_open === false) {
+        return (
+            <div className="max-w-md mx-auto py-20 text-center space-y-6">
+                <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mx-auto text-muted-foreground border-4 border-dashed">
+                    <Clock className="w-10 h-10" />
+                </div>
+                <div className="space-y-2">
+                    <h2 className="text-2xl font-bold">Operaciones Cerradas</h2>
+                    <p className="text-muted-foreground">
+                        {adminSettings.closed_message}
+                    </p>
+                </div>
+                <div className="pt-4">
+                    <Button variant="outline" className="w-full" onClick={() => router.push('/dashboard')}>
+                        Volver al Dashboard
+                    </Button>
+                </div>
+            </div>
+        )
+    }
+
     return (
         <div className="max-w-3xl mx-auto space-y-6 py-6">
             {/* Progress Header */}
