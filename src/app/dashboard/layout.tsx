@@ -24,25 +24,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         setIsMobileMenuOpen(false)
     }, [pathname])
 
-    useEffect(() => {
-        const loadProfile = async () => {
-            const { data: { user } } = await supabase.auth.getUser()
-            if (!user) {
-                router.push("/login")
-                return
-            }
-
-            const { data } = await supabase
-                .from('profiles')
-                .select('full_name, role')
-                .eq('id', user.id)
-                .single()
-
-            setProfile(data)
-            setLoading(false)
-        }
-        loadProfile()
-    }, [router])
+    const handleLogout = async () => {
+        await supabase.auth.signOut()
+        router.push("/login")
+    }
 
     const isAdmin = profile?.role === 'admin'
     const userInitial = profile?.full_name?.charAt(0).toUpperCase() || 'U'
@@ -82,7 +67,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                     <NavigationContent isAdmin={isAdmin} />
                 </div>
                 <div className="p-4 border-t bg-muted/5">
-                    <LogoutButton />
+                    <LogoutButton onLogout={handleLogout} />
                 </div>
             </aside>
 
@@ -95,7 +80,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                     <NavigationContent isAdmin={isAdmin} />
                 </div>
                 <div className="p-4 border-t bg-muted/10">
-                    <LogoutButton />
+                    <LogoutButton onLogout={handleLogout} />
                 </div>
             </aside>
 
@@ -175,12 +160,14 @@ function NavigationContent({ isAdmin }: { isAdmin: boolean }) {
     )
 }
 
-function LogoutButton() {
+function LogoutButton({ onLogout }: { onLogout: () => void }) {
     return (
-        <Button variant="ghost" className="w-full justify-start gap-3 text-muted-foreground hover:text-destructive hover:bg-destructive/5 font-medium" asChild>
-            <Link href="/login">
-                <LogOut className="w-4 h-4" /> Cerrar Sesión
-            </Link>
+        <Button
+            variant="ghost"
+            className="w-full justify-start gap-3 text-muted-foreground hover:text-destructive hover:bg-destructive/5 font-medium"
+            onClick={onLogout}
+        >
+            <LogOut className="w-4 h-4" /> Cerrar Sesión
         </Button>
     )
 }
