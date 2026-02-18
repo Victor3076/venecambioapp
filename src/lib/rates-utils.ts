@@ -66,10 +66,31 @@ export const formatRate = (value: number, targetCode: string, sourceCode: string
     const pairKey = `${sourceCode}_${targetCode}`;
     const config = pairConfig[pairKey] || { decimals: 2 };
 
+    // User requested maximum 2 decimals for 'Received' (Recibes) amounts
+    // We'll cap it at 2 but keep the pairConfig decimals for the actual rate calculation if needed
+    const displayDecimals = Math.min(config.decimals, 2);
+
     return new Intl.NumberFormat('es-VE', {
-        minimumFractionDigits: config.decimals,
-        maximumFractionDigits: config.decimals
+        minimumFractionDigits: displayDecimals,
+        maximumFractionDigits: displayDecimals
     }).format(value);
+}
+
+// Formats a number with thousand separators and 2 fixed decimals (standard for PEN, USD, COP, VES)
+export const formatCurrency = (value: number | string) => {
+    const num = typeof value === 'string' ? parseFloat(value) || 0 : value;
+    return new Intl.NumberFormat('es-VE', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    }).format(num);
+}
+
+// Parses a formatted string (e.g. "1.234,56") back to a float
+export const parseFormattedNumber = (value: string): number => {
+    if (!value) return 0;
+    // Remove dots (thousands) and replace comma with dot (decimal)
+    const clean = value.replace(/\./g, '').replace(',', '.');
+    return parseFloat(clean) || 0;
 }
 
 // Helper to get the correct decimal precision for a currency pair

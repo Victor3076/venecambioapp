@@ -8,7 +8,7 @@ import { AccountsService, UserAccount } from "@/services/accounts"
 import { PaymentMethodsService, PaymentMethod } from "@/services/payment-methods"
 import { TransactionsService } from "@/services/transactions"
 import { AdminSettingsService, AdminSettings } from "@/services/admin-settings"
-import { calculateRate, formatRate, getRateDecimals } from "@/lib/rates-utils"
+import { calculateRate, formatRate, getRateDecimals, formatCurrency, parseFormattedNumber } from "@/lib/rates-utils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -24,7 +24,7 @@ export default function NewTransactionPage() {
     const [amountInput, setAmountInput] = useState("100")
     const [amountReceivedInput, setAmountReceivedInput] = useState("")
     const [amountBcvInput, setAmountBcvInput] = useState("")
-    const amountSent = parseFloat(amountInput) || 0
+    const amountSent = parseFormattedNumber(amountInput)
     const [sourceCurrency, setSourceCurrency] = useState("PERU")
     const [targetCurrency, setTargetCurrency] = useState("VES")
     const [rates, setRates] = useState<RatesData | null>(null)
@@ -122,29 +122,29 @@ export default function NewTransactionPage() {
         const rate = Number(rawRate.toFixed(decimals))
 
         if (direction === 'sent') {
+            const numericValue = parseFormattedNumber(value)
             setAmountInput(value)
-            const res = (parseFloat(value) || 0) * rate
+            const res = numericValue * rate
             setAmountReceivedInput(formatRate(res, targetCurrency, sourceCurrency))
             if (targetCurrency === 'VES') {
-                setAmountBcvInput((res / bcvRate).toFixed(2))
+                setAmountBcvInput(formatCurrency(res / bcvRate))
             }
         } else if (direction === 'received') {
-            const cleanValue = value.replace(/[^0-9.,]/g, '').replace(',', '.')
+            const numericValue = parseFormattedNumber(value)
             setAmountReceivedInput(value)
-            const amountRec = parseFloat(cleanValue) || 0
-            const res = rate > 0 ? amountRec / rate : 0
-            setAmountInput(res.toFixed(2))
+            const res = rate > 0 ? numericValue / rate : 0
+            setAmountInput(formatCurrency(res))
             if (targetCurrency === 'VES') {
-                setAmountBcvInput((amountRec / bcvRate).toFixed(2))
+                setAmountBcvInput(formatCurrency(numericValue / bcvRate))
             }
         } else if (direction === 'bcv') {
+            const numericValue = parseFormattedNumber(value)
             setAmountBcvInput(value)
             if (targetCurrency === 'VES') {
-                const amountBcvVal = parseFloat(value) || 0
-                const amountRec = amountBcvVal * bcvRate
+                const amountRec = numericValue * bcvRate
                 setAmountReceivedInput(formatRate(amountRec, targetCurrency, sourceCurrency))
                 const resultSent = rate > 0 ? amountRec / rate : 0
-                setAmountInput(resultSent.toFixed(2))
+                setAmountInput(formatCurrency(resultSent))
             }
         }
     }
@@ -170,7 +170,7 @@ export default function NewTransactionPage() {
 
             if (targetCurrency === 'VES') {
                 const bcvRate = rates.usdt_prices.BCV || 1
-                setAmountBcvInput((res / bcvRate).toFixed(2))
+                setAmountBcvInput(formatCurrency(res / bcvRate))
             }
         }
     }, [sourceCurrency, targetCurrency, rates])
@@ -359,8 +359,9 @@ export default function NewTransactionPage() {
                                 <label className="text-sm font-medium">Envías</label>
                                 <div className="flex gap-2">
                                     <Input
-                                        type="number"
+                                        type="text"
                                         value={amountInput}
+                                        onBlur={() => setAmountInput(formatCurrency(parseFormattedNumber(amountInput)))}
                                         onChange={e => updateCalculation(e.target.value, 'sent')}
                                         onClick={(e) => (e.target as HTMLInputElement).select()}
                                         className={isBelowMin ? "border-red-500" : ""}
@@ -381,7 +382,7 @@ export default function NewTransactionPage() {
                                 {isBelowMin && (
                                     <p className="text-[10px] text-red-500 font-bold flex items-center gap-1 animate-pulse mt-1">
                                         <AlertCircle className="w-3 h-3" />
-                                        Monto mínimo: {minAmount} {sourceCurrency === 'USA' ? 'USD' : (sourceCurrency === 'PERU' ? 'PEN' : (sourceCurrency === 'CHILE' ? 'CLP' : 'COP'))}
+                                        Monto mínimo: {formatCurrency(minAmount)} {sourceCurrency === 'USA' ? 'USD' : (sourceCurrency === 'PERU' ? 'PEN' : (sourceCurrency === 'CHILE' ? 'CLP' : 'COP'))}
                                     </p>
                                 )}
                                 {pendingTransfers.length > 0 && !isBelowMin && (
@@ -423,6 +424,7 @@ export default function NewTransactionPage() {
                                         <Input
                                             type="text"
                                             value={amountBcvInput}
+                                            onBlur={() => setAmountBcvInput(formatCurrency(parseFormattedNumber(amountBcvInput)))}
                                             onChange={e => updateCalculation(e.target.value, 'bcv')}
                                             onClick={(e) => (e.target as HTMLInputElement).select()}
                                             className="pl-7 bg-background font-bold border-primary/20"
@@ -454,7 +456,7 @@ export default function NewTransactionPage() {
                                     <div key={i} className="flex justify-between items-center text-sm p-2 bg-muted rounded-md border">
                                         <div className="flex flex-col">
                                             <span className="font-bold">{t.account.alias}</span>
-                                            <span className="text-[10px] text-muted-foreground">{t.amountSent} {CURRENCY_LABELS[sourceCurrency]}</span>
+                                            <span className="text-[10px] text-muted-foreground">{formatCurrency(t.amountSent)} {CURRENCY_LABELS[sourceCurrency]}</span>
                                         </div>
                                         <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500" onClick={() => setPendingTransfers(pendingTransfers.filter((_, idx) => idx !== i))}>
                                             <Landmark className="w-3 h-3" />
@@ -463,7 +465,7 @@ export default function NewTransactionPage() {
                                 ))}
                                 <div className="pt-1 border-t flex justify-between font-bold text-sm">
                                     <span>Total Parcial:</span>
-                                    <span>{totalToPay} {CURRENCY_LABELS[sourceCurrency]}</span>
+                                    <span>{formatCurrency(totalToPay)} {CURRENCY_LABELS[sourceCurrency]}</span>
                                 </div>
                             </div>
                         )}
@@ -472,7 +474,7 @@ export default function NewTransactionPage() {
                         </Button>
                         {pendingTransfers.length > 0 && !isBelowMin && (
                             <Button className="w-full bg-green-600 hover:bg-green-700" onClick={() => handleCreateTransaction()} disabled={loading}>
-                                {loading ? "Procesando..." : `Finalizar y depositar ${totalToPay} ${CURRENCY_LABELS[sourceCurrency]}`}
+                                {loading ? "Procesando..." : `Finalizar y depositar ${formatCurrency(totalToPay)} ${CURRENCY_LABELS[sourceCurrency]}`}
                             </Button>
                         )}
                     </CardFooter>
@@ -610,7 +612,7 @@ export default function NewTransactionPage() {
                                 )}
 
                                 <div className="mt-4 p-3 bg-primary text-white rounded-md font-bold text-center text-xl shadow-md">
-                                    Total a pagar: {totalToPay} {CURRENCY_LABELS[sourceCurrency] || sourceCurrency}
+                                    Total a pagar: {formatCurrency(totalToPay)} {CURRENCY_LABELS[sourceCurrency] || sourceCurrency}
                                 </div>
                                 <div className="text-[10px] text-blue-800 text-center mt-2 italic">
                                     Este depósito cubrirá {pendingTransfers.length} transferencia(s).

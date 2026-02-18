@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input"
 import { RatesService, RatesData } from "@/services/rates"
 import { AdminSettingsService, AdminSettings } from "@/services/admin-settings"
-import { calculateRate, formatRate, getRateDecimals } from "@/lib/rates-utils"
+import { calculateRate, formatRate, getRateDecimals, formatCurrency, parseFormattedNumber } from "@/lib/rates-utils"
 import Link from "next/link"
 import { CURRENCY_LABELS, SUPPORTED_REGIONS, MINIMUM_AMOUNTS } from "@/lib/constants"
 import { Logo } from "@/components/logo"
@@ -15,7 +15,7 @@ import { AlertCircle, Clock } from "lucide-react"
 export default function Home() {
   const [rates, setRates] = useState<RatesData | null>(null)
   const [amountInput, setAmountInput] = useState<string>("100")
-  const amountSent = parseFloat(amountInput) || 0
+  const amountSent = parseFormattedNumber(amountInput)
   const [sourceCurrency, setSourceCurrency] = useState<string>("PERU")
   const [targetCurrency, setTargetCurrency] = useState<string>("VES")
   const [amountReceived, setAmountReceived] = useState<string>("0")
@@ -60,33 +60,34 @@ export default function Home() {
     const rate = Number(rawRate.toFixed(decimals))
 
     if (direction === 'sent') {
-      const amount = parseFloat(value) || 0
-      setAmountInput(value)
-      const result = amount * rate
+      const numericValue = parseFormattedNumber(value)
+      setAmountInput(value) // Keep what user types for fluidity
+      const result = numericValue * rate
       setAmountReceived(formatRate(result, targetCurrency, sourceCurrency))
       // Update BCV if target is VES
       if (targetCurrency === 'VES') {
-        setAmountBcv((result / bcvRate).toFixed(2))
+        const bcvRate = rates.usdt_prices.BCV || 1
+        setAmountBcv(formatCurrency(result / bcvRate))
       }
     } else if (direction === 'received') {
-      // Clean non-numeric characters for received input (e.g. from copy-paste)
-      const cleanValue = value.replace(/[^0-9.,]/g, '').replace(',', '.')
+      const numericValue = parseFormattedNumber(value)
       setAmountReceived(value)
-      const amountRec = parseFloat(cleanValue) || 0
-      const result = rate > 0 ? amountRec / rate : 0
-      setAmountInput(result.toFixed(2))
+      const result = rate > 0 ? numericValue / rate : 0
+      setAmountInput(formatCurrency(result))
       // Update BCV if target is VES
       if (targetCurrency === 'VES') {
-        setAmountBcv((amountRec / bcvRate).toFixed(2))
+        const bcvRate = rates.usdt_prices.BCV || 1
+        setAmountBcv(formatCurrency(numericValue / bcvRate))
       }
     } else if (direction === 'bcv') {
+      const numericValue = parseFormattedNumber(value)
       setAmountBcv(value)
       if (targetCurrency === 'VES') {
-        const amountBcvVal = parseFloat(value) || 0
-        const amountRec = amountBcvVal * bcvRate
+        const bcvRate = rates.usdt_prices.BCV || 1
+        const amountRec = numericValue * bcvRate
         setAmountReceived(formatRate(amountRec, targetCurrency, sourceCurrency))
         const resultSent = rate > 0 ? amountRec / rate : 0
-        setAmountInput(resultSent.toFixed(2))
+        setAmountInput(formatCurrency(resultSent))
       }
     }
   }
@@ -206,9 +207,10 @@ export default function Home() {
                     <label className="text-sm font-medium">Envías</label>
                     <div className="flex gap-2">
                       <Input
-                        type="number"
-                        placeholder="100"
+                        type="text"
+                        placeholder="1.000,00"
                         value={amountInput}
+                        onBlur={() => setAmountInput(formatCurrency(parseFormattedNumber(amountInput)))}
                         onChange={(e) => updateCalculation(e.target.value, 'sent')}
                         onClick={(e) => (e.target as HTMLInputElement).select()}
                         className={isBelowMin ? "border-red-500" : ""}
@@ -269,6 +271,7 @@ export default function Home() {
                           <Input
                             type="text"
                             value={amountBcv}
+                            onBlur={() => setAmountBcv(formatCurrency(parseFormattedNumber(amountBcv)))}
                             onChange={(e) => updateCalculation(e.target.value, 'bcv')}
                             onClick={(e) => (e.target as HTMLInputElement).select()}
                             className="pl-7 bg-muted/30 font-bold border-primary/20"

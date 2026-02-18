@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { TransactionsService, Transaction } from "@/services/transactions"
 import { Card, CardContent } from "@/components/ui/card"
 import { ArrowRightLeft, Clock, CheckCircle2, XCircle } from "lucide-react"
+import { formatCurrency } from "@/lib/rates-utils"
 
 export default function TransactionsHistoryPage() {
     const [transactions, setTransactions] = useState<Transaction[]>([])
@@ -64,7 +65,7 @@ export default function TransactionsHistoryPage() {
 
                                 <div className="flex-1 flex flex-col items-center sm:items-start text-center sm:text-left">
                                     <div className="text-lg font-bold">
-                                        {tx.amount_sent} {tx.currency_sent} → {tx.amount_received.toLocaleString()} {tx.currency_received}
+                                        {formatCurrency(tx.amount_sent)} {tx.currency_sent} → {formatCurrency(tx.amount_received)} {tx.currency_received}
                                     </div>
                                     <div className="text-xs text-muted-foreground">Tasa: {tx.exchange_rate}</div>
                                 </div>
