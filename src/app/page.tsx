@@ -310,7 +310,7 @@ export default function Home() {
           © 2026 Venecambio. Todos los derechos reservados.
         </div>
       </footer>
-    </div >
+    </div>
   );
 }
 
