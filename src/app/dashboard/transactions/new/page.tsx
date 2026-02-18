@@ -370,7 +370,13 @@ export default function NewTransactionPage() {
                                     />
                                     <select
                                         value={sourceCurrency}
-                                        onChange={e => setSourceCurrency(e.target.value)}
+                                        onChange={e => {
+                                            const newSource = e.target.value
+                                            setSourceCurrency(newSource)
+                                            if (newSource === targetCurrency) {
+                                                setTargetCurrency(newSource === 'VES' ? 'PERU' : 'VES')
+                                            }
+                                        }}
                                         disabled={pendingTransfers.length > 0}
                                         className={`h-10 border rounded-md px-2 bg-background text-sm ${pendingTransfers.length > 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
                                     >
@@ -403,7 +409,17 @@ export default function NewTransactionPage() {
                                         onClick={(e) => (e.target as HTMLInputElement).select()}
                                         className="bg-background font-bold text-lg"
                                     />
-                                    <select value={targetCurrency} onChange={e => setTargetCurrency(e.target.value)} className="h-10 border rounded-md px-2 bg-background text-sm">
+                                    <select
+                                        value={targetCurrency}
+                                        onChange={e => {
+                                            const newTarget = e.target.value
+                                            setTargetCurrency(newTarget)
+                                            if (newTarget === sourceCurrency) {
+                                                setSourceCurrency(newTarget === 'VES' ? 'PERU' : 'VES')
+                                            }
+                                        }}
+                                        className="h-10 border rounded-md px-2 bg-background text-sm"
+                                    >
                                         {SUPPORTED_REGIONS.map(region => (
                                             <option key={region} value={region === 'VENEZUELA' ? 'VES' : region}>
                                                 {CURRENCY_LABELS[region]}

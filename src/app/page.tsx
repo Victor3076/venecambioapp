@@ -216,7 +216,13 @@ export default function Home() {
                       />
                       <select
                         value={sourceCurrency}
-                        onChange={(e) => setSourceCurrency(e.target.value)}
+                        onChange={(e) => {
+                          const newSource = e.target.value
+                          setSourceCurrency(newSource)
+                          if (newSource === targetCurrency) {
+                            setTargetCurrency(newSource === 'VES' ? 'PERU' : 'VES')
+                          }
+                        }}
                         className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                       >
                         {SUPPORTED_REGIONS.filter(r => r !== 'VENEZUELA').map(region => (
@@ -246,7 +252,13 @@ export default function Home() {
                       />
                       <select
                         value={targetCurrency}
-                        onChange={(e) => setTargetCurrency(e.target.value)}
+                        onChange={(e) => {
+                          const newTarget = e.target.value
+                          setTargetCurrency(newTarget)
+                          if (newTarget === sourceCurrency) {
+                            setSourceCurrency(newTarget === 'VES' ? 'PERU' : 'VES')
+                          }
+                        }}
                         className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                       >
                         {SUPPORTED_REGIONS.map(region => (
