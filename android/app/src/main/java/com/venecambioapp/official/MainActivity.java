@@ -1,4 +1,4 @@
-package com.venecambio.app;
+package com.venecambioapp.official;
 
 import com.getcapacitor.BridgeActivity;
 

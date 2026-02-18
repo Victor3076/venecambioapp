@@ -1,11 +1,11 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.venecambio.app',
+  appId: 'com.venecambioapp.official',
   appName: 'VeneCambio',
   webDir: 'out',
   server: {
-    url: 'https://venecambioapp.vercel.app',
+    url: 'https://venecambio.com',
     cleartext: true
   }
 };

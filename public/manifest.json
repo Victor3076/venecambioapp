@@ -1,0 +1,17 @@
+{
+    "name": "VeneCambio",
+    "short_name": "VeneCambio",
+    "description": "Envíos de remesas a Venezuela de forma rápida y segura.",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#1E3A8A",
+    "icons": [
+        {
+            "src": "/logo.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ]
+}
