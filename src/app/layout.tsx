@@ -17,6 +17,10 @@ export const metadata: Metadata = {
   title: "Venecambio - Tu Remesa Segura",
   description: "Calculadora de envíos y gestión de remesas para Venezuela, Perú, Chile, Colombia y USA.",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
