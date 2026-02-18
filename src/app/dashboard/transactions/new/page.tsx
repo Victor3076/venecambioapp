@@ -411,16 +411,10 @@ export default function NewTransactionPage() {
                                     />
                                     <select
                                         value={targetCurrency}
-                                        onChange={e => {
-                                            const newTarget = e.target.value
-                                            setTargetCurrency(newTarget)
-                                            if (newTarget === sourceCurrency) {
-                                                setSourceCurrency(newTarget === 'VES' ? 'PERU' : 'VES')
-                                            }
-                                        }}
+                                        onChange={e => setTargetCurrency(e.target.value)}
                                         className="h-10 border rounded-md px-2 bg-background text-sm"
                                     >
-                                        {SUPPORTED_REGIONS.map(region => (
+                                        {SUPPORTED_REGIONS.filter(region => (region === 'VENEZUELA' ? 'VES' : region) !== sourceCurrency).map(region => (
                                             <option key={region} value={region === 'VENEZUELA' ? 'VES' : region}>
                                                 {CURRENCY_LABELS[region]}
                                             </option>

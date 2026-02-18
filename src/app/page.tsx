@@ -252,16 +252,10 @@ export default function Home() {
                       />
                       <select
                         value={targetCurrency}
-                        onChange={(e) => {
-                          const newTarget = e.target.value
-                          setTargetCurrency(newTarget)
-                          if (newTarget === sourceCurrency) {
-                            setSourceCurrency(newTarget === 'VES' ? 'PERU' : 'VES')
-                          }
-                        }}
+                        onChange={(e) => setTargetCurrency(e.target.value)}
                         className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                       >
-                        {SUPPORTED_REGIONS.map(region => (
+                        {SUPPORTED_REGIONS.filter(region => (region === 'VENEZUELA' ? 'VES' : region) !== sourceCurrency).map(region => (
                           <option key={region} value={region === 'VENEZUELA' ? 'VES' : region}>
                             {CURRENCY_LABELS[region]}
                           </option>
