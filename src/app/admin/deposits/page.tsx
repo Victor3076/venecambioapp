@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Plus, Search, RefreshCw, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { CURRENCY_LABELS, SUPPORTED_REGIONS } from "@/lib/constants"
+import { formatCurrency } from "@/lib/rates-utils"
 
 export default function BankDepositsPage() {
     const [deposits, setDeposits] = useState<BankDeposit[]>([])
@@ -170,7 +171,7 @@ export default function BankDepositsPage() {
                                             <div className="font-mono">{deposit.reference_number}</div>
                                             <div className="truncate pr-2">{deposit.bank_name || "-"}</div>
                                             <div className="font-bold">
-                                                {parseFloat(deposit.amount.toString()).toLocaleString('es-VE', { minimumFractionDigits: 2 })} {deposit.currency}
+                                                {formatCurrency(deposit.amount)} {deposit.currency}
                                             </div>
                                             <div>
                                                 <span className={`px-2 py-1 rounded-full text-xs font-bold ${deposit.status === 'matched'

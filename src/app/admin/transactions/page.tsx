@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Eye, Check, X, ImageIcon, Upload, ClipboardPaste, ArrowLeft, Copy, User, Landmark, CreditCard, Mail, Phone, Hash, Search, FileUp } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import Link from "next/link"
+import { formatCurrency } from "@/lib/rates-utils"
 
 type AdminTx = Transaction & { profiles: { email: string, full_name: string } }
 
@@ -289,7 +290,7 @@ export default function AdminTransactionsPage() {
                                             </td>
                                             <td className="p-4">
                                                 <div className="font-bold text-primary">
-                                                    {tx.amount_sent} {tx.currency_sent} → {tx.amount_received.toLocaleString()} {tx.currency_received}
+                                                    {formatCurrency(tx.amount_sent)} {tx.currency_sent} → {formatCurrency(tx.amount_received)} {tx.currency_received}
                                                 </div>
                                                 <div className="text-[10px] text-muted-foreground">Tasa: {tx.exchange_rate}</div>
                                             </td>
@@ -344,11 +345,11 @@ export default function AdminTransactionsPage() {
                                                 </div>
                                                 <div className="flex justify-between items-center text-sm">
                                                     <span className="text-muted-foreground">Monto enviado:</span>
-                                                    <span className="font-bold text-lg">{selectedTx.amount_sent} {selectedTx.currency_sent}</span>
+                                                    <span className="font-bold text-lg">{formatCurrency(selectedTx.amount_sent)} {selectedTx.currency_sent}</span>
                                                 </div>
                                                 <div className="flex justify-between items-center text-sm">
                                                     <span className="text-muted-foreground">Monto a pagar:</span>
-                                                    <span className="font-bold text-lg text-primary">{parseFloat(selectedTx.amount_received.toString()).toLocaleString()} {selectedTx.currency_received}</span>
+                                                    <span className="font-bold text-lg text-primary">{formatCurrency(selectedTx.amount_received)} {selectedTx.currency_received}</span>
                                                 </div>
                                                 <div className="pt-2 border-t flex justify-between items-center text-xs">
                                                     <span className="text-muted-foreground">TASA: {selectedTx.exchange_rate}</span>
@@ -498,7 +499,7 @@ export default function AdminTransactionsPage() {
                                     </Button>
                                 </div>
                                 <CardDescription>
-                                    Asocia un depósito bancario a esta operación de <b>{parseFloat(selectedTx.amount_sent.toString()).toLocaleString('es-VE')} {selectedTx.currency_sent}</b>.
+                                    Asocia un depósito bancario a esta operación de <b>{formatCurrency(selectedTx.amount_sent)} {selectedTx.currency_sent}</b>.
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="pt-4 space-y-6">
@@ -512,7 +513,7 @@ export default function AdminTransactionsPage() {
                                             {potentialMatches.map(match => (
                                                 <div key={match.id} className="bg-green-50 border border-green-200 p-3 rounded-lg flex justify-between items-center shadow-sm">
                                                     <div>
-                                                        <div className="font-bold text-green-900">{parseFloat(match.amount.toString()).toLocaleString('es-VE')} {match.currency}</div>
+                                                        <div className="font-bold text-green-900">{formatCurrency(match.amount)} {match.currency}</div>
                                                         <div className="text-xs text-green-700">Ref: {match.reference_number} • {match.bank_name || 'Banco desconocido'}</div>
                                                         <div className="text-[10px] text-green-600">Fecha: {new Date(match.created_at || '').toLocaleDateString()}</div>
                                                     </div>
@@ -555,7 +556,7 @@ export default function AdminTransactionsPage() {
                                             .map(deposit => (
                                                 <div key={deposit.id} className="bg-muted/20 border p-3 rounded flex justify-between items-center text-sm hover:bg-muted/40 transition-colors">
                                                     <div>
-                                                        <div className="font-medium">{parseFloat(deposit.amount.toString()).toLocaleString('es-VE')} {deposit.currency}</div>
+                                                        <div className="font-medium">{formatCurrency(deposit.amount)} {deposit.currency}</div>
                                                         <div className="text-xs text-muted-foreground">Ref: {deposit.reference_number} • {deposit.bank_name || '-'}</div>
                                                     </div>
                                                     <Button
