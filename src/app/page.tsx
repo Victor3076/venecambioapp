@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input"
 import { RatesService, RatesData } from "@/services/rates"
 import { AdminSettingsService, AdminSettings } from "@/services/admin-settings"
-import { calculateRate, formatRate, getRateDecimals, formatCurrency, parseFormattedNumber } from "@/lib/rates-utils"
+import { calculateRate, formatRate, getRateDecimals, formatCurrency, parseFormattedNumber, isInversePair } from "@/lib/rates-utils"
 import Link from "next/link"
 import { CURRENCY_LABELS, SUPPORTED_REGIONS, MINIMUM_AMOUNTS } from "@/lib/constants"
 import { Logo } from "@/components/logo"
@@ -59,10 +59,12 @@ export default function Home() {
     // IMPORTANT: Round rate to displayed precision for exact calculations
     const rate = Number(rawRate.toFixed(decimals))
 
+    const isInverse = isInversePair(targetCurrency, sourceCurrency)
+
     if (direction === 'sent') {
       const numericValue = parseFormattedNumber(value)
       setAmountInput(value) // Keep what user types for fluidity
-      const result = numericValue * rate
+      const result = isInverse ? (rate > 0 ? numericValue / rate : 0) : numericValue * rate
       setAmountReceived(formatRate(result, targetCurrency, sourceCurrency))
       // Update BCV if target is VES
       if (targetCurrency === 'VES') {
@@ -72,7 +74,7 @@ export default function Home() {
     } else if (direction === 'received') {
       const numericValue = parseFormattedNumber(value)
       setAmountReceived(value)
-      const result = rate > 0 ? numericValue / rate : 0
+      const result = isInverse ? numericValue * rate : (rate > 0 ? numericValue / rate : 0)
       setAmountInput(formatCurrency(result))
       // Update BCV if target is VES
       if (targetCurrency === 'VES') {
@@ -86,7 +88,7 @@ export default function Home() {
         const bcvRate = rates.usdt_prices.BCV || 1
         const amountRec = numericValue * bcvRate
         setAmountReceived(formatRate(amountRec, targetCurrency, sourceCurrency))
-        const resultSent = rate > 0 ? amountRec / rate : 0
+        const resultSent = isInverse ? amountRec * rate : (rate > 0 ? amountRec / rate : 0)
         setAmountInput(formatCurrency(resultSent))
       }
     }

@@ -8,7 +8,7 @@ import { AccountsService, UserAccount } from "@/services/accounts"
 import { PaymentMethodsService, PaymentMethod } from "@/services/payment-methods"
 import { TransactionsService } from "@/services/transactions"
 import { AdminSettingsService, AdminSettings } from "@/services/admin-settings"
-import { calculateRate, formatRate, getRateDecimals, formatCurrency, parseFormattedNumber } from "@/lib/rates-utils"
+import { calculateRate, formatRate, getRateDecimals, formatCurrency, parseFormattedNumber, isInversePair } from "@/lib/rates-utils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -121,10 +121,12 @@ export default function NewTransactionPage() {
         // IMPORTANT: Round rate to displayed precision for exact calculations (e.g., 100 × 149.65 = 14965)
         const rate = Number(rawRate.toFixed(decimals))
 
+        const isInverse = isInversePair(targetCurrency, sourceCurrency)
+
         if (direction === 'sent') {
             const numericValue = parseFormattedNumber(value)
             setAmountInput(value)
-            const res = numericValue * rate
+            const res = isInverse ? (rate > 0 ? numericValue / rate : 0) : numericValue * rate
             setAmountReceivedInput(formatRate(res, targetCurrency, sourceCurrency))
             if (targetCurrency === 'VES') {
                 setAmountBcvInput(formatCurrency(res / bcvRate))
@@ -132,7 +134,7 @@ export default function NewTransactionPage() {
         } else if (direction === 'received') {
             const numericValue = parseFormattedNumber(value)
             setAmountReceivedInput(value)
-            const res = rate > 0 ? numericValue / rate : 0
+            const res = isInverse ? numericValue * rate : (rate > 0 ? numericValue / rate : 0)
             setAmountInput(formatCurrency(res))
             if (targetCurrency === 'VES') {
                 setAmountBcvInput(formatCurrency(numericValue / bcvRate))
@@ -143,7 +145,7 @@ export default function NewTransactionPage() {
             if (targetCurrency === 'VES') {
                 const amountRec = numericValue * bcvRate
                 setAmountReceivedInput(formatRate(amountRec, targetCurrency, sourceCurrency))
-                const resultSent = rate > 0 ? amountRec / rate : 0
+                const resultSent = isInverse ? amountRec * rate : (rate > 0 ? amountRec / rate : 0)
                 setAmountInput(formatCurrency(resultSent))
             }
         }

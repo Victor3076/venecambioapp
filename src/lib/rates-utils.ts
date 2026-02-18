@@ -99,3 +99,8 @@ export const getRateDecimals = (targetCode: string, sourceCode: string): number 
     const config = pairConfig[pairKey] || { decimals: 2 };
     return config.decimals;
 }
+
+export const isInversePair = (targetCode: string, sourceCode: string): boolean => {
+    const pairKey = `${sourceCode}_${targetCode}`;
+    return !!pairConfig[pairKey]?.isInverse;
+}
