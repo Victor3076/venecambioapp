@@ -169,6 +169,10 @@ export default function Home() {
               <p className="text-muted-foreground text-lg md:text-xl max-w-[500px]">
                 Envía tus remesas de forma **Rápida, Segura y con la mejor tasa** del mercado.
               </p>
+              <div className="flex flex-wrap gap-4 pt-4">
+                <Button size="lg" disabled={isBelowMin || adminSettings?.is_open === false} asChild={!isBelowMin && adminSettings?.is_open !== false} className="px-8 h-12 text-base font-bold shadow-lg shadow-primary/25">
+                  {adminSettings?.is_open === false ? "Cerrado" : (isBelowMin ? "Monto insuficiente" : <Link href="/login">Empezar ahora</Link>)}
+                </Button>
               </div>
             </div>
 
