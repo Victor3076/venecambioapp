@@ -149,11 +149,8 @@ export default function Home() {
             </a>
           </nav>
           <div className="flex gap-3">
-            <Button variant="ghost" asChild className="hidden sm:inline-flex">
+            <Button variant="outline" asChild>
               <Link href="/login">Ingresar</Link>
-            </Button>
-            <Button asChild>
-              <Link href="/register">Crear Cuenta</Link>
             </Button>
           </div>
         </div>
