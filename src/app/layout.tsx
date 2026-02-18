@@ -22,6 +22,7 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
     title: "VeneCambio",
   },
+  themeColor: "#ffffff",
 };
 
 export default function RootLayout({
