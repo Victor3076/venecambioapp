@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
         // 2. Fetch ALL User's FCM Tokens
         const { data: tokensData, error: tokensError } = await supabaseAdmin
             .from('fcm_tokens')
-            .select('token')
+            .select('token, platform')
             .eq('user_id', notification.user_id);
 
         if (tokensError || !tokensData || tokensData.length === 0) {
@@ -42,47 +42,64 @@ export async function POST(req: NextRequest) {
         const tokens = tokensData.map(t => t.token);
         console.log(`Found ${tokens.length} tokens for user ${notification.user_id}`);
 
-        // 3. Send Push Notification via Firebase Admin to Multiple Tokens
-        const message = {
-            notification: {
-                title: notification.title || 'Venecambio',
-                body: notification.message || 'Tienes una nueva actualización.',
-            },
-            tokens: tokens, // Use 'tokens' array for multicast
-            // Optional: Add custom data for app redirection
-            data: {
-                notificationId: notification.id,
-                type: notification.type || 'info',
-            },
-            webpush: {
+        const webTokens = tokensData.filter(t => t.platform === 'web').map(t => t.token);
+        const nativeTokens = tokensData.filter(t => t.platform !== 'web').map(t => t.token);
+
+        const results = [];
+
+        // 3a. Send "Data Message" to Web Tokens (allows custom SW handling for click/redirect)
+        if (webTokens.length > 0) {
+            const webMessage = {
+                tokens: webTokens,
+                data: {
+                    title: notification.title || 'Venecambio',
+                    body: notification.message || 'Tienes una nueva actualización.',
+                    notificationId: notification.id,
+                    type: notification.type || 'info',
+                    icon: '/logo.png', // Pass icon in data for SW to use
+                    url: '/dashboard/transactions' // Pass target URL
+                }
+            };
+            const webResponse = await adminMessaging.sendEachForMulticast(webMessage as any);
+            results.push({ type: 'web', response: webResponse, tokens: webTokens });
+            console.log('Sent Web Data Messages:', webResponse.successCount);
+        }
+
+        // 3b. Send "Notification Message" to Native Tokens (Standard System Notification)
+        if (nativeTokens.length > 0) {
+            const nativeMessage = {
+                tokens: nativeTokens,
                 notification: {
-                    icon: '/logo.png',
-                    badge: '/logo.png'
+                    title: notification.title || 'Venecambio',
+                    body: notification.message || 'Tienes una nueva actualización.',
+                },
+                data: {
+                    notificationId: notification.id,
+                    type: notification.type || 'info',
                 }
-            }
-        };
+            };
+            const nativeResponse = await adminMessaging.sendEachForMulticast(nativeMessage as any);
+            results.push({ type: 'native', response: nativeResponse, tokens: nativeTokens });
+            console.log('Sent Native Notifications:', nativeResponse.successCount);
+        }
 
-        const response = await adminMessaging.sendEachForMulticast(message as any);
-        console.log('Successfully sent push notification:', response.successCount, 'successes', response.failureCount, 'failures');
-
-        // Optional: Cleanup invalid tokens
-        if (response.failureCount > 0) {
-            const failedTokens: string[] = [];
-            response.responses.forEach((resp, idx) => {
-                if (!resp.success) {
-                    failedTokens.push(tokens[idx]);
+        // Cleanup invalid tokens from both batches
+        for (const res of results) {
+            if (res.response.failureCount > 0) {
+                const failedTokens: string[] = [];
+                res.response.responses.forEach((resp, idx) => {
+                    if (!resp.success) {
+                        failedTokens.push(res.tokens[idx]);
+                    }
+                });
+                if (failedTokens.length > 0) {
+                    console.log(`Removing invalid ${res.type} tokens:`, failedTokens);
+                    await supabaseAdmin.from('fcm_tokens').delete().in('token', failedTokens);
                 }
-            });
-            if (failedTokens.length > 0) {
-                console.log('Removing invalid tokens:', failedTokens);
-                await supabaseAdmin.from('fcm_tokens').delete().in('token', failedTokens);
             }
         }
 
-        // Message sent via sendEachForMulticast above
-        console.log('Successfully sent push notification:', response);
-
-        return NextResponse.json({ success: true, response });
+        return NextResponse.json({ success: true, results });
 
     } catch (error: any) {
         console.error('Error in push notification webhook:', error);

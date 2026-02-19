@@ -15,28 +15,40 @@ const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
     console.log('[firebase-messaging-sw.js] Received background message ', payload);
+
+    // Check if it's a data-only message (from our new backend logic)
+    if (payload.data && !payload.notification) {
+        const title = payload.data.title || 'Venecambio';
+        const options = {
+            body: payload.data.body,
+            icon: payload.data.icon || '/logo.png',
+            badge: '/logo.png',
+            data: payload.data // Pass data along so notificationclick can use it
+        };
+
+        self.registration.showNotification(title, options);
+    }
 });
 
 self.addEventListener('notificationclick', function (event) {
     console.log('[firebase-messaging-sw.js] Notification click received.');
     event.notification.close();
 
-    // Default URL to open
-    const targetUrl = '/dashboard/transactions';
+    // URL from payload data or default
+    const targetUrl = event.notification.data?.url || '/dashboard/transactions';
 
-    // This looks to see if the current is already open and focuses if it is
     event.waitUntil(clients.matchAll({
         type: 'window',
         includeUncontrolled: true
     }).then(function (clientList) {
-        // Check if there's already a tab/window open with this URL
+        // Focus existing tab if available
         for (var i = 0; i < clientList.length; i++) {
             var client = clientList[i];
             if (client.url.includes('/dashboard') && 'focus' in client) {
                 return client.focus();
             }
         }
-        // If not, open a new window
+        // Open new window
         if (clients.openWindow) {
             return clients.openWindow(targetUrl);
         }
