@@ -10,37 +10,59 @@ import { Button } from "@/components/ui/button"
 import { Bell } from "lucide-react"
 
 export function FcmHandler() {
+    const [token, setToken] = useState<string | null>(null)
     const [showPermissionButton, setShowPermissionButton] = useState(false)
+    const [logs, setLogs] = useState<string[]>([])
+
+    const addLog = (msg: string) => {
+        setLogs(prev => [...prev, `${new Date().toLocaleTimeString()}: ${msg}`])
+    }
 
     const setupWebFcm = async (userId: string) => {
         try {
-            if (!messaging || !('serviceWorker' in navigator)) return
-
+            if (!messaging || !('serviceWorker' in navigator)) {
+                addLog("Web FCM: Messaging not available or no service worker support.")
+                return
+            }
+            addLog("Web FCM: Registering service worker...")
             const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
                 scope: '/firebase-cloud-messaging-push-scope',
             });
+            addLog("Web FCM: Service worker registered.")
 
-            const vapidKey = "BNHpLPlpSVRXK73eeUBmIyEA7g1h-TNalsRUxav5N3ZVFd5a0B5CZx4CWhtGD-PzGWHAlKLbDMlmqZO4Ok3Xmj0"
-            const token = await getToken(messaging, {
+            const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY
+            if (!vapidKey) {
+                addLog("Web FCM: VAPID key not found in environment variables.")
+                return
+            }
+
+            addLog("Web FCM: Getting token...")
+            const currentToken = await getToken(messaging, {
                 vapidKey,
                 serviceWorkerRegistration: registration
             })
 
-            if (token) {
-                console.log("Web FCM Token obtained:", token)
-                await saveTokenToSupabase(token, 'web', userId)
+            if (currentToken) {
+                addLog("Web FCM Token obtained!")
+                setToken(currentToken)
+                await saveTokenToSupabase(currentToken, 'web', userId)
+            } else {
+                addLog("Web FCM: No registration token available.")
+                setShowPermissionButton(true)
             }
 
             onMessage(messaging, (payload) => {
+                addLog(`Web message received in foreground: ${payload.notification?.title || 'No Title'}`)
                 console.log("Web message received in foreground:", payload)
             })
-        } catch (error) {
+        } catch (error: any) {
+            addLog(`Error setting up Web FCM: ${error.message}`)
             console.error("Error setting up Web FCM:", error)
         }
     }
 
     const saveTokenToSupabase = async (token: string, platform: string, userId: string) => {
-        console.log(`Saving ${platform} token to database...`)
+        addLog(`Saving ${platform} token to database...`)
 
         // Upsert into fcm_tokens table
         const { error } = await supabase
@@ -52,36 +74,47 @@ export function FcmHandler() {
                 last_active: new Date().toISOString()
             }, { onConflict: 'token' })
 
-        if (error) console.error("Error saving FCM token:", error)
+        if (error) {
+            addLog(`Error saving FCM token: ${error.message}`)
+            console.error("Error saving FCM token:", error)
+        } else {
+            addLog(`${platform} token saved successfully.`)
+        }
     }
 
     const setupNativeFcm = async (userId: string) => {
         try {
-            console.log("Native: Checking permissions...")
+            addLog("Native: Checking permissions...")
             let permStatus = await PushNotifications.checkPermissions()
 
             if (permStatus.receive === 'prompt') {
+                addLog("Native: Permission status is 'prompt', requesting permissions...")
                 permStatus = await PushNotifications.requestPermissions()
             }
 
             if (permStatus.receive !== 'granted') {
-                console.log("Native notification permission NOT granted")
+                addLog("Native notification permission NOT granted")
                 return
             }
+            addLog("Native: Notification permission granted.")
 
+            addLog("Native: Registering for push notifications...")
             await PushNotifications.register()
+            addLog("Native: PushNotifications.register() called.")
 
             PushNotifications.addListener('registration', async (res: { value: string }) => {
                 const token = res.value
-                console.log("Native FCM Token obtained:", token)
+                addLog(`Native FCM Token obtained: ${token}`)
                 await saveTokenToSupabase(token, Capacitor.getPlatform(), userId)
             })
 
             PushNotifications.addListener('registrationError', (error: any) => {
+                addLog(`Native registration error: ${error.error.message}`)
                 console.error("Native registration error:", error)
             })
 
             PushNotifications.addListener('pushNotificationReceived', async (notification: any) => {
+                addLog(`Native push received in FOREGROUND: ${notification.title || 'No Title'}`)
                 console.log("Native push received in FOREGROUND:", notification)
                 await LocalNotifications.schedule({
                     notifications: [
@@ -96,7 +129,8 @@ export function FcmHandler() {
                     ]
                 })
             })
-        } catch (error) {
+        } catch (error: any) {
+            addLog(`Error setting up Native FCM: ${error.message}`)
             console.error("Error setting up Native FCM:", error)
         }
     }
@@ -105,25 +139,43 @@ export function FcmHandler() {
         let mounted = true
 
         const checkPermissionAndSetup = async () => {
+            addLog("CheckPermissionAndSetup initiated")
             const { data: { user } } = await supabase.auth.getUser()
-            if (!user) return
+            if (!user) {
+                addLog("No user found in getUser()")
+                return
+            }
+            addLog(`User found: ${user.email} (ID: ${user.id})`)
 
             const isNative = Capacitor.isNativePlatform()
+            addLog(`Platform: ${isNative ? 'Native' : 'Web/PWA'}`)
 
             if (!isNative && typeof window !== 'undefined' && 'Notification' in window) {
+                addLog(`Web: Notification.permission is '${Notification.permission}'`)
                 if (Notification.permission === 'default') {
+                    addLog("Permission default, showing button")
                     setShowPermissionButton(true)
                 } else if (Notification.permission === 'granted') {
+                    addLog("Permission granted, setting up Web FCM")
                     await setupWebFcm(user.id)
+                } else {
+                    addLog(`Permission denied: ${Notification.permission}`)
                 }
             } else if (isNative) {
+                addLog("Setting up Native FCM")
                 await setupNativeFcm(user.id)
+            } else {
+                addLog("Notifications not supported in this environment.")
             }
         }
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            addLog(`Auth Event: ${event}`)
             if (session?.user && mounted) {
                 checkPermissionAndSetup()
+            } else if (!session?.user && event === 'SIGNED_OUT') {
+                addLog("User signed out, clearing token.")
+                setToken(null)
             }
         })
 
@@ -134,37 +186,71 @@ export function FcmHandler() {
             subscription.unsubscribe()
             if (Capacitor.isNativePlatform()) {
                 PushNotifications.removeAllListeners()
+                addLog("Native: PushNotifications listeners removed.")
             }
+            addLog("Cleanup complete.")
         }
     }, [])
 
     const handleManualPermissionRequest = async () => {
-        if (!('Notification' in window)) return
-
+        if (!('Notification' in window)) {
+            addLog("Manual request: Notification API not supported.")
+            return
+        }
+        addLog("Manual request: Requesting notification permission...")
         const permission = await Notification.requestPermission()
         if (permission === 'granted') {
-            setShowPermissionButton(false)
+            addLog("Permission granted manually")
             const { data: { user } } = await supabase.auth.getUser()
-            if (user) await setupWebFcm(user.id)
+            if (user) {
+                await setupWebFcm(user.id)
+                setShowPermissionButton(false)
+            } else {
+                addLog("Manual request: No user found after permission granted.")
+            }
+        } else {
+            addLog(`Permission denied manually: ${permission}`)
         }
     }
 
-    if (!showPermissionButton) return null
-
     return (
-        <div className="fixed bottom-20 left-4 right-4 z-50 md:bottom-8 md:right-8 md:left-auto md:w-auto animate-in slide-in-from-bottom-5 fade-in duration-500">
-            <Button
-                onClick={handleManualPermissionRequest}
-                className="w-full md:w-auto shadow-xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-6 rounded-xl flex items-center gap-3 border-2 border-primary-foreground/20"
-            >
-                <div className="bg-white/20 p-2 rounded-full">
-                    <Bell className="w-5 h-5 animate-bounce" />
+        <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-2 pointer-events-none">
+            {showPermissionButton && (
+                <div className="bg-background border p-4 rounded-lg shadow-lg max-w-sm pointer-events-auto animate-in slide-in-from-bottom-5">
+                    <h3 className="font-bold mb-2">Activar Notificaciones</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                        Recibe actualizaciones sobre tus operaciones al instante.
+                    </p>
+                    <button
+                        onClick={handleManualPermissionRequest}
+                        className="w-full shadow-md bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-3 rounded-lg flex items-center justify-center gap-2"
+                    >
+                        <Bell className="w-4 h-4" /> Activar Ahora
+                    </button>
+                    <div className="mt-2 text-right">
+                        <Button variant="ghost" size="sm" onClick={() => setShowPermissionButton(false)} className="text-xs h-6">
+                            Ahora no
+                        </Button>
+                    </div>
                 </div>
-                <div className="text-left">
-                    <p className="text-sm leading-none">Activar Notificaciones</p>
-                    <p className="text-[10px] opacity-90 font-normal mt-1">Recibe alertas del estado de tu envío</p>
+            )}
+
+            {/* DEBUG CONSOLE - REMOVE BEFORE PROD */}
+            {logs.length > 0 && (
+                <div className="bg-black/80 text-white p-2 rounded text-[10px] max-w-[300px] max-h-[200px] overflow-y-auto pointer-events-auto">
+                    <div className="flex justify-between border-b border-white/20 pb-1 mb-1">
+                        <strong>Debug Logs</strong>
+                        <div className="flex gap-2">
+                            <button onClick={() => setLogs([])} className="text-red-300 hover:text-red-100">Clear</button>
+                            <button onClick={() => window.location.reload()} className="text-blue-300 hover:text-blue-100">Reload</button>
+                        </div>
+                    </div>
+                    {logs.map((log, i) => (
+                        <div key={i} className="font-mono">{log}</div>
+                    ))}
                 </div>
-            </Button>
+            )}
         </div>
     )
 }
+
