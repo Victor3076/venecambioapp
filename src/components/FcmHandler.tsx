@@ -151,15 +151,19 @@ export function FcmHandler() {
             addLog(`Platform: ${isNative ? 'Native' : 'Web/PWA'}`)
 
             if (!isNative && typeof window !== 'undefined' && 'Notification' in window) {
-                addLog(`Web: Notification.permission is '${Notification.permission}'`)
-                if (Notification.permission === 'default') {
+                const currentPerm = Notification.permission
+                addLog(`Web: Notification.permission = '${currentPerm}'`)
+                addLog(`Type of permission: ${typeof currentPerm}`)
+                addLog(`Comparison 'granted' === '${currentPerm}': ${currentPerm === 'granted'}`)
+
+                if (currentPerm === 'default') {
                     addLog("Permission default, showing button")
                     setShowPermissionButton(true)
-                } else if (Notification.permission === 'granted') {
-                    addLog("Permission granted, setting up Web FCM")
+                } else if (currentPerm === 'granted') {
+                    addLog("Permission IS granted. Calling setupWebFcm...")
                     await setupWebFcm(user.id)
                 } else {
-                    addLog(`Permission denied: ${Notification.permission}`)
+                    addLog(`Permission denied/other: ${currentPerm}`)
                 }
             } else if (isNative) {
                 addLog("Setting up Native FCM")
@@ -243,6 +247,12 @@ export function FcmHandler() {
                         <div className="flex gap-2">
                             <button onClick={() => setLogs([])} className="text-red-300 hover:text-red-100">Clear</button>
                             <button onClick={() => window.location.reload()} className="text-blue-300 hover:text-blue-100">Reload</button>
+                            <button onClick={async () => {
+                                addLog("Forcing SetupWebFcm...")
+                                const { data } = await supabase.auth.getUser()
+                                if (data.user) await setupWebFcm(data.user.id)
+                                else addLog("No user for force setup")
+                            }} className="text-yellow-300 hover:text-yellow-100">Force</button>
                         </div>
                     </div>
                     {logs.map((log, i) => (
