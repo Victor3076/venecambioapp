@@ -26,7 +26,7 @@ export function FcmHandler() {
             console.log("Web FCM: Service worker registered.")
 
             // Hardcoded key to ensure it works in PWA/Prod without env var issues
-            const vapidKey = "BNHpLPlpSVRXK73eeUBmIyEA7g1h-TNalsRUXav5N3ZVFd5a0B5CZx4CWhtGD-PzGWHAlKLbDMlmqZO4Ok3Xmj0"
+            const vapidKey = "BNHpLPlpSVRXK73eeUBmIyEA7g1h-TNalsRUxav5N3ZVFd5a0B5CZx4CWhtGD-PzGWHAlKLbDMlmqZO4Ok3Xmj0"
 
             if (!vapidKey) {
                 console.error("Web FCM: VAPID key is missing (unexpected).")
