@@ -145,12 +145,12 @@ export default function DashboardPage() {
                                         <Button variant="ghost" size="icon" onClick={() => handleShare(tx)} className="h-8 w-8 text-muted-foreground hover:text-primary">
                                             <Share2 className="w-4 h-4" />
                                         </Button>
-                                        <div className="flex items-center gap-3">
+                                        <div className="flex flex-col items-end gap-1 md:flex-row md:items-center md:gap-3">
                                             <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${getStatusColor(tx.status)}`}>
                                                 {statusLabels[tx.status] || tx.status}
                                             </span>
                                             {tx.completion_proof_url && (
-                                                <Button variant="outline" size="sm" asChild className="h-8 text-xs">
+                                                <Button variant="outline" size="sm" asChild className="h-7 text-xs px-2">
                                                     <a href={tx.completion_proof_url} target="_blank" rel="noopener noreferrer">
                                                         <ExternalLink className="w-3 h-3 mr-1" /> Comprobante
                                                     </a>
