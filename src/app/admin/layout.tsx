@@ -67,7 +67,7 @@ export default function AdminLayout({
     if (!authorized) return null
 
     const navItems = [
-        { href: "/admin", icon: List, label: "Operaciones" },
+        { href: "/admin/transactions", icon: List, label: "Operaciones" },
         { href: "/admin/rates", icon: BarChart3, label: "Tasas" },
         { href: "/admin/users", icon: Settings, label: "Usuarios" },
         { href: "/admin/payment-methods", icon: LayoutDashboard, label: "Cuentas" },
