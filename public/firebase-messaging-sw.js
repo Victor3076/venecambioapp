@@ -15,7 +15,11 @@ const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
     console.log('[firebase-messaging-sw.js] Received background message ', payload);
-    // Customize notification here
+    // Browser handles notification display automatically for data messages with 'notification' key.
+    // We only need custom logic if we want to handle data-only messages or modify the default behavior.
+
+    // COMMENTED OUT TO PREVENT DOUBLE NOTIFICATIONS
+    /*
     const notificationTitle = payload.notification.title;
     const notificationOptions = {
         body: payload.notification.body,
@@ -24,4 +28,5 @@ messaging.onBackgroundMessage((payload) => {
 
     self.registration.showNotification(notificationTitle,
         notificationOptions);
+    */
 });

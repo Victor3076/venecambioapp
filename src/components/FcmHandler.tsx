@@ -123,13 +123,18 @@ export function FcmHandler() {
         const { data: { user } } = await supabase.auth.getUser()
         if (user) {
             console.log(`Saving ${platform} token to database...`)
-            await supabase
-                .from('profiles')
-                .update({
-                    fcm_token: token,
-                    fcm_platform: platform
-                })
-                .eq('id', user.id)
+
+            // Upsert into fcm_tokens table
+            const { error } = await supabase
+                .from('fcm_tokens')
+                .upsert({
+                    token: token,
+                    user_id: user.id,
+                    platform: platform,
+                    last_active: new Date().toISOString()
+                }, { onConflict: 'token' })
+
+            if (error) console.error("Error saving FCM token:", error)
         }
     }
 

@@ -28,25 +28,27 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
         }
 
-        // 2. Fetch the User's FCM Token
-        const { data: profile, error: profileError } = await supabaseAdmin
-            .from('profiles')
-            .select('fcm_token')
-            .eq('id', notification.user_id)
-            .single();
+        // 2. Fetch ALL User's FCM Tokens
+        const { data: tokensData, error: tokensError } = await supabaseAdmin
+            .from('fcm_tokens')
+            .select('token')
+            .eq('user_id', notification.user_id);
 
-        if (profileError || !profile?.fcm_token) {
-            console.log('No FCM token found for user:', notification.user_id);
-            return NextResponse.json({ success: true, message: 'No token found, skipping push' });
+        if (tokensError || !tokensData || tokensData.length === 0) {
+            console.log('No FCM tokens found for user:', notification.user_id);
+            return NextResponse.json({ success: true, message: 'No tokens found, skipping push' });
         }
 
-        // 3. Send Push Notification via Firebase Admin
+        const tokens = tokensData.map(t => t.token);
+        console.log(`Found ${tokens.length} tokens for user ${notification.user_id}`);
+
+        // 3. Send Push Notification via Firebase Admin to Multiple Tokens
         const message = {
             notification: {
                 title: notification.title || 'Venecambio',
                 body: notification.message || 'Tienes una nueva actualización.',
             },
-            token: profile.fcm_token,
+            tokens: tokens, // Use 'tokens' array for multicast
             // Optional: Add custom data for app redirection
             data: {
                 notificationId: notification.id,
@@ -59,7 +61,24 @@ export async function POST(req: NextRequest) {
             }
         };
 
-        const response = await adminMessaging.send(message);
+        const response = await adminMessaging.sendEachForMulticast(message as any);
+        console.log('Successfully sent push notification:', response.successCount, 'successes', response.failureCount, 'failures');
+
+        // Optional: Cleanup invalid tokens
+        if (response.failureCount > 0) {
+            const failedTokens: string[] = [];
+            response.responses.forEach((resp, idx) => {
+                if (!resp.success) {
+                    failedTokens.push(tokens[idx]);
+                }
+            });
+            if (failedTokens.length > 0) {
+                console.log('Removing invalid tokens:', failedTokens);
+                await supabaseAdmin.from('fcm_tokens').delete().in('token', failedTokens);
+            }
+        }
+
+        // Message sent via sendEachForMulticast above
         console.log('Successfully sent push notification:', response);
 
         return NextResponse.json({ success: true, response });
