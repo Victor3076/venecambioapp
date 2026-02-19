@@ -55,6 +55,10 @@ export async function POST(req: NextRequest) {
                 type: notification.type || 'info',
             },
             webpush: {
+                notification: {
+                    icon: '/logo.png',
+                    badge: '/logo.png'
+                },
                 fcmOptions: {
                     link: '/dashboard/transactions'
                 }
