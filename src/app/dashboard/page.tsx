@@ -8,11 +8,14 @@ import { useEffect, useState } from "react"
 import { TransactionsService, Transaction } from "@/services/transactions"
 import { AccountsService } from "@/services/accounts"
 import { DashboardTour } from "@/components/DashboardTour"
+import { ImageModal } from "@/components/ImageModal"
 
 export default function DashboardPage() {
     const [transactions, setTransactions] = useState<Transaction[]>([])
     const [accountsCount, setAccountsCount] = useState(0)
+
     const [loading, setLoading] = useState(true)
+    const [selectedReceipt, setSelectedReceipt] = useState<string | null>(null)
 
     const statusLabels: Record<string, string> = {
         verifying: "Verificando",
@@ -150,10 +153,13 @@ export default function DashboardPage() {
                                                 {statusLabels[tx.status] || tx.status}
                                             </span>
                                             {tx.completion_proof_url && (
-                                                <Button variant="outline" size="sm" asChild className="h-7 text-xs px-2">
-                                                    <a href={tx.completion_proof_url} target="_blank" rel="noopener noreferrer">
-                                                        <ExternalLink className="w-3 h-3 mr-1" /> Comprobante
-                                                    </a>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="h-7 text-xs px-2 cursor-pointer"
+                                                    onClick={() => setSelectedReceipt(tx.completion_proof_url as string)}
+                                                >
+                                                    <ExternalLink className="w-3 h-3 mr-1" /> Comprobante
                                                 </Button>
                                             )}
                                         </div>
@@ -164,6 +170,13 @@ export default function DashboardPage() {
                     )}
                 </CardContent>
             </Card>
-        </div>
+
+
+            <ImageModal
+                isOpen={!!selectedReceipt}
+                onClose={() => setSelectedReceipt(null)}
+                imageUrl={selectedReceipt || ""}
+            />
+        </div >
     )
 }
