@@ -24,6 +24,26 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         setIsMobileMenuOpen(false)
     }, [pathname])
 
+    useEffect(() => {
+        const loadProfile = async () => {
+            const { data: { user } } = await supabase.auth.getUser()
+            if (!user) {
+                router.push("/login")
+                return
+            }
+
+            const { data } = await supabase
+                .from('profiles')
+                .select('full_name, role')
+                .eq('id', user.id)
+                .single()
+
+            setProfile(data)
+            setLoading(false)
+        }
+        loadProfile()
+    }, [router])
+
     const handleLogout = async () => {
         await supabase.auth.signOut()
         router.push("/login")
