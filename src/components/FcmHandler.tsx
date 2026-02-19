@@ -30,9 +30,11 @@ export function FcmHandler() {
             });
             addLog("Web FCM: Service worker registered.")
 
-            const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY
+            // Hardcoded key to ensure it works in PWA/Prod without env var issues
+            const vapidKey = "BNHpLPlpSVRXK73eeUBmIyEA7g1h-TNalsRUxav5N3ZVFd5a0B5CZx4CWhtGD-PzGWHAlKLbDMlmqZO4Ok3Xmj0"
+
             if (!vapidKey) {
-                addLog("Web FCM: VAPID key not found in environment variables.")
+                addLog("Web FCM: VAPID key is missing (unexpected).")
                 return
             }
 
