@@ -12,38 +12,52 @@ import { Bell } from "lucide-react"
 export function FcmHandler() {
     const [showPermissionButton, setShowPermissionButton] = useState(false)
 
-    useEffect(() => {
-        const checkPermissionAndSetup = async () => {
-            const isNative = Capacitor.isNativePlatform()
+    const setupWebFcm = async (userId: string) => {
+        try {
+            if (!messaging || !('serviceWorker' in navigator)) return
 
-            if (!isNative && typeof window !== 'undefined' && 'Notification' in window) {
-                // WEB / PWA Logic
-                if (Notification.permission === 'default') {
-                    // We need to ask for permission manually (required for iOS)
-                    setShowPermissionButton(true)
-                } else if (Notification.permission === 'granted') {
-                    // Already granted, proceed to setup
-                    await setupWebFcm()
-                }
-            } else if (isNative) {
-                // NATIVE Logic
-                await setupNativeFcm()
+            const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
+                scope: '/firebase-cloud-messaging-push-scope',
+            });
+
+            const vapidKey = "BNHpLPlpSVRXK73eeUBmIyEA7g1h-TNalsRUxav5N3ZVFd5a0B5CZx4CWhtGD-PzGWHAlKLbDMlmqZO4Ok3Xmj0"
+            const token = await getToken(messaging, {
+                vapidKey,
+                serviceWorkerRegistration: registration
+            })
+
+            if (token) {
+                console.log("Web FCM Token obtained:", token)
+                await saveTokenToSupabase(token, 'web', userId)
             }
+
+            onMessage(messaging, (payload) => {
+                console.log("Web message received in foreground:", payload)
+            })
+        } catch (error) {
+            console.error("Error setting up Web FCM:", error)
         }
+    }
 
-        checkPermissionAndSetup()
+    const saveTokenToSupabase = async (token: string, platform: string, userId: string) => {
+        console.log(`Saving ${platform} token to database...`)
 
-        return () => {
-            if (Capacitor.isNativePlatform()) {
-                PushNotifications.removeAllListeners()
-            }
-        }
-    }, [])
+        // Upsert into fcm_tokens table
+        const { error } = await supabase
+            .from('fcm_tokens')
+            .upsert({
+                token: token,
+                user_id: userId,
+                platform: platform,
+                last_active: new Date().toISOString()
+            }, { onConflict: 'token' })
 
-    const setupNativeFcm = async () => {
+        if (error) console.error("Error saving FCM token:", error)
+    }
+
+    const setupNativeFcm = async (userId: string) => {
         try {
             console.log("Native: Checking permissions...")
-            // 1. Request Permission Natively
             let permStatus = await PushNotifications.checkPermissions()
 
             if (permStatus.receive === 'prompt') {
@@ -55,22 +69,18 @@ export function FcmHandler() {
                 return
             }
 
-            // 2. Register for notifications
             await PushNotifications.register()
 
-            // 3. Listen for token
             PushNotifications.addListener('registration', async (res: { value: string }) => {
                 const token = res.value
                 console.log("Native FCM Token obtained:", token)
-                await saveTokenToSupabase(token, Capacitor.getPlatform())
+                await saveTokenToSupabase(token, Capacitor.getPlatform(), userId)
             })
 
-            // 4. Listen for errors
             PushNotifications.addListener('registrationError', (error: any) => {
                 console.error("Native registration error:", error)
             })
 
-            // 5. Listen for foreground notifications
             PushNotifications.addListener('pushNotificationReceived', async (notification: any) => {
                 console.log("Native push received in FOREGROUND:", notification)
                 await LocalNotifications.schedule({
@@ -91,52 +101,42 @@ export function FcmHandler() {
         }
     }
 
-    const setupWebFcm = async () => {
-        try {
-            if (!messaging || !('serviceWorker' in navigator)) return
+    useEffect(() => {
+        let mounted = true
 
-            const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
-                scope: '/firebase-cloud-messaging-push-scope',
-            });
+        const checkPermissionAndSetup = async () => {
+            const { data: { user } } = await supabase.auth.getUser()
+            if (!user) return
 
-            const vapidKey = "BNHpLPlpSVRXK73eeUBmIyEA7g1h-TNalsRUxav5N3ZVFd5a0B5CZx4CWhtGD-PzGWHAlKLbDMlmqZO4Ok3Xmj0"
-            const token = await getToken(messaging, {
-                vapidKey,
-                serviceWorkerRegistration: registration
-            })
+            const isNative = Capacitor.isNativePlatform()
 
-            if (token) {
-                console.log("Web FCM Token obtained:", token)
-                await saveTokenToSupabase(token, 'web')
+            if (!isNative && typeof window !== 'undefined' && 'Notification' in window) {
+                if (Notification.permission === 'default') {
+                    setShowPermissionButton(true)
+                } else if (Notification.permission === 'granted') {
+                    await setupWebFcm(user.id)
+                }
+            } else if (isNative) {
+                await setupNativeFcm(user.id)
             }
-
-            onMessage(messaging, (payload) => {
-                console.log("Web message received in foreground:", payload)
-                // Optional: Show toast here
-            })
-        } catch (error) {
-            console.error("Error setting up Web FCM:", error)
         }
-    }
 
-    const saveTokenToSupabase = async (token: string, platform: string) => {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (user) {
-            console.log(`Saving ${platform} token to database...`)
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            if (session?.user && mounted) {
+                checkPermissionAndSetup()
+            }
+        })
 
-            // Upsert into fcm_tokens table
-            const { error } = await supabase
-                .from('fcm_tokens')
-                .upsert({
-                    token: token,
-                    user_id: user.id,
-                    platform: platform,
-                    last_active: new Date().toISOString()
-                }, { onConflict: 'token' })
+        checkPermissionAndSetup()
 
-            if (error) console.error("Error saving FCM token:", error)
+        return () => {
+            mounted = false
+            subscription.unsubscribe()
+            if (Capacitor.isNativePlatform()) {
+                PushNotifications.removeAllListeners()
+            }
         }
-    }
+    }, [])
 
     const handleManualPermissionRequest = async () => {
         if (!('Notification' in window)) return
@@ -144,7 +144,8 @@ export function FcmHandler() {
         const permission = await Notification.requestPermission()
         if (permission === 'granted') {
             setShowPermissionButton(false)
-            await setupWebFcm()
+            const { data: { user } } = await supabase.auth.getUser()
+            if (user) await setupWebFcm(user.id)
         }
     }
 
