@@ -58,9 +58,6 @@ export async function POST(req: NextRequest) {
                 notification: {
                     icon: '/logo.png',
                     badge: '/logo.png'
-                },
-                fcmOptions: {
-                    link: '/dashboard/transactions'
                 }
             }
         };

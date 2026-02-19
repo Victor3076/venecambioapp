@@ -20,7 +20,7 @@ export function FcmHandler() {
                 return
             }
             console.log("Web FCM: Registering service worker...")
-            const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
+            const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js?v=2', {
                 scope: '/firebase-cloud-messaging-push-scope',
             });
             console.log("Web FCM: Service worker registered.")
