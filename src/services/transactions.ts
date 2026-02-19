@@ -141,6 +141,21 @@ export const TransactionsService = {
         return data as (Transaction & { profiles: { email: string, full_name: string } })[]
     },
 
+    async getVerifying() {
+        // Fetch status 'verifying' 
+        const { data, error } = await supabase
+            .from('transactions')
+            .select('*, profiles(email, full_name)')
+            .eq('status', 'verifying')
+            .order('created_at', { ascending: false })
+
+        if (error) {
+            console.error('Error fetching verifying transactions:', error)
+            return []
+        }
+        return data as (Transaction & { profiles: { email: string, full_name: string } })[]
+    },
+
     async updateStatus(id: string, status: Transaction['status'], completionProofUrl?: string) {
         // First check if it belongs to a group, especially for 'verified' status
         const { data: tx } = await supabase

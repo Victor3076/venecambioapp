@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from "react"
 import { BankDepositsService, BankDeposit } from "@/services/bank-deposits"
+import { TransactionsService, Transaction } from "@/services/transactions"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 
-import { Plus, Search, RefreshCw, ArrowLeft } from "lucide-react"
+import { Plus, Search, RefreshCw, ArrowLeft, Check, X } from "lucide-react"
 import Link from "next/link"
 import { CURRENCY_LABELS, SUPPORTED_REGIONS } from "@/lib/constants"
 import { formatCurrency } from "@/lib/rates-utils"
@@ -21,6 +22,12 @@ export default function BankDepositsPage() {
     const [currency, setCurrency] = useState("VES")
     const [reference, setReference] = useState("")
     const [bankName, setBankName] = useState("")
+
+    // Reconciliation State
+    const [selectedDeposit, setSelectedDeposit] = useState<BankDeposit | null>(null)
+    const [pendingTransactions, setPendingTransactions] = useState<(Transaction & { profiles: { email: string, full_name: string } })[]>([])
+    const [matching, setMatching] = useState(false)
+    const [txSearchTerm, setTxSearchTerm] = useState("")
 
     const loadDeposits = async () => {
         setLoading(true)
@@ -58,6 +65,37 @@ export default function BankDepositsPage() {
             alert(`Error al crear depósito: ${error.message || JSON.stringify(error)}`)
         } finally {
             setCreating(false)
+        }
+    }
+
+    const openReconciliation = async (deposit: BankDeposit) => {
+        setSelectedDeposit(deposit)
+        setMatching(false)
+        setTxSearchTerm("")
+        try {
+            const txs = await TransactionsService.getVerifying()
+            setPendingTransactions(txs || [])
+        } catch (error) {
+            console.error("Error loading pending transactions:", error)
+            alert("Error al cargar transacciones pendientes.")
+        }
+    }
+
+    const handleMatch = async (transactionId: string) => {
+        if (!selectedDeposit) return
+        if (!confirm("¿Vincular este depósito a la operación seleccionada?")) return
+
+        setMatching(true)
+        try {
+            await BankDepositsService.match(selectedDeposit.id!, transactionId)
+            alert("Depósito conciliado exitosamente.")
+            setSelectedDeposit(null)
+            loadDeposits()
+        } catch (error: any) {
+            console.error("Error matching:", error)
+            alert(`Error al conciliar: ${error.message}`)
+        } finally {
+            setMatching(false)
         }
     }
 
@@ -173,13 +211,18 @@ export default function BankDepositsPage() {
                                             <div className="font-bold">
                                                 {formatCurrency(deposit.amount)} {deposit.currency}
                                             </div>
-                                            <div>
+                                            <div className="flex items-center gap-2">
                                                 <span className={`px-2 py-1 rounded-full text-xs font-bold ${deposit.status === 'matched'
                                                     ? 'bg-green-100 text-green-700'
                                                     : 'bg-blue-100 text-blue-700'
                                                     }`}>
                                                     {deposit.status === 'matched' ? 'Conciliado' : 'Disponible'}
                                                 </span>
+                                                {deposit.status !== 'matched' && (
+                                                    <Button variant="outline" size="sm" className="h-6 text-[10px]" onClick={() => openReconciliation(deposit)}>
+                                                        Conciliar
+                                                    </Button>
+                                                )}
                                             </div>
                                         </div>
                                     ))}
@@ -189,6 +232,127 @@ export default function BankDepositsPage() {
                     </CardContent>
                 </Card>
             </div>
+
+
+            {selectedDeposit && (
+                <ReconciliationModal
+                    deposit={selectedDeposit}
+                    transactions={pendingTransactions}
+                    onClose={() => setSelectedDeposit(null)}
+                    onMatch={handleMatch}
+                    matching={matching}
+                    searchTerm={txSearchTerm}
+                    setSearchTerm={setTxSearchTerm}
+                />
+            )
+            }
+        </div >
+    )
+}
+
+function ReconciliationModal({
+    deposit,
+    transactions,
+    onClose,
+    onMatch,
+    matching,
+    searchTerm,
+    setSearchTerm
+}: {
+    deposit: BankDeposit,
+    transactions: (Transaction & { profiles: { email: string, full_name: string } })[],
+    onClose: () => void,
+    onMatch: (txId: string) => void,
+    matching: boolean,
+    searchTerm: string,
+    setSearchTerm: (s: string) => void
+}) {
+    // Filter matching currency first, then search term
+    const filteredTxs = transactions.filter(tx => {
+        // Must match currency? Usually yes.
+        // Let's assume strict currency matching for safety.
+        // deposit.currency vs tx.amount_sent currency? 
+        // Admin usually registers deposit in the currency received.
+        // User sends "amount_sent". So deposit.currency should match tx.currency_sent.
+        const currencyMatch = tx.currency_sent === deposit.currency
+        if (!currencyMatch) return false
+
+        const searchLower = searchTerm.toLowerCase()
+        return (
+            tx.profiles?.full_name?.toLowerCase().includes(searchLower) ||
+            tx.amount_sent.toString().includes(searchLower) ||
+            tx.id?.includes(searchLower)
+        )
+    })
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+            <Card className="w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl animate-in fade-in zoom-in duration-200">
+                <CardHeader className="border-b pb-3 bg-card">
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <CardTitle>Conciliar Depósito</CardTitle>
+                            <CardDescription className="font-mono mt-1 text-primary font-bold">
+                                Ref: {deposit.reference_number} • {formatCurrency(deposit.amount)} {deposit.currency}
+                            </CardDescription>
+                        </div>
+                        <Button variant="ghost" size="icon" onClick={onClose}>
+                            <X className="w-4 h-4" />
+                        </Button>
+                    </div>
+                </CardHeader>
+                <CardContent className="pt-4 space-y-4 overflow-y-auto flex-1">
+                    <div className="relative">
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Buscar operación por nombre o monto..."
+                            className="pl-9"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <h4 className="text-sm font-medium text-muted-foreground">Operaciones Pendientes ({filteredTxs.length})</h4>
+                        {filteredTxs.length === 0 ? (
+                            <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
+                                {transactions.length === 0 ? "No hay operaciones pendientes para revisar." : "No se encontraron operaciones coincidentes."}
+                            </div>
+                        ) : (
+                            <div className="space-y-2">
+                                {filteredTxs.map(tx => (
+                                    <div key={tx.id} className="border rounded-lg p-3 hover:bg-muted/40 transition-colors flex justify-between items-center group">
+                                        <div className="space-y-1">
+                                            <div className="font-bold flex items-center gap-2">
+                                                {tx.profiles?.full_name || 'Usuario desconocido'}
+                                                <span className="text-[10px] bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded-full font-normal uppercase">
+                                                    Por Verificar
+                                                </span>
+                                            </div>
+                                            <div className="text-xs text-muted-foreground">
+                                                Enviado: <span className="font-medium text-foreground">{formatCurrency(tx.amount_sent)} {tx.currency_sent}</span>
+                                                <span className="mx-1">→</span>
+                                                Recibe: {formatCurrency(tx.amount_received)} {tx.currency_received}
+                                            </div>
+                                            <div className="text-[10px] text-muted-foreground">
+                                                {new Date(tx.created_at!).toLocaleString()}
+                                            </div>
+                                        </div>
+                                        <Button
+                                            size="sm"
+                                            className="opacity-0 group-hover:opacity-100 transition-opacity bg-green-600 hover:bg-green-700"
+                                            onClick={() => onMatch(tx.id!)}
+                                            disabled={matching}
+                                        >
+                                            <Check className="w-4 h-4 mr-1" /> Vincular
+                                        </Button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </CardContent>
+            </Card>
         </div>
     )
 }
