@@ -267,14 +267,25 @@ function ReconciliationModal({
     searchTerm: string,
     setSearchTerm: (s: string) => void
 }) {
+    // Helper to normalize currency codes (e.g. USA -> USD, PERU -> PEN)
+    const normalizeCurrency = (code: string) => {
+        const map: Record<string, string> = {
+            'USA': 'USD',
+            'PERU': 'PEN',
+            'CHILE': 'CLP',
+            'COLOMBIA': 'COP',
+            'VENEZUELA': 'VES'
+        }
+        return map[code] || code
+    }
+
     // Filter matching currency first, then search term
     const filteredTxs = transactions.filter(tx => {
-        // Must match currency? Usually yes.
-        // Let's assume strict currency matching for safety.
-        // deposit.currency vs tx.amount_sent currency? 
-        // Admin usually registers deposit in the currency received.
-        // User sends "amount_sent". So deposit.currency should match tx.currency_sent.
-        const currencyMatch = tx.currency_sent === deposit.currency
+        // Normalize both sides to ensure matching
+        const txCurrency = normalizeCurrency(tx.currency_sent)
+        const depositCurrency = normalizeCurrency(deposit.currency)
+
+        const currencyMatch = txCurrency === depositCurrency
         if (!currencyMatch) return false
 
         const searchLower = searchTerm.toLowerCase()
