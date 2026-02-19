@@ -148,7 +148,19 @@ export default function RatesPage() {
             const marginKey = `${currencyCode}_${targetCode}`;
             const currentMargin = percentages[marginKey] || 0;
             const rate = calculateRate(targetCode, currencyCode, targetPrice, basePrice, currentMargin);
-            const formattedRate = formatRate(rate, targetCode, currencyCode);
+
+            // Custom decimal logic for Chile (CLP)
+            let decimals = 2; // Default
+            if (currencyCode === 'CHILE') {
+                if (targetCode === 'VENEZUELA') decimals = 4;
+                if (targetCode === 'COLOMBIA') decimals = 2; // Explicitly 2
+                if (targetCode === 'PERU') decimals = 4;
+                if (targetCode === 'USA') decimals = 0;
+            } else if (targetCode === 'VENEZUELA') {
+                decimals = 2; // Default for VES
+            }
+
+            const formattedRate = rate.toLocaleString('es-VE', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 
             return (
                 <div className="flex flex-col gap-1 border-b pb-2 last:border-0 last:pb-0">
