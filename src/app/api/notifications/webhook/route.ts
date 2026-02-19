@@ -47,22 +47,30 @@ export async function POST(req: NextRequest) {
 
         const results = [];
 
-        // 3a. Send "Data Message" to Web Tokens (allows custom SW handling for click/redirect)
+        // 3a. Send "Notification Message" to Web Tokens (Ensures display on old SW)
+        // We include 'data.url' for the New SW to handle the click redirection.
         if (webTokens.length > 0) {
             const webMessage = {
                 tokens: webTokens,
-                data: {
+                notification: {
                     title: notification.title || 'Venecambio',
                     body: notification.message || 'Tienes una nueva actualización.',
+                },
+                webpush: {
+                    notification: {
+                        icon: '/logo.png',
+                        badge: '/logo.png'
+                    }
+                },
+                data: {
                     notificationId: notification.id,
                     type: notification.type || 'info',
-                    icon: '/logo.png', // Pass icon in data for SW to use
-                    url: '/dashboard/transactions' // Pass target URL
+                    url: '/dashboard/transactions' // Used by New SW listener
                 }
             };
             const webResponse = await adminMessaging.sendEachForMulticast(webMessage as any);
             results.push({ type: 'web', response: webResponse, tokens: webTokens });
-            console.log('Sent Web Data Messages:', webResponse.successCount);
+            console.log('Sent Web Notification Messages:', webResponse.successCount);
         }
 
         // 3b. Send "Notification Message" to Native Tokens (Standard System Notification)
