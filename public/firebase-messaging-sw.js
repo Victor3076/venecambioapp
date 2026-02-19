@@ -15,18 +15,30 @@ const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
     console.log('[firebase-messaging-sw.js] Received background message ', payload);
-    // Browser handles notification display automatically for data messages with 'notification' key.
-    // We only need custom logic if we want to handle data-only messages or modify the default behavior.
+});
 
-    // COMMENTED OUT TO PREVENT DOUBLE NOTIFICATIONS
-    /*
-    const notificationTitle = payload.notification.title;
-    const notificationOptions = {
-        body: payload.notification.body,
-        icon: '/logo.png'
-    };
+self.addEventListener('notificationclick', function (event) {
+    console.log('[firebase-messaging-sw.js] Notification click received.');
+    event.notification.close();
 
-    self.registration.showNotification(notificationTitle,
-        notificationOptions);
-    */
+    // Default URL to open
+    const targetUrl = '/dashboard/transactions';
+
+    // This looks to see if the current is already open and focuses if it is
+    event.waitUntil(clients.matchAll({
+        type: 'window',
+        includeUncontrolled: true
+    }).then(function (clientList) {
+        // Check if there's already a tab/window open with this URL
+        for (var i = 0; i < clientList.length; i++) {
+            var client = clientList[i];
+            if (client.url.includes('/dashboard') && 'focus' in client) {
+                return client.focus();
+            }
+        }
+        // If not, open a new window
+        if (clients.openWindow) {
+            return clients.openWindow(targetUrl);
+        }
+    }));
 });
