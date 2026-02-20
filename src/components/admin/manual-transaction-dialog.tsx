@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase"
 import { AccountsService, UserAccount } from "@/services/accounts"
 import { TransactionsService } from "@/services/transactions"
 import { RatesService, RatesData } from "@/services/rates"
+import { BankDepositsService, BankDeposit } from "@/services/bank-deposits"
 import { calculateRate, formatRate, getRateDecimals, formatCurrency, parseFormattedNumber, isInversePair } from "@/lib/rates-utils"
 import { CURRENCY_LABELS, SUPPORTED_REGIONS } from "@/lib/constants"
 
@@ -32,7 +33,9 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess }: ManualTr
     const [amountSent, setAmountSent] = useState("100.000")
     const [amountReceived, setAmountReceived] = useState("0")
     const [exchangeRate, setExchangeRate] = useState(0)
-    const [status, setStatus] = useState<'verifying' | 'verified'>('verified')
+    const [reconcileNow, setReconcileNow] = useState(true)
+    const [availableDeposits, setAvailableDeposits] = useState<BankDeposit[]>([])
+    const [selectedDepositId, setSelectedDepositId] = useState<string | null>(null)
 
     useEffect(() => {
         if (isOpen) {
@@ -44,6 +47,8 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess }: ManualTr
             setSelectedUser(null)
             setSelectedAccount(null)
             setUserSearch("")
+            setSelectedDepositId(null)
+            setReconcileNow(true)
         }
     }, [isOpen])
 
@@ -70,7 +75,26 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess }: ManualTr
         }
     }, [selectedUser])
 
-    // Calculator Logic (Simplified version from Home)
+    // Fetch matching deposits when amount/currency/reconcileNow changes
+    useEffect(() => {
+        if (reconcileNow && step === 3) {
+            const amount = parseFormattedNumber(amountSent)
+            if (amount > 0) {
+                BankDepositsService.getAvailable(sourceCurrency)
+                    .then(deps => {
+                        const matches = deps.filter(d => Number(d.amount) === amount)
+                        setAvailableDeposits(matches)
+                        if (matches.length === 1) setSelectedDepositId(matches[0].id!)
+                        else setSelectedDepositId(null)
+                    })
+                    .catch(err => console.error("Error loading deposits:", err))
+            } else {
+                setAvailableDeposits([])
+            }
+        }
+    }, [amountSent, sourceCurrency, reconcileNow, step])
+
+    // Calculator Logic
     useEffect(() => {
         if (!rates) return
 
@@ -97,19 +121,28 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess }: ManualTr
 
     const handleCreate = async () => {
         if (!selectedUser || !selectedAccount) return
+        if (reconcileNow && !selectedDepositId) {
+            alert("Por favor selecciona un depósito para conciliar.")
+            return
+        }
 
         setLoading(true)
         try {
-            await TransactionsService.createForUser(selectedUser.id, {
+            const tx = await TransactionsService.createForUser(selectedUser.id, {
                 amount_sent: parseFormattedNumber(amountSent),
                 currency_sent: sourceCurrency,
                 amount_received: parseFormattedNumber(amountReceived),
                 currency_received: targetCurrency,
                 exchange_rate: exchangeRate,
-                status: status,
+                status: reconcileNow ? 'verified' : 'verifying',
                 beneficiary_data: selectedAccount
             })
-            alert("Operación creada con éxito")
+
+            if (reconcileNow && selectedDepositId && tx.id) {
+                await BankDepositsService.match(selectedDepositId, tx.id)
+            }
+
+            alert(reconcileNow ? "Operación creada y conciliada con éxito" : "Operación creada con éxito (pendiente de conciliación)")
             onSuccess()
             onClose()
         } catch (error: any) {
@@ -292,34 +325,71 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess }: ManualTr
                                 </div>
                             </div>
 
-                            <div className="space-y-3 pt-4 border-t">
+                            <div className="space-y-4 pt-4 border-t">
                                 <label className="text-sm font-medium block">Estado Inicial</label>
                                 <div className="flex gap-4">
                                     <div
-                                        className={`flex-1 p-3 border rounded-xl cursor-pointer transition-all flex items-center gap-3 ${status === 'verified' ? 'border-primary bg-primary/5' : ''}`}
-                                        onClick={() => setStatus('verified')}
+                                        className={`flex-1 p-3 border rounded-xl cursor-pointer transition-all flex items-center gap-3 ${reconcileNow ? 'border-primary bg-primary/5' : ''}`}
+                                        onClick={() => setReconcileNow(true)}
                                     >
-                                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${status === 'verified' ? 'border-primary' : 'border-muted-foreground'}`}>
-                                            {status === 'verified' && <div className="w-2 h-2 rounded-full bg-primary" />}
+                                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${reconcileNow ? 'border-primary' : 'border-muted-foreground'}`}>
+                                            {reconcileNow && <div className="w-2 h-2 rounded-full bg-primary" />}
                                         </div>
                                         <div>
-                                            <div className="font-bold text-sm">Pago Verificado</div>
-                                            <div className="text-[10px] text-muted-foreground">Confirmaste el depósito en el banco.</div>
+                                            <div className="font-bold text-sm">Conciliar</div>
+                                            <div className="text-[10px] text-muted-foreground">Ya recibí el depósito.</div>
                                         </div>
                                     </div>
                                     <div
-                                        className={`flex-1 p-3 border rounded-xl cursor-pointer transition-all flex items-center gap-3 ${status === 'verifying' ? 'border-yellow-500 bg-yellow-50/50' : ''}`}
-                                        onClick={() => setStatus('verifying')}
+                                        className={`flex-1 p-3 border rounded-xl cursor-pointer transition-all flex items-center gap-3 ${!reconcileNow ? 'border-yellow-500 bg-yellow-50/50' : ''}`}
+                                        onClick={() => {
+                                            setReconcileNow(false)
+                                            setSelectedDepositId(null)
+                                        }}
                                     >
-                                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${status === 'verifying' ? 'border-yellow-500' : 'border-muted-foreground'}`}>
-                                            {status === 'verifying' && <div className="w-2 h-2 rounded-full bg-yellow-500" />}
+                                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${!reconcileNow ? 'border-yellow-500' : 'border-muted-foreground'}`}>
+                                            {!reconcileNow && <div className="w-2 h-2 rounded-full bg-yellow-500" />}
                                         </div>
                                         <div>
-                                            <div className="font-bold text-sm">Por Verificar</div>
-                                            <div className="text-[10px] text-muted-foreground">Subirá luego comprobante (espera).</div>
+                                            <div className="font-bold text-sm">Por conciliar</div>
+                                            <div className="text-[10px] text-muted-foreground">Se conciliará luego.</div>
                                         </div>
                                     </div>
                                 </div>
+
+                                {reconcileNow && (
+                                    <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                                        <label className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-2">
+                                            <Landmark className="w-3 h-3 text-primary" /> Depósitos Disponibles ({sourceCurrency})
+                                        </label>
+                                        <div className="space-y-2 max-h-32 overflow-y-auto pr-1">
+                                            {availableDeposits.map(dep => (
+                                                <div
+                                                    key={dep.id}
+                                                    className={`p-2 border rounded-lg cursor-pointer flex justify-between items-center text-sm transition-all ${selectedDepositId === dep.id ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:bg-muted/50'}`}
+                                                    onClick={() => setSelectedDepositId(dep.id!)}
+                                                >
+                                                    <div>
+                                                        <div className="font-bold">{formatCurrency(dep.amount)} {dep.currency}</div>
+                                                        <div className="text-[10px] text-muted-foreground">Ref: {dep.reference_number} • {dep.bank_name || '-'}</div>
+                                                    </div>
+                                                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${selectedDepositId === dep.id ? 'bg-primary border-primary' : 'border-muted'}`}>
+                                                        {selectedDepositId === dep.id && <Check className="w-3 h-3 text-white" />}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                            {availableDeposits.length === 0 && (
+                                                <div className="p-3 bg-muted/20 border rounded-lg text-xs text-center flex flex-col items-center gap-2">
+                                                    <AlertCircle className="w-4 h-4 text-muted-foreground" />
+                                                    No hay depósitos de {formatCurrency(parseFormattedNumber(amountSent))} {sourceCurrency} disponibles.
+                                                    <Button variant="link" className="h-auto p-0 text-[10px]" asChild>
+                                                        <a href="/admin/deposits" target="_blank">Registrar depósito nuevo</a>
+                                                    </Button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
@@ -329,11 +399,11 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess }: ManualTr
                     <Button variant="outline" className="flex-1" onClick={onClose} disabled={loading}>Cancelar</Button>
                     <Button
                         className="flex-1 bg-primary hover:bg-primary/90"
-                        disabled={loading || (step < 3 && !selectedUser) || (step === 3 && !selectedAccount)}
+                        disabled={loading || (step < 3 && !selectedUser) || (step === 3 && !selectedAccount) || (step === 3 && reconcileNow && !selectedDepositId)}
                         onClick={step === 3 ? handleCreate : () => setStep(step + 1)}
                     >
                         {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                        {step === 3 ? 'Crear Operación' : 'Siguiente'}
+                        {step === 3 ? (reconcileNow ? 'Conciliar y Crear' : 'Crear Operación') : 'Siguiente'}
                         {step < 3 && <Check className="w-4 h-4 ml-2" />}
                     </Button>
                 </CardFooter>
