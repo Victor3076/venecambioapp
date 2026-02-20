@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Eye, Check, X, ImageIcon, Upload, ClipboardPaste, ArrowLeft, Copy, User, Landmark, CreditCard, Mail, Phone, Hash, Search, FileUp, Plus } from "lucide-react"
+import { Eye, Check, X, ImageIcon, Upload, ClipboardPaste, ArrowLeft, Copy, User, Landmark, CreditCard, Mail, Phone, Hash, Search, FileUp, Plus, AlertCircle } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import Link from "next/link"
 import { formatCurrency } from "@/lib/rates-utils"
@@ -31,6 +31,7 @@ export default function AdminTransactionsPage() {
     const [filterStatus, setFilterStatus] = useState<Transaction['status'] | 'all'>('all')
     const [filterCurrency, setFilterCurrency] = useState<string>('all')
     const [isManualModalOpen, setIsManualModalOpen] = useState(false)
+    const [preSelectedDepositId, setPreSelectedDepositId] = useState<string | null>(null)
 
     const REGION_TO_CURRENCY: Record<string, string> = {
         'PERU': 'PEN',
@@ -220,6 +221,49 @@ export default function AdminTransactionsPage() {
                 </div>
             </div>
 
+            {/* Pending Deposits Alert */}
+            {(() => {
+                const pending = allDeposits.filter(d => d.status === 'available' || !d.matched_transaction_id);
+                if (pending.length === 0) return null;
+
+                return (
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center justify-between shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
+                        <div className="flex items-center gap-3 text-amber-900">
+                            <div className="bg-amber-100 p-2 rounded-full text-amber-600 shrink-0">
+                                <AlertCircle className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <h4 className="font-bold text-sm">Depósitos pendientes por procesar</h4>
+                                <p className="text-[11px] text-amber-700 leading-tight">
+                                    Hay <b>{pending.length}</b> {pending.length === 1 ? 'entrada bancaria que no ha' : 'entradas bancarias que no han'} sido vinculadas a ninguna operación.
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex gap-2">
+                            {pending.slice(0, 1).map(d => (
+                                <Button
+                                    key={d.id}
+                                    variant="outline"
+                                    size="sm"
+                                    className="border-amber-300 bg-amber-100/50 hover:bg-amber-200 text-amber-800 text-[10px] h-8 font-bold"
+                                    onClick={() => {
+                                        setPreSelectedDepositId(d.id || null)
+                                        setIsManualModalOpen(true)
+                                    }}
+                                >
+                                    Procesar {formatCurrency(d.amount)} {d.currency}
+                                </Button>
+                            ))}
+                            {pending.length > 1 && (
+                                <Link href="/admin/deposits">
+                                    <Button variant="ghost" size="sm" className="text-amber-700 text-[10px] h-8">Ver todos</Button>
+                                </Link>
+                            )}
+                        </div>
+                    </div>
+                );
+            })()}
+
             <Card className="p-4 shadow-sm border-none ring-1 ring-black/5">
                 <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 gap-4">
                     <div className="lg:col-span-2">
@@ -304,9 +348,7 @@ export default function AdminTransactionsPage() {
                                         const standardCurr = REGION_TO_CURRENCY[tx.currency_sent] || tx.currency_sent
                                         const matchesStatus = filterStatus === 'all' || tx.status === filterStatus
                                         const matchesCurrency = filterCurrency === 'all' || standardCurr === filterCurrency
-                                        const matchesDate = (filterStatus === 'verifying' && tx.status === 'verifying') ||
-                                            !filterDate ||
-                                            (tx.created_at && tx.created_at.startsWith(filterDate))
+                                        const matchesDate = !filterDate || (tx.created_at && tx.created_at.startsWith(filterDate))
 
                                         const searchLower = searchTerm.toLowerCase()
                                         const matchesSearch = !searchTerm ||
@@ -387,9 +429,7 @@ export default function AdminTransactionsPage() {
                                                     const standardCurr = REGION_TO_CURRENCY[tx.currency_sent] || tx.currency_sent
                                                     const matchesStatus = filterStatus === 'all' || tx.status === filterStatus
                                                     const matchesCurrency = filterCurrency === 'all' || standardCurr === filterCurrency
-                                                    const matchesDate = (filterStatus === 'verifying' && tx.status === 'verifying') ||
-                                                        !filterDate ||
-                                                        (tx.created_at && tx.created_at.startsWith(filterDate))
+                                                    const matchesDate = !filterDate || (tx.created_at && tx.created_at.startsWith(filterDate))
 
                                                     const searchLower = searchTerm.toLowerCase()
                                                     const matchesSearch = !searchTerm ||
@@ -696,10 +736,15 @@ export default function AdminTransactionsPage() {
 
             <ManualTransactionDialog
                 isOpen={isManualModalOpen}
-                onClose={() => setIsManualModalOpen(false)}
+                initialDepositId={preSelectedDepositId}
+                onClose={() => {
+                    setIsManualModalOpen(false)
+                    setPreSelectedDepositId(null)
+                }}
                 onSuccess={() => {
                     loadTransactions()
                     setIsManualModalOpen(false)
+                    setPreSelectedDepositId(null)
                 }}
             />
         </div >

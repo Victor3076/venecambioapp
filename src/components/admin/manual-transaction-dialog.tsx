@@ -15,6 +15,7 @@ interface ManualTransactionDialogProps {
     isOpen: boolean
     onClose: () => void
     onSuccess: () => void
+    initialDepositId?: string | null
 }
 
 const REGION_TO_CURRENCY: Record<string, string> = {
@@ -25,12 +26,20 @@ const REGION_TO_CURRENCY: Record<string, string> = {
     'VENEZUELA': 'VES'
 }
 
-export function ManualTransactionDialog({ isOpen, onClose, onSuccess }: ManualTransactionDialogProps) {
+const CURRENCY_TO_REGION: Record<string, string> = {
+    'PEN': 'PERU',
+    'CLP': 'CHILE',
+    'COP': 'COLOMBIA',
+    'USD': 'USA',
+    'VES': 'VENEZUELA'
+}
+
+export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDepositId }: ManualTransactionDialogProps) {
     const [step, setStep] = useState(1) // 1: Select User, 2: Select Beneficiary, 3: Transaction Details
     const [loading, setLoading] = useState(false)
     const [users, setUsers] = useState<any[]>([])
     const [userSearch, setUserSearch] = useState("")
-    const [selectedUser, setSelectedUser] = useState<any>(null)
+    const [selectedUser, setSelectedUser] = useState<any | null>(null)
     const [accounts, setAccounts] = useState<UserAccount[]>([])
     const [selectedAccount, setSelectedAccount] = useState<UserAccount | null>(null)
     const [rates, setRates] = useState<RatesData | null>(null)
@@ -41,14 +50,33 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess }: ManualTr
     const [amountSent, setAmountSent] = useState("100.000")
     const [amountReceived, setAmountReceived] = useState("0")
     const [exchangeRate, setExchangeRate] = useState(0)
-    const [reconcileNow, setReconcileNow] = useState(true)
+    const [reconcileNow, setReconcileNow] = useState(false)
     const [availableDeposits, setAvailableDeposits] = useState<BankDeposit[]>([])
     const [selectedDepositId, setSelectedDepositId] = useState<string | null>(null)
 
     useEffect(() => {
         if (isOpen) {
+            setStep(1)
+            setSelectedUser(null)
+            setSelectedAccount(null)
+            setUserSearch("")
+            setAmountSent("") // Reset amountSent
+            setReconcileNow(!!initialDepositId) // Set reconcileNow based on initialDepositId
+            setSelectedDepositId(initialDepositId || null) // Set selectedDepositId
             loadUsers()
             loadRates()
+
+            if (initialDepositId) {
+                BankDepositsService.getById(initialDepositId)
+                    .then(dep => {
+                        if (dep) {
+                            const region = CURRENCY_TO_REGION[dep.currency] || dep.currency
+                            setSourceCurrency(region)
+                            setAmountSent(dep.amount.toString())
+                        }
+                    })
+                    .catch(e => console.error("Error loading initial deposit:", e))
+            }
         } else {
             // Reset
             setStep(1)
@@ -58,7 +86,7 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess }: ManualTr
             setSelectedDepositId(null)
             setReconcileNow(true)
         }
-    }, [isOpen])
+    }, [isOpen, initialDepositId])
 
     const loadUsers = async () => {
         const { data } = await supabase.from('profiles').select('id, full_name, email, phone, client_code').order('full_name')

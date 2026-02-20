@@ -12,6 +12,15 @@ export interface BankDeposit {
 }
 
 export const BankDepositsService = {
+    async getById(id: string) {
+        const { data, error } = await supabase
+            .from('bank_deposits')
+            .select('*')
+            .eq('id', id)
+            .single()
+        if (error) throw error
+        return data as BankDeposit
+    },
     async create(deposit: Omit<BankDeposit, 'id' | 'status' | 'created_at'>) {
         const { data, error } = await supabase
             .from('bank_deposits')
