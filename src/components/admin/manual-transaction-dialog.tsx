@@ -17,6 +17,14 @@ interface ManualTransactionDialogProps {
     onSuccess: () => void
 }
 
+const REGION_TO_CURRENCY: Record<string, string> = {
+    'PERU': 'PEN',
+    'CHILE': 'CLP',
+    'COLOMBIA': 'COP',
+    'USA': 'USD',
+    'VENEZUELA': 'VES'
+}
+
 export function ManualTransactionDialog({ isOpen, onClose, onSuccess }: ManualTransactionDialogProps) {
     const [step, setStep] = useState(1) // 1: Select User, 2: Select Beneficiary, 3: Transaction Details
     const [loading, setLoading] = useState(false)
@@ -75,12 +83,12 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess }: ManualTr
         }
     }, [selectedUser])
 
-    // Fetch matching deposits when amount/currency/reconcileNow changes
     useEffect(() => {
         if (reconcileNow && step === 3) {
             const amount = parseFormattedNumber(amountSent)
             if (amount > 0) {
-                BankDepositsService.getAvailable(sourceCurrency)
+                const currencyCode = REGION_TO_CURRENCY[sourceCurrency] || sourceCurrency
+                BankDepositsService.getAvailable(currencyCode)
                     .then(deps => {
                         const matches = deps.filter(d => Number(d.amount) === amount)
                         setAvailableDeposits(matches)
@@ -128,11 +136,14 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess }: ManualTr
 
         setLoading(true)
         try {
+            const mappedSource = REGION_TO_CURRENCY[sourceCurrency] || sourceCurrency
+            const mappedTarget = REGION_TO_CURRENCY[targetCurrency] || targetCurrency
+
             const tx = await TransactionsService.createForUser(selectedUser.id, {
                 amount_sent: parseFormattedNumber(amountSent),
-                currency_sent: sourceCurrency,
+                currency_sent: mappedSource,
                 amount_received: parseFormattedNumber(amountReceived),
-                currency_received: targetCurrency,
+                currency_received: mappedTarget,
                 exchange_rate: exchangeRate,
                 status: reconcileNow ? 'verified' : 'verifying',
                 beneficiary_data: selectedAccount
@@ -362,7 +373,7 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess }: ManualTr
                                 {reconcileNow && (
                                     <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
                                         <label className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-2">
-                                            <Landmark className="w-3 h-3 text-primary" /> Depósitos Disponibles ({sourceCurrency === 'PERU' ? 'Soles' : (sourceCurrency === 'CHILE' ? 'Pesos' : (sourceCurrency === 'COLOMBIA' ? 'Pesos' : sourceCurrency))})
+                                            <Landmark className="w-3 h-3 text-primary" /> Depósitos Disponibles ({REGION_TO_CURRENCY[sourceCurrency] || sourceCurrency})
                                         </label>
                                         <div className="space-y-2 max-h-32 overflow-y-auto pr-1">
                                             {availableDeposits.map(dep => (
@@ -383,7 +394,7 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess }: ManualTr
                                             {availableDeposits.length === 0 && (
                                                 <div className="p-3 bg-muted/20 border rounded-lg text-xs text-center flex flex-col items-center gap-2">
                                                     <AlertCircle className="w-4 h-4 text-muted-foreground" />
-                                                    No hay depósitos de {formatCurrency(parseFormattedNumber(amountSent))} {sourceCurrency} disponibles.
+                                                    No hay depósitos de {formatCurrency(parseFormattedNumber(amountSent))} {REGION_TO_CURRENCY[sourceCurrency] || sourceCurrency} disponibles.
                                                     <Button variant="link" className="h-auto p-0 text-[10px]" asChild>
                                                         <a href="/admin/deposits" target="_blank">Registrar depósito nuevo</a>
                                                     </Button>
