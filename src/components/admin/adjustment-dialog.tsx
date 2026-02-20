@@ -1,12 +1,11 @@
 "use client"
 
 import { useState } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Loader2, TrendingDown, Landmark, AlertCircle } from "lucide-react"
+import { Loader2, TrendingDown, Landmark, AlertCircle, X } from "lucide-react"
 import { AdjustmentsService } from "@/services/adjustments"
 import { SUPPORTED_REGIONS, CURRENCY_LABELS } from "@/lib/constants"
 
@@ -30,6 +29,8 @@ export function AdjustmentDialog({ isOpen, onClose, onSuccess, type }: Adjustmen
     const [region, setRegion] = useState('PERU')
     const [amount, setAmount] = useState('')
     const [description, setDescription] = useState('')
+
+    if (!isOpen) return null
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -62,30 +63,32 @@ export function AdjustmentDialog({ isOpen, onClose, onSuccess, type }: Adjustmen
     }
 
     return (
-        <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[425px]">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 backdrop-blur-sm animate-in fade-in duration-200">
+            <Card className="w-full max-w-[425px] shadow-2xl border-none">
                 <form onSubmit={handleSave}>
-                    <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2">
+                    <CardHeader className="border-b relative">
+                        <CardTitle className="flex items-center gap-2">
                             {type === 'initialization' ? (
                                 <><Landmark className="w-5 h-5 text-primary" /> Inicializar Saldo</>
                             ) : (
                                 <><TrendingDown className="w-5 h-5 text-destructive" /> Registrar Retiro</>
                             )}
-                        </DialogTitle>
-                        <DialogDescription>
+                        </CardTitle>
+                        <CardDescription>
                             {type === 'initialization'
-                                ? "Registra el monto con el que inicias operaciones en esta moneda."
-                                : "Registra una salida de dinero (gastos, comisiones, retiros)."}
-                        </DialogDescription>
-                    </DialogHeader>
+                                ? "Registra el monto con el que inicias operaciones."
+                                : "Registra una salida de dinero (gastos, comisiones)."}
+                        </CardDescription>
+                        <Button variant="ghost" size="icon" onClick={onClose} className="absolute right-4 top-4 rounded-full" type="button">
+                            <X className="h-4 w-4" />
+                        </Button>
+                    </CardHeader>
 
-                    <div className="grid gap-4 py-4">
+                    <CardContent className="grid gap-4 py-6">
                         <div className="grid gap-2">
-                            <Label htmlFor="region">País / Moneda</Label>
+                            <label className="text-sm font-medium">País / Moneda</label>
                             <select
-                                id="region"
-                                className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 outline-none"
                                 value={region}
                                 onChange={(e) => setRegion(e.target.value)}
                             >
@@ -96,47 +99,47 @@ export function AdjustmentDialog({ isOpen, onClose, onSuccess, type }: Adjustmen
                         </div>
 
                         <div className="grid gap-2">
-                            <Label htmlFor="amount">Monto ({REGION_TO_CURRENCY[region] || region})</Label>
+                            <label className="text-sm font-medium">Monto ({REGION_TO_CURRENCY[region] || region})</label>
                             <Input
-                                id="amount"
                                 type="number"
                                 step="any"
                                 placeholder="0.00"
                                 value={amount}
                                 onChange={(e) => setAmount(e.target.value)}
                                 required
+                                className="h-10"
                             />
                         </div>
 
                         <div className="grid gap-2">
-                            <Label htmlFor="description">Descripción (Opcional)</Label>
+                            <label className="text-sm font-medium">Descripción (Opcional)</label>
                             <Textarea
-                                id="description"
-                                placeholder={type === 'initialization' ? "Ej: Saldo inicial del día" : "Ej: Pago de comisiones, retiro personal..."}
+                                placeholder={type === 'initialization' ? "Ej: Saldo inicial" : "Ej: Pago de comisiones..."}
                                 value={description}
                                 onChange={(e) => setDescription(e.target.value)}
+                                className="resize-none"
                             />
                         </div>
 
                         {type === 'withdrawal' && (
                             <div className="p-3 bg-destructive/10 text-destructive rounded-lg flex gap-2 text-xs">
                                 <AlertCircle className="w-4 h-4 shrink-0" />
-                                <span>Este monto se restará del saldo total en la vista de Cuadre.</span>
+                                <span>Este monto se restará del saldo total.</span>
                             </div>
                         )}
-                    </div>
+                    </CardContent>
 
-                    <DialogFooter>
-                        <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
+                    <CardFooter className="border-t bg-muted/30 p-4 gap-3">
+                        <Button type="button" variant="outline" className="flex-1" onClick={onClose} disabled={loading}>
                             Cancelar
                         </Button>
-                        <Button type="submit" disabled={loading} variant={type === 'withdrawal' ? 'destructive' : 'default'}>
+                        <Button type="submit" className="flex-1" disabled={loading} variant={type === 'withdrawal' ? 'destructive' : 'default'}>
                             {loading && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
                             {type === 'initialization' ? "Guardar Saldo" : "Confirmar Retiro"}
                         </Button>
-                    </DialogFooter>
+                    </CardFooter>
                 </form>
-            </DialogContent>
-        </Dialog>
+            </Card>
+        </div>
     )
 }
