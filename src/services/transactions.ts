@@ -62,6 +62,20 @@ export const TransactionsService = {
         return data[0]
     },
 
+    async createForUser(userId: string, tx: Omit<Transaction, 'id' | 'user_id' | 'created_at' | 'updated_at'>) {
+        const { data, error } = await supabase
+            .from('transactions')
+            .insert([{
+                ...tx,
+                user_id: userId,
+                status: tx.status || 'verifying'
+            }])
+            .select()
+
+        if (error) throw error
+        return data[0]
+    },
+
     async getMyTransactions() {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return []

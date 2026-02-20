@@ -30,6 +30,21 @@ export const AccountsService = {
         return data as UserAccount[]
     },
 
+    async getUserAccounts(userId: string) {
+        const { data, error } = await supabase
+            .from('user_accounts')
+            .select('*')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false })
+
+        if (error) {
+            console.error('Error fetching user accounts:', error)
+            return []
+        }
+
+        return data as UserAccount[]
+    },
+
     async createAccount(account: Omit<UserAccount, 'id' | 'user_id' | 'created_at'>) {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) throw new Error("No user authenticated")

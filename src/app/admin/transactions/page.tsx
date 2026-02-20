@@ -7,10 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Eye, Check, X, ImageIcon, Upload, ClipboardPaste, ArrowLeft, Copy, User, Landmark, CreditCard, Mail, Phone, Hash, Search, FileUp } from "lucide-react"
+import { Eye, Check, X, ImageIcon, Upload, ClipboardPaste, ArrowLeft, Copy, User, Landmark, CreditCard, Mail, Phone, Hash, Search, FileUp, Plus } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import Link from "next/link"
 import { formatCurrency } from "@/lib/rates-utils"
+import { ManualTransactionDialog } from "@/components/admin/manual-transaction-dialog"
 
 type AdminTx = Transaction & { profiles: { email: string, full_name: string } }
 
@@ -27,6 +28,7 @@ export default function AdminTransactionsPage() {
     const [matching, setMatching] = useState(false)
     const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0])
     const [filterStatus, setFilterStatus] = useState<Transaction['status'] | 'all'>('all')
+    const [isManualModalOpen, setIsManualModalOpen] = useState(false)
 
     useEffect(() => {
         if (selectedTx && selectedTx.status === 'verifying') {
@@ -193,6 +195,9 @@ export default function AdminTransactionsPage() {
                         <Link href="/admin/users">Gestionar Usuarios</Link>
                     </Button>
                     <Button variant="outline" onClick={loadTransactions}>Actualizar Lista</Button>
+                    <Button className="bg-primary hover:bg-primary/90" onClick={() => setIsManualModalOpen(true)}>
+                        <Plus className="w-4 h-4 mr-2" /> Nueva Operación (WhatsApp)
+                    </Button>
                 </div>
             </div>
 
@@ -590,6 +595,15 @@ export default function AdminTransactionsPage() {
                     </div>
                 )
             }
+
+            <ManualTransactionDialog
+                isOpen={isManualModalOpen}
+                onClose={() => setIsManualModalOpen(false)}
+                onSuccess={() => {
+                    loadTransactions()
+                    setIsManualModalOpen(false)
+                }}
+            />
         </div >
     )
 }
