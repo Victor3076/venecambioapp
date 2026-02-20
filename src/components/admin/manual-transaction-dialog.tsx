@@ -113,22 +113,23 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDep
 
     useEffect(() => {
         if (reconcileNow && step === 3) {
-            const amount = parseFormattedNumber(amountSent)
-            if (amount > 0) {
-                const currencyCode = REGION_TO_CURRENCY[sourceCurrency] || sourceCurrency
-                BankDepositsService.getAvailable(currencyCode)
-                    .then(deps => {
-                        const matches = deps.filter(d => Number(d.amount) === amount)
-                        setAvailableDeposits(matches)
-                        if (matches.length === 1) setSelectedDepositId(matches[0].id!)
-                        else setSelectedDepositId(null)
-                    })
-                    .catch(err => console.error("Error loading deposits:", err))
-            } else {
-                setAvailableDeposits([])
-            }
+            BankDepositsService.getAvailable()
+                .then(deps => {
+                    setAvailableDeposits(deps)
+                    // If we have an initialDepositId, ensure it's selected
+                    if (initialDepositId && deps.find(d => d.id === initialDepositId)) {
+                        setSelectedDepositId(initialDepositId)
+                    } else if (deps.length > 0) {
+                        // Optional: don't auto-select unless it's a perfect match or initialDepositId
+                        const amount = parseFormattedNumber(amountSent)
+                        const currencyCode = REGION_TO_CURRENCY[sourceCurrency] || sourceCurrency
+                        const exactMatch = deps.find(d => Number(d.amount) === amount && d.currency === currencyCode)
+                        if (exactMatch) setSelectedDepositId(exactMatch.id!)
+                    }
+                })
+                .catch(err => console.error("Error loading deposits:", err))
         }
-    }, [amountSent, sourceCurrency, reconcileNow, step])
+    }, [reconcileNow, step, initialDepositId])
 
     // Calculator Logic
     useEffect(() => {
@@ -401,14 +402,20 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDep
                                 {reconcileNow && (
                                     <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
                                         <label className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-2">
-                                            <Landmark className="w-3 h-3 text-primary" /> Depósitos Disponibles ({REGION_TO_CURRENCY[sourceCurrency] || sourceCurrency})
+                                            <Landmark className="w-3 h-3 text-primary" /> Depósitos Bancarios Disponibles
                                         </label>
                                         <div className="space-y-2 max-h-32 overflow-y-auto pr-1">
                                             {availableDeposits.map(dep => (
                                                 <div
                                                     key={dep.id}
                                                     className={`p-2 border rounded-lg cursor-pointer flex justify-between items-center text-sm transition-all ${selectedDepositId === dep.id ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:bg-muted/50'}`}
-                                                    onClick={() => setSelectedDepositId(dep.id!)}
+                                                    onClick={() => {
+                                                        setSelectedDepositId(dep.id!)
+                                                        // Auto-fill amount and currency
+                                                        setAmountSent(dep.amount.toString())
+                                                        const region = CURRENCY_TO_REGION[dep.currency] || dep.currency
+                                                        setSourceCurrency(region)
+                                                    }}
                                                 >
                                                     <div>
                                                         <div className="font-bold">{formatCurrency(dep.amount)} {dep.currency}</div>
@@ -421,8 +428,7 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDep
                                             ))}
                                             {availableDeposits.length === 0 && (
                                                 <div className="p-3 bg-muted/20 border rounded-lg text-xs text-center flex flex-col items-center gap-2">
-                                                    <AlertCircle className="w-4 h-4 text-muted-foreground" />
-                                                    No hay depósitos de {formatCurrency(parseFormattedNumber(amountSent))} {REGION_TO_CURRENCY[sourceCurrency] || sourceCurrency} disponibles.
+                                                    No hay depósitos bancarios disponibles por conciliar.
                                                     <Button variant="link" className="h-auto p-0 text-[10px]" asChild>
                                                         <a href="/admin/deposits" target="_blank">Registrar depósito nuevo</a>
                                                     </Button>
