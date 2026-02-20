@@ -297,16 +297,24 @@ export default function AdminTransactionsPage() {
                                 {loading ? (
                                     <tr><td colSpan={6} className="p-8 text-center text-muted-foreground">Cargando transacciones...</td></tr>
                                 ) : (() => {
-                                    const filtered = transactions.filter(tx => {
+                                    const filtered = transactions.map(tx => ({
+                                        ...tx,
+                                        deposit: allDeposits.find(d => d.matched_transaction_id === tx.id)
+                                    })).filter(tx => {
                                         const standardCurr = REGION_TO_CURRENCY[tx.currency_sent] || tx.currency_sent
                                         const matchesStatus = filterStatus === 'all' || tx.status === filterStatus
                                         const matchesCurrency = filterCurrency === 'all' || standardCurr === filterCurrency
                                         const matchesDate = !filterDate || (tx.created_at && tx.created_at.startsWith(filterDate))
+
+                                        const searchLower = searchTerm.toLowerCase()
                                         const matchesSearch = !searchTerm ||
-                                            tx.profiles?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                            tx.profiles?.full_name?.toLowerCase().includes(searchLower) ||
                                             tx.amount_sent.toString().includes(searchTerm) ||
                                             tx.amount_received.toString().includes(searchTerm) ||
-                                            tx.id?.includes(searchTerm)
+                                            tx.id?.toLowerCase().includes(searchLower) ||
+                                            tx.deposit?.bank_name?.toLowerCase().includes(searchLower) ||
+                                            tx.deposit?.reference_number?.toLowerCase().includes(searchLower)
+
                                         return matchesStatus && matchesDate && matchesSearch && matchesCurrency
                                     });
 
@@ -315,7 +323,7 @@ export default function AdminTransactionsPage() {
                                     }
 
                                     return filtered.map(tx => {
-                                        const deposit = allDeposits.find(d => d.matched_transaction_id === tx.id)
+                                        const deposit = tx.deposit
                                         return (
                                             <tr key={tx.id} className="hover:bg-muted/30 transition-colors">
                                                 <td className="p-4 whitespace-nowrap">
@@ -369,15 +377,24 @@ export default function AdminTransactionsPage() {
                                     <td className="p-4">
                                         <div className="font-black text-lg text-primary">
                                             {formatCurrency(transactions
+                                                .map(tx => ({
+                                                    ...tx,
+                                                    deposit: allDeposits.find(d => d.matched_transaction_id === tx.id)
+                                                }))
                                                 .filter(tx => {
                                                     const standardCurr = REGION_TO_CURRENCY[tx.currency_sent] || tx.currency_sent
                                                     const matchesStatus = filterStatus === 'all' || tx.status === filterStatus
                                                     const matchesCurrency = filterCurrency === 'all' || standardCurr === filterCurrency
                                                     const matchesDate = !filterDate || (tx.created_at && tx.created_at.startsWith(filterDate))
+
+                                                    const searchLower = searchTerm.toLowerCase()
                                                     const matchesSearch = !searchTerm ||
-                                                        tx.profiles?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                                        tx.profiles?.full_name?.toLowerCase().includes(searchLower) ||
                                                         tx.amount_sent.toString().includes(searchTerm) ||
-                                                        tx.id?.includes(searchTerm)
+                                                        tx.id?.toLowerCase().includes(searchLower) ||
+                                                        tx.deposit?.bank_name?.toLowerCase().includes(searchLower) ||
+                                                        tx.deposit?.reference_number?.toLowerCase().includes(searchLower)
+
                                                     return matchesStatus && matchesDate && matchesSearch && matchesCurrency
                                                 })
                                                 .reduce((sum, tx) => sum + Number(tx.amount_sent), 0)
