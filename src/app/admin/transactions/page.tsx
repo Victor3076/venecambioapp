@@ -304,7 +304,9 @@ export default function AdminTransactionsPage() {
                                         const standardCurr = REGION_TO_CURRENCY[tx.currency_sent] || tx.currency_sent
                                         const matchesStatus = filterStatus === 'all' || tx.status === filterStatus
                                         const matchesCurrency = filterCurrency === 'all' || standardCurr === filterCurrency
-                                        const matchesDate = !filterDate || (tx.created_at && tx.created_at.startsWith(filterDate))
+                                        const matchesDate = (filterStatus === 'verifying' && tx.status === 'verifying') ||
+                                            !filterDate ||
+                                            (tx.created_at && tx.created_at.startsWith(filterDate))
 
                                         const searchLower = searchTerm.toLowerCase()
                                         const matchesSearch = !searchTerm ||
@@ -385,7 +387,9 @@ export default function AdminTransactionsPage() {
                                                     const standardCurr = REGION_TO_CURRENCY[tx.currency_sent] || tx.currency_sent
                                                     const matchesStatus = filterStatus === 'all' || tx.status === filterStatus
                                                     const matchesCurrency = filterCurrency === 'all' || standardCurr === filterCurrency
-                                                    const matchesDate = !filterDate || (tx.created_at && tx.created_at.startsWith(filterDate))
+                                                    const matchesDate = (filterStatus === 'verifying' && tx.status === 'verifying') ||
+                                                        !filterDate ||
+                                                        (tx.created_at && tx.created_at.startsWith(filterDate))
 
                                                     const searchLower = searchTerm.toLowerCase()
                                                     const matchesSearch = !searchTerm ||
