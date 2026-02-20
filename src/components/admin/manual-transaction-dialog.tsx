@@ -295,8 +295,8 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess }: ManualTr
                                         value={sourceCurrency}
                                         onChange={e => setSourceCurrency(e.target.value)}
                                     >
-                                        {Object.entries(SUPPORTED_REGIONS).map(([code, name]) => (
-                                            <option key={code} value={code}>{name}</option>
+                                        {SUPPORTED_REGIONS.map(region => (
+                                            <option key={region} value={region}>{region}</option>
                                         ))}
                                     </select>
                                 </div>
@@ -308,7 +308,9 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess }: ManualTr
                                 </div>
 
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium">Envía ({sourceCurrency})</label>
+                                    <label className="text-sm font-medium">
+                                        Envía ({sourceCurrency === 'PERU' ? 'Soles' : (sourceCurrency === 'CHILE' ? 'Pesos' : (sourceCurrency === 'COLOMBIA' ? 'Pesos' : sourceCurrency))})
+                                    </label>
                                     <Input
                                         value={amountSent}
                                         onChange={e => setAmountSent(e.target.value)}
@@ -360,7 +362,7 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess }: ManualTr
                                 {reconcileNow && (
                                     <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
                                         <label className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-2">
-                                            <Landmark className="w-3 h-3 text-primary" /> Depósitos Disponibles ({sourceCurrency})
+                                            <Landmark className="w-3 h-3 text-primary" /> Depósitos Disponibles ({sourceCurrency === 'PERU' ? 'Soles' : (sourceCurrency === 'CHILE' ? 'Pesos' : (sourceCurrency === 'COLOMBIA' ? 'Pesos' : sourceCurrency))})
                                         </label>
                                         <div className="space-y-2 max-h-32 overflow-y-auto pr-1">
                                             {availableDeposits.map(dep => (
