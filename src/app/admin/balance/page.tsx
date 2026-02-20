@@ -12,13 +12,19 @@ import { formatCurrency } from "@/lib/rates-utils"
 
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
+import { AdjustmentsService, CashflowAdjustment } from "@/services/adjustments"
+import { AdjustmentDialog } from "@/components/admin/adjustment-dialog"
 
 export default function AdminBalancePage() {
     const router = useRouter()
     const [transactions, setTransactions] = useState<Transaction[]>([])
     const [deposits, setDeposits] = useState<BankDeposit[]>([])
+    const [adjustments, setAdjustments] = useState<CashflowAdjustment[]>([])
     const [loading, setLoading] = useState(true)
     const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0])
+
+    const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false)
+    const [adjustType, setAdjustType] = useState<'withdrawal' | 'initialization'>('withdrawal')
 
     useEffect(() => {
         const checkRole = async () => {
@@ -48,9 +54,10 @@ export default function AdminBalancePage() {
         setLoading(true)
         try {
             // In a real app we might want to filter server-side
-            const [txs, deps] = await Promise.all([
+            const [txs, deps, adjs] = await Promise.all([
                 TransactionsService.getAll(),
-                BankDepositsService.getAll()
+                BankDepositsService.getAll(),
+                AdjustmentsService.getByDate(filterDate)
             ])
 
             // Filter by date
@@ -59,6 +66,7 @@ export default function AdminBalancePage() {
 
             setTransactions(filteredTxs)
             setDeposits(filteredDeps)
+            setAdjustments(adjs)
         } catch (error) {
             console.error("Error loading balance data:", error)
         } finally {
@@ -66,7 +74,6 @@ export default function AdminBalancePage() {
         }
     }
 
-    // Process data to group by bank and currency
     const processBalance = () => {
         const balanceMap: Record<string, { income: number, outflow: number, currency: string, bank: string }> = {}
 
@@ -78,20 +85,6 @@ export default function AdminBalancePage() {
             }
             balanceMap[key].income += Number(dep.amount)
         })
-
-        // Outflow from transactions (only verified/completed)
-        // Note: For Cuadre we look at 'amount_sent' which is what the user paid (income) 
-        // OR 'amount_received' which is what we sent?
-        // Usually "Cuadre" means: How much did I receive vs how much I have in deposits (matching).
-        // AND how much did I pay out.
-
-        // Let's stick to the user's request: "Cuadre de cuentas".
-        // Income = Deposits received.
-        // Outflow = Transactions sent (received_amount in VES/other).
-
-        // However, usually we balance SOURCE accounts separately from TARGET accounts.
-        // Source Accounts (where we receive PEN, CLP, etc.): Deposits should match Transactions (amount_sent).
-        // Target Accounts (where we send VES): Total amount_received.
 
         return Object.values(balanceMap)
     }
@@ -111,6 +104,25 @@ export default function AdminBalancePage() {
             return acc
         }, {})
 
+    const startBalanceByCurrency = adjustments
+        .filter(a => a.type === 'initialization')
+        .reduce((acc: any, a) => {
+            acc[a.currency] = (acc[a.currency] || 0) + Number(a.amount)
+            return acc
+        }, {})
+
+    const withdrawalsByCurrency = adjustments
+        .filter(a => a.type === 'withdrawal')
+        .reduce((acc: any, a) => {
+            acc[a.currency] = (acc[a.currency] || 0) + Number(a.amount)
+            return acc
+        }, {})
+
+    const openAdjustment = (type: 'withdrawal' | 'initialization') => {
+        setAdjustType(type)
+        setIsAdjustModalOpen(true)
+    }
+
     return (
         <div className="space-y-6 p-2 sm:p-4 max-w-7xl mx-auto">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -128,41 +140,78 @@ export default function AdminBalancePage() {
                     </div>
                 </div>
                 <div className="flex items-center gap-2 self-end md:self-auto">
+                    <Button variant="outline" size="sm" onClick={() => openAdjustment('initialization')} className="hidden sm:flex items-center gap-2">
+                        <TrendingUp className="w-4 h-4 text-green-600" /> Inicializar Saldo
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => openAdjustment('withdrawal')} className="hidden sm:flex items-center gap-2 text-destructive border-destructive/20 hover:bg-destructive/10">
+                        <TrendingDown className="w-4 h-4" /> Registrar Retiro
+                    </Button>
                     <div className="relative">
                         <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                         <input
                             type="date"
-                            className="h-10 pl-9 rounded-lg border border-input bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                            className="h-9 pl-9 rounded-lg border border-input bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
                             value={filterDate}
                             onChange={(e) => setFilterDate(e.target.value)}
                         />
                     </div>
-                    <Button variant="outline" size="icon" onClick={() => loadData()} disabled={loading} className="rounded-lg">
+                    <Button variant="outline" size="icon" onClick={() => loadData()} disabled={loading} className="rounded-lg h-9 w-9">
                         <Scale className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                     </Button>
                 </div>
             </div>
 
+            <div className="sm:hidden grid grid-cols-2 gap-2">
+                <Button variant="outline" size="sm" onClick={() => openAdjustment('initialization')} className="flex items-center gap-2 text-[10px]">
+                    <TrendingUp className="w-3 h-3 text-green-600" /> Inicializar
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => openAdjustment('withdrawal')} className="flex items-center gap-2 text-[10px] text-destructive border-destructive/20">
+                    <TrendingDown className="w-3 h-3" /> Retiro
+                </Button>
+            </div>
+
             {/* Summary Grid */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                {Object.keys(summaryByCurrency).map(curr => (
+                {Object.keys(CURRENCY_LABELS).filter(k => summaryByCurrency[k] || startBalanceByCurrency[k] || outflowByCurrency[k]).map(curr => (
                     <Card key={curr} className="overflow-hidden border-none shadow-md ring-1 ring-black/5">
                         <CardHeader className="pb-2 bg-muted/30">
-                            <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                                <TrendingUp className="w-3 h-3 text-green-500" /> Totales {curr}
+                            <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
+                                <span className="flex items-center gap-2">
+                                    <Scale className="w-3 h-3 text-primary" /> Totales {curr}
+                                </span>
+                                <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">DÍA</span>
                             </CardTitle>
                         </CardHeader>
-                        <CardContent className="pt-4">
-                            <div className="text-xl font-bold">{formatCurrency(summaryByCurrency[curr])}</div>
-                            <div className="flex items-center justify-between mt-2 pt-2 border-t text-[10px]">
-                                <span className="text-muted-foreground">Ocupado en Ops:</span>
-                                <span className="font-bold text-primary">{formatCurrency(outflowByCurrency[curr] || 0)}</span>
+                        <CardContent className="pt-4 space-y-2">
+                            <div className="flex items-center justify-between text-xs">
+                                <span className="text-muted-foreground">Saldo Inicial (+)</span>
+                                <span className="font-medium">{formatCurrency(startBalanceByCurrency[curr] || 0)}</span>
                             </div>
-                            <div className="flex items-center justify-between mt-1 text-[10px]">
-                                <span className="text-muted-foreground">Diferencia:</span>
-                                <span className={`font-bold ${summaryByCurrency[curr] - (outflowByCurrency[curr] || 0) < 0 ? 'text-destructive' : 'text-green-600'}`}>
-                                    {formatCurrency(summaryByCurrency[curr] - (outflowByCurrency[curr] || 0))}
-                                </span>
+                            <div className="flex items-center justify-between text-xs">
+                                <span className="text-muted-foreground flex items-center gap-1.5"><TrendingUp className="w-3 h-3 text-green-500" /> Ingresos (+)</span>
+                                <span className="font-medium text-green-600">{formatCurrency(summaryByCurrency[curr] || 0)}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-xs">
+                                <span className="text-muted-foreground flex items-center gap-1.5"><TrendingDown className="w-3 h-3 text-primary" /> Ops / Ventas (-)</span>
+                                <span className="font-medium text-primary">{formatCurrency(outflowByCurrency[curr] || 0)}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-xs">
+                                <span className="text-muted-foreground flex items-center gap-1.5"><TrendingDown className="w-3 h-3 text-destructive" /> Retiros (-)</span>
+                                <span className="font-medium text-destructive">{formatCurrency(withdrawalsByCurrency[curr] || 0)}</span>
+                            </div>
+
+                            <div className="pt-2 border-t mt-2">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[10px] font-bold uppercase text-muted-foreground">Saldo Final</span>
+                                    <div className="text-lg font-black font-mono">
+                                        {formatCurrency(
+                                            (startBalanceByCurrency[curr] || 0) +
+                                            (summaryByCurrency[curr] || 0) -
+                                            (outflowByCurrency[curr] || 0) -
+                                            (withdrawalsByCurrency[curr] || 0)
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                         </CardContent>
                     </Card>
@@ -252,27 +301,56 @@ export default function AdminBalancePage() {
                 </Card>
             </div>
 
-            {/* Global Summary for VES (Payment side) */}
-            <Card className="shadow-lg border-none bg-indigo-600 text-white overflow-hidden">
-                <div className="p-6 flex flex-col md:flex-row justify-between items-center gap-6">
-                    <div className="flex items-center gap-4">
-                        <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm">
-                            <Landmark className="w-8 h-8" />
+            {/* Recent Adjustments Table */}
+            {adjustments.length > 0 && (
+                <Card className="shadow-lg border-none mt-6">
+                    <CardHeader className="border-b">
+                        <CardTitle className="text-lg flex items-center gap-2">
+                            Ajustes y Retiros Recientes
+                        </CardTitle>
+                        <CardDescription>Detalle de inicialización de saldos y salidas manuales.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr className="bg-muted/50 text-muted-foreground font-medium">
+                                        <th className="p-4 text-left">Fecha/Hora</th>
+                                        <th className="p-4 text-left">Tipo</th>
+                                        <th className="p-4 text-left">Descripción</th>
+                                        <th className="p-4 text-right">Monto</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y text-xs">
+                                    {adjustments.map((adj) => (
+                                        <tr key={adj.id} className="hover:bg-muted/20">
+                                            <td className="p-4 text-muted-foreground">
+                                                {new Date(adj.created_at!).toLocaleTimeString()}
+                                            </td>
+                                            <td className="p-4">
+                                                <span className={`px-2 py-0.5 rounded-full text-[10px] uppercase font-bold ${adj.type === 'initialization' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                                    {adj.type === 'initialization' ? 'Inicialización' : 'Retiro'}
+                                                </span>
+                                            </td>
+                                            <td className="p-4 italic text-muted-foreground">{adj.description || '-'}</td>
+                                            <td className={`p-4 text-right font-bold ${adj.type === 'initialization' ? 'text-green-600' : 'text-destructive'}`}>
+                                                {adj.type === 'initialization' ? '+' : '-'} {formatCurrency(adj.amount)} {adj.currency}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
-                        <div>
-                            <h3 className="text-xl font-bold">Total a Pagar (Egresos VES)</h3>
-                            <p className="text-indigo-100 text-sm">Monto total que sale de nuestras cuentas de Venezuela.</p>
-                        </div>
-                    </div>
-                    <div className="text-4xl font-black font-mono">
-                        {formatCurrency(transactions
-                            .filter(tx => tx.status === 'verified' || tx.status === 'completed')
-                            .filter(tx => tx.currency_received === 'VES')
-                            .reduce((acc, tx) => acc + Number(tx.amount_received), 0)
-                        )} <span className="text-lg font-normal">VES</span>
-                    </div>
-                </div>
-            </Card>
+                    </CardContent>
+                </Card>
+            )}
+
+            <AdjustmentDialog
+                isOpen={isAdjustModalOpen}
+                onClose={() => setIsAdjustModalOpen(false)}
+                type={adjustType}
+                onSuccess={() => loadData()}
+            />
         </div>
     )
 }
