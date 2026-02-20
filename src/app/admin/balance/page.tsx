@@ -15,6 +15,14 @@ import { supabase } from "@/lib/supabase"
 import { AdjustmentsService, CashflowAdjustment } from "@/services/adjustments"
 import { AdjustmentDialog } from "@/components/admin/adjustment-dialog"
 
+const REGION_TO_CURRENCY: Record<string, string> = {
+    'PERU': 'PEN',
+    'CHILE': 'CLP',
+    'COLOMBIA': 'COP',
+    'USA': 'USD',
+    'VENEZUELA': 'VES'
+}
+
 export default function AdminBalancePage() {
     const router = useRouter()
     const [transactions, setTransactions] = useState<Transaction[]>([])
@@ -79,9 +87,10 @@ export default function AdminBalancePage() {
 
         // Income from deposits (by bank/currency)
         deposits.forEach(dep => {
-            const key = `${dep.bank_name || 'OTROS'}_${dep.currency}`
+            const standardCurr = REGION_TO_CURRENCY[dep.currency] || dep.currency
+            const key = `${dep.bank_name || 'OTROS'}_${standardCurr}`
             if (!balanceMap[key]) {
-                balanceMap[key] = { income: 0, outflow: 0, currency: dep.currency, bank: dep.bank_name || 'OTROS' }
+                balanceMap[key] = { income: 0, outflow: 0, currency: standardCurr, bank: dep.bank_name || 'OTROS' }
             }
             balanceMap[key].income += Number(dep.amount)
         })
@@ -91,30 +100,34 @@ export default function AdminBalancePage() {
 
     const balances = processBalance()
 
-    // Group by currency for summary cards
+    // Group by currency for summary cards - Standardize all to ISO codes
     const summaryByCurrency = deposits.reduce((acc: any, dep) => {
-        acc[dep.currency] = (acc[dep.currency] || 0) + Number(dep.amount)
+        const curr = REGION_TO_CURRENCY[dep.currency] || dep.currency
+        acc[curr] = (acc[curr] || 0) + Number(dep.amount)
         return acc
     }, {})
 
     const outflowByCurrency = transactions
         .filter(tx => tx.status === 'verified' || tx.status === 'completed')
         .reduce((acc: any, tx) => {
-            acc[tx.currency_sent] = (acc[tx.currency_sent] || 0) + Number(tx.amount_sent)
+            const curr = REGION_TO_CURRENCY[tx.currency_sent] || tx.currency_sent
+            acc[curr] = (acc[curr] || 0) + Number(tx.amount_sent)
             return acc
         }, {})
 
     const startBalanceByCurrency = adjustments
         .filter(a => a.type === 'initialization')
         .reduce((acc: any, a) => {
-            acc[a.currency] = (acc[a.currency] || 0) + Number(a.amount)
+            const curr = REGION_TO_CURRENCY[a.currency] || a.currency
+            acc[curr] = (acc[curr] || 0) + Number(a.amount)
             return acc
         }, {})
 
     const withdrawalsByCurrency = adjustments
         .filter(a => a.type === 'withdrawal')
         .reduce((acc: any, a) => {
-            acc[a.currency] = (acc[a.currency] || 0) + Number(a.amount)
+            const curr = REGION_TO_CURRENCY[a.currency] || a.currency
+            acc[curr] = (acc[curr] || 0) + Number(a.amount)
             return acc
         }, {})
 
@@ -172,7 +185,13 @@ export default function AdminBalancePage() {
 
             {/* Summary Grid */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                {Object.keys(CURRENCY_LABELS).filter(k => summaryByCurrency[k] || startBalanceByCurrency[k] || outflowByCurrency[k]).map(curr => (
+                {Object.keys(CURRENCY_LABELS).filter(k =>
+                    summaryByCurrency[k] ||
+                    startBalanceByCurrency[k] ||
+                    outflowByCurrency[k] ||
+                    withdrawalsByCurrency[k] ||
+                    k === 'USD' || k === 'VES'
+                ).map(curr => (
                     <Card key={curr} className="overflow-hidden border-none shadow-md ring-1 ring-black/5">
                         <CardHeader className="pb-2 bg-muted/30">
                             <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
