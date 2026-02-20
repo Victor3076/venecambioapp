@@ -12,6 +12,7 @@ import { supabase } from "@/lib/supabase"
 import Link from "next/link"
 import { formatCurrency } from "@/lib/rates-utils"
 import { ManualTransactionDialog } from "@/components/admin/manual-transaction-dialog"
+import { CURRENCY_LABELS } from "@/lib/constants"
 
 type AdminTx = Transaction & { profiles: { email: string, full_name: string } }
 
@@ -28,7 +29,16 @@ export default function AdminTransactionsPage() {
     const [matching, setMatching] = useState(false)
     const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0])
     const [filterStatus, setFilterStatus] = useState<Transaction['status'] | 'all'>('all')
+    const [filterCurrency, setFilterCurrency] = useState<string>('all')
     const [isManualModalOpen, setIsManualModalOpen] = useState(false)
+
+    const REGION_TO_CURRENCY: Record<string, string> = {
+        'PERU': 'PEN',
+        'CHILE': 'CLP',
+        'COLOMBIA': 'COP',
+        'USA': 'USD',
+        'VENEZUELA': 'VES'
+    }
 
     useEffect(() => {
         if (selectedTx && selectedTx.status === 'verifying') {
@@ -84,9 +94,18 @@ export default function AdminTransactionsPage() {
 
     const loadTransactions = async () => {
         setLoading(true)
-        const data = await TransactionsService.getAll()
-        setTransactions(data as AdminTx[])
-        setLoading(false)
+        try {
+            const [txData, depData] = await Promise.all([
+                TransactionsService.getAll(),
+                BankDepositsService.getAll()
+            ])
+            setTransactions(txData as AdminTx[])
+            setAllDeposits(depData)
+        } catch (error) {
+            console.error("Error loading data:", error)
+        } finally {
+            setLoading(false)
+        }
     }
 
     useEffect(() => {
@@ -201,35 +220,50 @@ export default function AdminTransactionsPage() {
                 </div>
             </div>
 
-            <Card className="p-4">
-                <div className="flex flex-col md:flex-row gap-4">
-                    <div className="flex-1">
+            <Card className="p-4 shadow-sm border-none ring-1 ring-black/5">
+                <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                    <div className="lg:col-span-2">
                         <label className="text-sm font-medium mb-1 block">Buscar</label>
                         <div className="relative">
                             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                             <Input
-                                placeholder="Cliente, monto..."
+                                placeholder="Cliente, monto, ID..."
                                 className="pl-8"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </div>
                     </div>
-                    <div className="w-full md:w-48">
+                    <div>
+                        <label className="text-sm font-medium mb-1 block">Moneda</label>
+                        <select
+                            className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                            value={filterCurrency}
+                            onChange={(e) => setFilterCurrency(e.target.value)}
+                        >
+                            <option value="all">Todas las monedas</option>
+                            <option value="PEN">PEN (Soles)</option>
+                            <option value="CLP">CLP (Pesos CLP)</option>
+                            <option value="COP">COP (Pesos COP)</option>
+                            <option value="USD">USD (Dólares)</option>
+                            <option value="VES">VES (Bolívares)</option>
+                        </select>
+                    </div>
+                    <div>
                         <label className="text-sm font-medium mb-1 block">Estado</label>
                         <select
                             className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
                             value={filterStatus}
                             onChange={(e) => setFilterStatus(e.target.value as any)}
                         >
-                            <option value="all">Todos</option>
+                            <option value="all">Todos los estados</option>
                             <option value="verifying">Verificando</option>
                             <option value="verified">Verificado</option>
                             <option value="completed">Completado</option>
                             <option value="rejected">Rechazado</option>
                         </select>
                     </div>
-                    <div className="w-full md:w-48">
+                    <div>
                         <label className="text-sm font-medium mb-1 block">Fecha</label>
                         <Input
                             type="date"
@@ -237,11 +271,11 @@ export default function AdminTransactionsPage() {
                             onChange={(e) => setFilterDate(e.target.value)}
                         />
                     </div>
-                    <div className="flex items-end">
-                        <Button variant="ghost" onClick={() => { setFilterDate(new Date().toISOString().split('T')[0]); setFilterStatus("all"); setSearchTerm("") }}>
-                            Limpiar
-                        </Button>
-                    </div>
+                </div>
+                <div className="flex justify-end mt-4">
+                    <Button variant="ghost" size="sm" onClick={() => { setFilterDate(new Date().toISOString().split('T')[0]); setFilterStatus("all"); setFilterCurrency("all"); setSearchTerm("") }}>
+                        Limpiar Filtros
+                    </Button>
                 </div>
             </Card>
 
@@ -249,67 +283,110 @@ export default function AdminTransactionsPage() {
                 <CardContent className="p-0">
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm text-left">
-                            <thead className="bg-muted text-muted-foreground font-medium border-b">
+                            <thead className="bg-muted/50 text-muted-foreground font-medium border-b">
                                 <tr>
                                     <th className="p-4">Fecha</th>
                                     <th className="p-4">Usuario</th>
                                     <th className="p-4">Operación</th>
+                                    <th className="p-4">Banco / Ref</th>
                                     <th className="p-4">Estado</th>
                                     <th className="p-4 text-right">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y bg-background">
                                 {loading ? (
-                                    <tr><td colSpan={5} className="p-8 text-center text-muted-foreground">Cargando transacciones...</td></tr>
-                                ) : transactions
-                                    .filter(tx => {
+                                    <tr><td colSpan={6} className="p-8 text-center text-muted-foreground">Cargando transacciones...</td></tr>
+                                ) : (() => {
+                                    const filtered = transactions.filter(tx => {
+                                        const standardCurr = REGION_TO_CURRENCY[tx.currency_sent] || tx.currency_sent
                                         const matchesStatus = filterStatus === 'all' || tx.status === filterStatus
+                                        const matchesCurrency = filterCurrency === 'all' || standardCurr === filterCurrency
                                         const matchesDate = !filterDate || (tx.created_at && tx.created_at.startsWith(filterDate))
                                         const matchesSearch = !searchTerm ||
                                             tx.profiles?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                                             tx.amount_sent.toString().includes(searchTerm) ||
-                                            tx.amount_received.toString().includes(searchTerm)
-                                        return matchesStatus && matchesDate && matchesSearch
+                                            tx.amount_received.toString().includes(searchTerm) ||
+                                            tx.id?.includes(searchTerm)
+                                        return matchesStatus && matchesDate && matchesSearch && matchesCurrency
+                                    });
+
+                                    if (filtered.length === 0) {
+                                        return <tr><td colSpan={6} className="p-8 text-center text-muted-foreground">No hay operaciones que coincidan con los filtros.</td></tr>
+                                    }
+
+                                    return filtered.map(tx => {
+                                        const deposit = allDeposits.find(d => d.matched_transaction_id === tx.id)
+                                        return (
+                                            <tr key={tx.id} className="hover:bg-muted/30 transition-colors">
+                                                <td className="p-4 whitespace-nowrap">
+                                                    {tx.created_at ? new Date(tx.created_at).toLocaleDateString() : ''}
+                                                    <div className="text-[10px] text-muted-foreground">{tx.created_at ? new Date(tx.created_at).toLocaleTimeString() : ''}</div>
+                                                </td>
+                                                <td className="p-4">
+                                                    <div className="font-semibold text-foreground">{tx.profiles?.full_name || 'Sin nombre'}</div>
+                                                    <div className="text-[10px] text-muted-foreground truncate max-w-[150px]">{tx.profiles?.email}</div>
+                                                </td>
+                                                <td className="p-4">
+                                                    <div className="font-bold text-primary">
+                                                        {formatCurrency(tx.amount_sent)} {tx.currency_sent} → {formatCurrency(tx.amount_received)} {tx.currency_received}
+                                                    </div>
+                                                    <div className="text-[10px] text-muted-foreground">Tasa: {tx.exchange_rate}</div>
+                                                </td>
+                                                <td className="p-4">
+                                                    {deposit ? (
+                                                        <div className="space-y-0.5">
+                                                            <div className="font-medium text-xs flex items-center gap-1.5">
+                                                                <Landmark className="w-3 h-3 text-muted-foreground" />
+                                                                {deposit.bank_name || 'Desconocido'}
+                                                            </div>
+                                                            <div className="text-[10px] flex items-center gap-1.5 text-muted-foreground text-ellipsis overflow-hidden max-w-[120px]">
+                                                                <Hash className="w-3 h-3" />
+                                                                {deposit.reference_number}
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-[10px] text-muted-foreground italic">Sin conciliar</span>
+                                                    )}
+                                                </td>
+                                                <td className="p-4">
+                                                    <StatusBadge status={tx.status} />
+                                                </td>
+                                                <td className="p-4 text-right">
+                                                    <Button variant="ghost" size="sm" onClick={() => setSelectedTx(tx)} className="h-8">
+                                                        <Eye className="w-4 h-4 mr-2" /> Revisar
+                                                    </Button>
+                                                </td>
+                                            </tr>
+                                        )
                                     })
-                                    .length === 0 ? (
-                                    <tr><td colSpan={5} className="p-8 text-center text-muted-foreground">No hay operaciones que coincidan con los filtros.</td></tr>
-                                ) : transactions
-                                    .filter(tx => {
-                                        const matchesStatus = filterStatus === 'all' || tx.status === filterStatus
-                                        const matchesDate = !filterDate || (tx.created_at && tx.created_at.startsWith(filterDate))
-                                        const matchesSearch = !searchTerm ||
-                                            tx.profiles?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                            tx.amount_sent.toString().includes(searchTerm) ||
-                                            tx.amount_received.toString().includes(searchTerm)
-                                        return matchesStatus && matchesDate && matchesSearch
-                                    })
-                                    .map(tx => (
-                                        <tr key={tx.id} className="hover:bg-muted/30 transition-colors">
-                                            <td className="p-4 whitespace-nowrap">
-                                                {tx.created_at ? new Date(tx.created_at).toLocaleDateString() : ''}
-                                                <div className="text-[10px] text-muted-foreground">{tx.created_at ? new Date(tx.created_at).toLocaleTimeString() : ''}</div>
-                                            </td>
-                                            <td className="p-4">
-                                                <div className="font-semibold text-foreground">{tx.profiles?.full_name || 'Sin nombre'}</div>
-                                                <div className="text-[10px] text-muted-foreground truncate max-w-[150px]">{tx.profiles?.email}</div>
-                                            </td>
-                                            <td className="p-4">
-                                                <div className="font-bold text-primary">
-                                                    {formatCurrency(tx.amount_sent)} {tx.currency_sent} → {formatCurrency(tx.amount_received)} {tx.currency_received}
-                                                </div>
-                                                <div className="text-[10px] text-muted-foreground">Tasa: {tx.exchange_rate}</div>
-                                            </td>
-                                            <td className="p-4">
-                                                <StatusBadge status={tx.status} />
-                                            </td>
-                                            <td className="p-4 text-right">
-                                                <Button variant="ghost" size="sm" onClick={() => setSelectedTx(tx)} className="h-8">
-                                                    <Eye className="w-4 h-4 mr-2" /> Revisar
-                                                </Button>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                })()}
                             </tbody>
+                            <tfoot className="bg-muted/20 border-t">
+                                <tr>
+                                    <td colSpan={2} className="p-4 font-bold text-right text-muted-foreground">
+                                        Total {filterCurrency !== 'all' ? filterCurrency : ''} filtrado:
+                                    </td>
+                                    <td className="p-4">
+                                        <div className="font-black text-lg text-primary">
+                                            {formatCurrency(transactions
+                                                .filter(tx => {
+                                                    const standardCurr = REGION_TO_CURRENCY[tx.currency_sent] || tx.currency_sent
+                                                    const matchesStatus = filterStatus === 'all' || tx.status === filterStatus
+                                                    const matchesCurrency = filterCurrency === 'all' || standardCurr === filterCurrency
+                                                    const matchesDate = !filterDate || (tx.created_at && tx.created_at.startsWith(filterDate))
+                                                    const matchesSearch = !searchTerm ||
+                                                        tx.profiles?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                                        tx.amount_sent.toString().includes(searchTerm) ||
+                                                        tx.id?.includes(searchTerm)
+                                                    return matchesStatus && matchesDate && matchesSearch && matchesCurrency
+                                                })
+                                                .reduce((sum, tx) => sum + Number(tx.amount_sent), 0)
+                                            )} {filterCurrency !== 'all' ? filterCurrency : ''}
+                                        </div>
+                                    </td>
+                                    <td colSpan={3}></td>
+                                </tr>
+                            </tfoot>
                         </table>
                     </div>
                 </CardContent>
