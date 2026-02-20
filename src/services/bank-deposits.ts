@@ -175,5 +175,26 @@ export const BankDepositsService = {
 
         if (error) throw error
         return data as BankDeposit[]
+    },
+
+    async update(id: string, deposit: Partial<BankDeposit>) {
+        const { data, error } = await supabase
+            .from('bank_deposits')
+            .update(deposit)
+            .eq('id', id)
+            .select()
+            .single()
+
+        if (error) throw error
+        return data as BankDeposit
+    },
+
+    async delete(id: string) {
+        const { error } = await supabase
+            .from('bank_deposits')
+            .delete()
+            .eq('id', id)
+
+        if (error) throw error
     }
 }

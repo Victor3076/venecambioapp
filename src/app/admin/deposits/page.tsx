@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 
-import { Plus, Search, RefreshCw, ArrowLeft, Check, X } from "lucide-react"
+import { Plus, Search, RefreshCw, ArrowLeft, Check, X, Pencil, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { CURRENCY_LABELS, SUPPORTED_REGIONS } from "@/lib/constants"
 import { formatCurrency } from "@/lib/rates-utils"
@@ -22,6 +22,7 @@ export default function BankDepositsPage() {
     const [currency, setCurrency] = useState("VES")
     const [reference, setReference] = useState("")
     const [bankName, setBankName] = useState("")
+    const [editingId, setEditingId] = useState<string | null>(null)
 
     // Reconciliation State
     const [selectedDeposit, setSelectedDeposit] = useState<BankDeposit | null>(null)
@@ -45,26 +46,65 @@ export default function BankDepositsPage() {
         loadDeposits()
     }, [])
 
-    const handleCreate = async (e: React.FormEvent) => {
+    const handleCreateOrUpdate = async (e: React.FormEvent) => {
         e.preventDefault()
         setCreating(true)
         try {
-            await BankDepositsService.create({
+            const depositData = {
                 amount: parseFloat(amount),
                 currency,
                 reference_number: reference,
                 bank_name: bankName
-            })
+            }
+
+            if (editingId) {
+                await BankDepositsService.update(editingId, depositData)
+                alert("Depósito actualizado exitosamente.")
+            } else {
+                await BankDepositsService.create(depositData)
+                alert("Depósito registrado exitosamente.")
+            }
+
             // Reset form
             setAmount("")
             setReference("")
             setBankName("")
+            setEditingId(null)
             loadDeposits()
         } catch (error: any) {
-            console.error("Error creating deposit:", error)
-            alert(`Error al crear depósito: ${error.message || JSON.stringify(error)}`)
+            console.error("Error saving deposit:", error)
+            alert(`Error al guardar depósito: ${error.message || JSON.stringify(error)}`)
         } finally {
             setCreating(false)
+        }
+    }
+
+    const startEdit = (deposit: BankDeposit) => {
+        setAmount(deposit.amount.toString())
+        setCurrency(deposit.currency)
+        setReference(deposit.reference_number)
+        setBankName(deposit.bank_name || "")
+        setEditingId(deposit.id!)
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+
+    const cancelEdit = () => {
+        setAmount("")
+        setReference("")
+        setBankName("")
+        setEditingId(null)
+    }
+
+    const handleDelete = async (id: string) => {
+        if (!confirm("¿Está seguro de que desea eliminar este depósito? Esta acción no se puede deshacer.")) return
+
+        try {
+            await BankDepositsService.delete(id)
+            alert("Depósito eliminado exitosamente.")
+            loadDeposits()
+        } catch (error: any) {
+            console.error("Error deleting deposit:", error)
+            alert(`Error al eliminar depósito: ${error.message}`)
         }
     }
 
@@ -122,11 +162,13 @@ export default function BankDepositsPage() {
                 {/* Form Section */}
                 <Card className="md:col-span-1 h-fit">
                     <CardHeader>
-                        <CardTitle>Nuevo Depósito</CardTitle>
-                        <CardDescription>Registra un ingreso bancario.</CardDescription>
+                        <CardTitle>{editingId ? "Editar Depósito" : "Nuevo Depósito"}</CardTitle>
+                        <CardDescription>
+                            {editingId ? "Modifica los datos del depósito seleccionado." : "Registra un ingreso bancario."}
+                        </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <form onSubmit={handleCreate} className="space-y-4">
+                        <form onSubmit={handleCreateOrUpdate} className="space-y-4">
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Moneda</label>
                                 <select
@@ -173,9 +215,17 @@ export default function BankDepositsPage() {
                                 />
                             </div>
 
-                            <Button type="submit" className="w-full" disabled={creating}>
-                                {creating ? "Guardando..." : "Registrar Depósito"} <Plus className="ml-2 w-4 h-4" />
-                            </Button>
+                            <div className="flex gap-2 pt-2">
+                                <Button type="submit" className="flex-1" disabled={creating}>
+                                    {creating ? "Guardando..." : editingId ? "Actualizar" : "Registrar"}
+                                    {editingId ? <Check className="ml-2 w-4 h-4" /> : <Plus className="ml-2 w-4 h-4" />}
+                                </Button>
+                                {editingId && (
+                                    <Button type="button" variant="outline" onClick={cancelEdit} disabled={creating}>
+                                        Cancelar
+                                    </Button>
+                                )}
+                            </div>
                         </form>
                     </CardContent>
                 </Card>
@@ -219,9 +269,17 @@ export default function BankDepositsPage() {
                                                     {deposit.status === 'matched' ? 'Conciliado' : 'Disponible'}
                                                 </span>
                                                 {deposit.status !== 'matched' && (
-                                                    <Button variant="outline" size="sm" className="h-6 text-[10px]" onClick={() => openReconciliation(deposit)}>
-                                                        Conciliar
-                                                    </Button>
+                                                    <div className="flex items-center gap-1">
+                                                        <Button variant="outline" size="sm" className="h-7 text-[10px]" onClick={() => openReconciliation(deposit)}>
+                                                            Conciliar
+                                                        </Button>
+                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => startEdit(deposit)}>
+                                                            <Pencil className="h-3.5 w-3.5" />
+                                                        </Button>
+                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => handleDelete(deposit.id!)}>
+                                                            <Trash2 className="h-3.5 w-3.5" />
+                                                        </Button>
+                                                    </div>
                                                 )}
                                             </div>
                                         </div>
