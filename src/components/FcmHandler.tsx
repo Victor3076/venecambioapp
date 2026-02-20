@@ -19,11 +19,15 @@ export function FcmHandler() {
                 console.log("Web FCM: Messaging not available or no service worker support.")
                 return
             }
-            console.log("Web FCM: Registering service worker...")
-            const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js?v=2', {
-                scope: '/firebase-cloud-messaging-push-scope',
-            });
-            console.log("Web FCM: Service worker registered.")
+            console.log("Web FCM: Checking for existing service worker...")
+            let registration = await navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js');
+
+            if (!registration) {
+                console.log("Web FCM: Registering service worker at root scope...")
+                registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+            }
+
+            console.log("Web FCM: Service worker status:", registration.active ? 'active' : 'not active');
 
             // Hardcoded key to ensure it works in PWA/Prod without env var issues
             const vapidKey = "BNHpLPlpSVRXK73eeUBmIyEA7g1h-TNalsRUxav5N3ZVFd5a0B5CZx4CWhtGD-PzGWHAlKLbDMlmqZO4Ok3Xmj0"
@@ -52,7 +56,11 @@ export function FcmHandler() {
                 console.log("Web message received in foreground:", payload)
             })
         } catch (error: any) {
-            console.error("Error setting up Web FCM:", error)
+            console.error("Error setting up Web FCM:", error);
+            // On iOS, sometimes it fails if not in standalone mode or other restrictions
+            if (error.message?.includes('Permission denied')) {
+                setShowPermissionButton(true);
+            }
         }
     }
 

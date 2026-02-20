@@ -152,11 +152,11 @@ export default function RatesPage() {
             // Custom decimal logic for Chile (CLP)
             let decimals = 2; // Default
             if (currencyCode === 'CHILE') {
-                if (targetCode === 'VENEZUELA') decimals = 4;
+                if (targetCode === 'VES') decimals = 4;
                 if (targetCode === 'COLOMBIA') decimals = 2; // Explicitly 2
                 if (targetCode === 'PERU') decimals = 4;
                 if (targetCode === 'USA') decimals = 0;
-            } else if (targetCode === 'VENEZUELA') {
+            } else if (targetCode === 'VES') {
                 decimals = 2; // Default for VES
             }
 
