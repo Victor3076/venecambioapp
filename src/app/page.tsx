@@ -65,7 +65,7 @@ export default function Home() {
       const numericValue = parseFormattedNumber(value)
       setAmountInput(value) // Keep what user types for fluidity
       const result = isInverse ? (rate > 0 ? numericValue / rate : 0) : numericValue * rate
-      setAmountReceived(formatRate(result, targetCurrency, sourceCurrency))
+      setAmountReceived(formatCurrency(result))
       // Update BCV if target is VES
       if (targetCurrency === 'VES') {
         const bcvRate = rates.usdt_prices.BCV || 1
@@ -87,7 +87,7 @@ export default function Home() {
       if (targetCurrency === 'VES') {
         const bcvRate = rates.usdt_prices.BCV || 1
         const amountRec = numericValue * bcvRate
-        setAmountReceived(formatRate(amountRec, targetCurrency, sourceCurrency))
+        setAmountReceived(formatCurrency(amountRec))
         const resultSent = isInverse ? amountRec * rate : (rate > 0 ? amountRec / rate : 0)
         setAmountInput(formatCurrency(resultSent))
       }

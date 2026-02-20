@@ -66,10 +66,8 @@ export const formatRate = (value: number, targetCode: string, sourceCode: string
     const pairKey = `${sourceCode}_${targetCode}`;
     const config = pairConfig[pairKey] || { decimals: 2 };
 
-    // User requested maximum 2 decimals for 'Received' (Recibes) amounts
-    // EXCEPTION: Chile to Venezuela (CHILE_VES) needs 4 decimals
-    const isChileVes = sourceCode === 'CHILE' && targetCode === 'VES';
-    const displayDecimals = isChileVes ? config.decimals : Math.min(config.decimals, 2);
+    // Exchange rates should use the full precision defined in pairConfig
+    const displayDecimals = config.decimals;
 
     return new Intl.NumberFormat('es-VE', {
         minimumFractionDigits: displayDecimals,

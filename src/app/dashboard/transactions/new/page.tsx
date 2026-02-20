@@ -127,7 +127,7 @@ export default function NewTransactionPage() {
             const numericValue = parseFormattedNumber(value)
             setAmountInput(value)
             const res = isInverse ? (rate > 0 ? numericValue / rate : 0) : numericValue * rate
-            setAmountReceivedInput(formatRate(res, targetCurrency, sourceCurrency))
+            setAmountReceivedInput(formatCurrency(res))
             if (targetCurrency === 'VES') {
                 setAmountBcvInput(formatCurrency(res / bcvRate))
             }
@@ -144,7 +144,7 @@ export default function NewTransactionPage() {
             setAmountBcvInput(value)
             if (targetCurrency === 'VES') {
                 const amountRec = numericValue * bcvRate
-                setAmountReceivedInput(formatRate(amountRec, targetCurrency, sourceCurrency))
+                setAmountReceivedInput(formatCurrency(amountRec))
                 const resultSent = isInverse ? amountRec * rate : (rate > 0 ? amountRec / rate : 0)
                 setAmountInput(formatCurrency(resultSent))
             }
@@ -168,7 +168,7 @@ export default function NewTransactionPage() {
             const r = Number(rr.toFixed(dec))
 
             const res = amountSent * r
-            setAmountReceivedInput(formatRate(res, targetCurrency, sourceCurrency))
+            setAmountReceivedInput(formatCurrency(res))
 
             if (targetCurrency === 'VES') {
                 const bcvRate = rates.usdt_prices.BCV || 1
