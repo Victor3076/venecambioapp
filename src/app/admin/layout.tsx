@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { BarChart3, List, Settings, LogOut, LayoutDashboard, Wallet, TrendingUp, Bell, Menu, X } from "lucide-react"
+import { BarChart3, List, Settings, LogOut, LayoutDashboard, Wallet, TrendingUp, Bell, Menu, X, Scale } from "lucide-react"
 import { NotificationBell } from "@/components/NotificationBell"
 import { Button } from "@/components/ui/button"
 import { supabase } from "@/lib/supabase"
@@ -72,6 +72,7 @@ export default function AdminLayout({
         { href: "/admin/users", icon: Settings, label: "Usuarios" },
         { href: "/admin/payment-methods", icon: LayoutDashboard, label: "Cuentas" },
         { href: "/admin/deposits", icon: Wallet, label: "Depósitos" },
+        { href: "/admin/balance", icon: Scale, label: "Cuadre", adminOnly: true },
         { href: "/admin/notifications", icon: Bell, label: "Notificaciones" },
         { href: "/admin/profits", icon: TrendingUp, label: "Ganancias", adminOnly: true },
     ].filter(item => !item.adminOnly || role === 'admin')
