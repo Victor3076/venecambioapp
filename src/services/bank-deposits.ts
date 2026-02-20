@@ -8,6 +8,7 @@ export interface BankDeposit {
     bank_name?: string
     status: 'available' | 'matched'
     matched_transaction_id?: string
+    deposit_date?: string
     created_at?: string
 }
 
@@ -21,16 +22,15 @@ export const BankDepositsService = {
         if (error) throw error
         return data as BankDeposit
     },
-    async create(deposit: Omit<BankDeposit, 'id' | 'status' | 'created_at'>) {
-        // Check for duplicates (same reference, currency and day)
+    async create(deposit: Omit<BankDeposit, 'id' | 'status' | 'created_at' | 'deposit_date'>) {
+        // Check for duplicates (same reference, currency and day) using the new deposit_date column
         const today = new Date().toISOString().split('T')[0]
         const { data: existing, error: checkError } = await supabase
             .from('bank_deposits')
             .select('id')
             .eq('reference_number', deposit.reference_number)
             .eq('currency', deposit.currency)
-            .gte('created_at', `${today}T00:00:00`)
-            .lte('created_at', `${today}T23:59:59`)
+            .eq('deposit_date', today)
             .maybeSingle()
 
         if (checkError) console.error("Error checking for duplicate deposit:", checkError)
