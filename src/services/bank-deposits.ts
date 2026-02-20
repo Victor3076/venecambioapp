@@ -22,6 +22,22 @@ export const BankDepositsService = {
         return data as BankDeposit
     },
     async create(deposit: Omit<BankDeposit, 'id' | 'status' | 'created_at'>) {
+        // Check for duplicates (same reference, currency and day)
+        const today = new Date().toISOString().split('T')[0]
+        const { data: existing, error: checkError } = await supabase
+            .from('bank_deposits')
+            .select('id')
+            .eq('reference_number', deposit.reference_number)
+            .eq('currency', deposit.currency)
+            .gte('created_at', `${today}T00:00:00`)
+            .lte('created_at', `${today}T23:59:59`)
+            .maybeSingle()
+
+        if (checkError) console.error("Error checking for duplicate deposit:", checkError)
+        if (existing) {
+            throw new Error(`Ya existe un depósito con la referencia ${deposit.reference_number} para ${deposit.currency} el día de hoy.`)
+        }
+
         const { data, error } = await supabase
             .from('bank_deposits')
             .insert([{
