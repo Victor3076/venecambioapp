@@ -190,7 +190,7 @@ export default function AdminBalancePage() {
                     startBalanceByCurrency[k] ||
                     outflowByCurrency[k] ||
                     withdrawalsByCurrency[k] ||
-                    k === 'USD' || k === 'VES'
+                    k === 'USD' || k === 'VES' || k === 'COP'
                 ).map(curr => (
                     <Card key={curr} className="overflow-hidden border-none shadow-md ring-1 ring-black/5">
                         <CardHeader className="pb-2 bg-muted/30">
