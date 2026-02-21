@@ -95,3 +95,29 @@ export async function deleteUser(id: string) {
     revalidatePath('/admin/users')
     return { success: true }
 }
+
+export async function resetPassword(id: string) {
+    const supabaseAdmin = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        { auth: { autoRefreshToken: false, persistSession: false } }
+    )
+
+    // 1. Reset password in Auth
+    const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(id, {
+        password: '123456'
+    })
+
+    if (authError) throw new Error(authError.message)
+
+    // 2. Mark profile as needing password change
+    const { error: profileError } = await supabaseAdmin
+        .from('profiles')
+        .update({ must_change_password: true })
+        .eq('id', id)
+
+    if (profileError) throw new Error(profileError.message)
+
+    revalidatePath('/admin/users')
+    return { success: true }
+}

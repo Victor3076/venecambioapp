@@ -7,8 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase"
-import { createUser, updateUser, deleteUser } from "./actions"
-import { User, Mail, UserPlus, Shield, Loader2, ArrowLeft, Search, Pencil, Trash2, X, Landmark, Plus } from "lucide-react"
+import { createUser, updateUser, deleteUser, resetPassword } from "./actions"
+import { User, Mail, UserPlus, Shield, Loader2, ArrowLeft, Search, Pencil, Trash2, X, Landmark, Plus, KeyRound } from "lucide-react"
 import { AddAccountDialog } from "@/components/admin/add-account-dialog"
 
 export default function AdminUsersPage() {
@@ -66,6 +66,18 @@ export default function AdminUsersPage() {
             toast.error("Error: " + error.message)
         } finally {
             setIsCreating(false)
+        }
+    }
+
+    const handleResetPassword = async (id: string, name: string) => {
+        if (!confirm(`¿Estás seguro de que deseas reiniciar la contraseña de ${name} a '123456'?`)) return
+
+        try {
+            await resetPassword(id)
+            loadUsers()
+            toast.success("Contraseña reiniciada a 123456")
+        } catch (error: any) {
+            toast.error("Error al reiniciar: " + error.message)
         }
     }
 
@@ -274,6 +286,15 @@ export default function AdminUsersPage() {
                                                             <Landmark className="w-4 h-4" />
                                                         </Button>
                                                     )}
+                                                    <Button
+                                                        size="icon"
+                                                        variant="ghost"
+                                                        className="h-8 w-8 text-muted-foreground hover:text-orange-500"
+                                                        onClick={() => handleResetPassword(u.id, u.full_name)}
+                                                        title="Reiniciar Contraseña"
+                                                    >
+                                                        <KeyRound className="w-4 h-4" />
+                                                    </Button>
                                                     <Button
                                                         size="icon"
                                                         variant="ghost"
