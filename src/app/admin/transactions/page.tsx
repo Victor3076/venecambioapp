@@ -175,8 +175,9 @@ export default function AdminTransactionsPage() {
 
 
     const copyToClipboard = (text: string) => {
+        if (!text) return
         navigator.clipboard.writeText(text)
-        // Could show a toast here
+        toast.success("¡Copiado al portapapeles!")
     }
 
     const StatusBadge = ({ status }: { status: Transaction['status'] }) => {
@@ -505,27 +506,114 @@ export default function AdminTransactionsPage() {
                                         {selectedTx.beneficiary_data && (
                                             <div className="space-y-4">
                                                 <h3 className="font-bold text-sm uppercase tracking-wider text-muted-foreground border-b pb-1">Datos Beneficiario</h3>
-                                                <div className="bg-muted/10 rounded-lg border p-4 space-y-3">
+                                                <div className="bg-muted/10 rounded-lg border p-4 space-y-4 shadow-sm">
                                                     <div className="flex items-center gap-2 mb-2 pb-2 border-b">
                                                         <div className="bg-primary/10 p-1.5 rounded-full text-primary">
                                                             <User className="w-4 h-4" />
                                                         </div>
-                                                        <span className="font-bold">{selectedTx.beneficiary_data.alias}</span>
+                                                        <span className="font-bold text-base">{selectedTx.beneficiary_data.alias}</span>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-6 w-6 text-muted-foreground ml-1"
+                                                            onClick={() => copyToClipboard(selectedTx.beneficiary_data?.alias || '')}
+                                                        >
+                                                            <Copy className="w-3 h-3" />
+                                                        </Button>
                                                         <div className="ml-auto text-xs bg-muted px-2 py-0.5 rounded text-muted-foreground uppercase">{selectedTx.beneficiary_data.country}</div>
                                                     </div>
-                                                    <div className="grid gap-3 text-sm">
-                                                        <div className="flex justify-between items-center">
-                                                            <span className="text-muted-foreground">Banco:</span>
-                                                            <span className="font-medium">{selectedTx.beneficiary_data.bank_name}</span>
+
+                                                    <div className="grid grid-cols-1 gap-3 text-sm">
+                                                        <div className="flex justify-between items-center group">
+                                                            <span className="text-muted-foreground flex items-center gap-1.5 font-medium">
+                                                                <Landmark className="w-3.5 h-3.5" /> Banco:
+                                                            </span>
+                                                            <div className="flex items-center gap-1">
+                                                                <span className="font-bold">{selectedTx.beneficiary_data.bank_name}</span>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className="h-6 w-6"
+                                                                    onClick={() => copyToClipboard(selectedTx.beneficiary_data?.bank_name || '')}
+                                                                >
+                                                                    <Copy className="w-3 h-3" />
+                                                                </Button>
+                                                            </div>
                                                         </div>
-                                                        <div className="flex justify-between items-center">
-                                                            <span className="text-muted-foreground">Cuenta:</span>
-                                                            <span className="font-medium font-mono text-primary text-xs">{selectedTx.beneficiary_data.account_number}</span>
+
+                                                        <div className="flex justify-between items-center group">
+                                                            <span className="text-muted-foreground flex items-center gap-1.5 font-medium">
+                                                                <CreditCard className="w-3.5 h-3.5" /> Cuenta / Tel:
+                                                            </span>
+                                                            <div className="flex items-center gap-1">
+                                                                <span className="font-black font-mono text-primary">{selectedTx.beneficiary_data.account_number}</span>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className="h-6 w-6"
+                                                                    onClick={() => copyToClipboard(selectedTx.beneficiary_data?.account_number || '')}
+                                                                >
+                                                                    <Copy className="w-3.5 h-3.5" />
+                                                                </Button>
+                                                            </div>
                                                         </div>
-                                                        {selectedTx.beneficiary_data.details?.id_number && (
-                                                            <div className="flex justify-between items-center">
-                                                                <span className="text-muted-foreground">Documento:</span>
-                                                                <span className="font-medium">{selectedTx.beneficiary_data.details.id_number}</span>
+
+                                                        {/* Dynamic Details */}
+                                                        {selectedTx.beneficiary_data.details?.rut && (
+                                                            <div className="flex justify-between items-center group pt-2 border-t border-dashed">
+                                                                <span className="text-muted-foreground font-medium">RUT:</span>
+                                                                <div className="flex items-center gap-1">
+                                                                    <span className="font-bold">{selectedTx.beneficiary_data.details.rut}</span>
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="h-6 w-6"
+                                                                        onClick={() => copyToClipboard(selectedTx.beneficiary_data?.details?.rut || '')}
+                                                                    >
+                                                                        <Copy className="w-3 h-3" />
+                                                                    </Button>
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {(selectedTx.beneficiary_data.details?.id_number) && (
+                                                            <div className="flex justify-between items-center group pt-2 border-t border-dashed">
+                                                                <span className="text-muted-foreground font-medium">Documento:</span>
+                                                                <div className="flex items-center gap-1">
+                                                                    <span className="font-bold">{selectedTx.beneficiary_data.details.id_number}</span>
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="h-6 w-6"
+                                                                        onClick={() => copyToClipboard(selectedTx.beneficiary_data?.details?.id_number || '')}
+                                                                    >
+                                                                        <Copy className="w-3 h-3" />
+                                                                    </Button>
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {selectedTx.beneficiary_data.details?.account_type && (
+                                                            <div className="flex justify-between items-center bg-muted/30 px-2 py-1.5 rounded">
+                                                                <span className="text-[10px] uppercase font-bold text-muted-foreground">Tipo de Cuenta</span>
+                                                                <span className="text-xs font-black">{selectedTx.beneficiary_data.details.account_type}</span>
+                                                            </div>
+                                                        )}
+
+                                                        {selectedTx.beneficiary_data.details?.email && (
+                                                            <div className="flex justify-between items-center group pt-2 border-t border-dashed">
+                                                                <span className="text-muted-foreground font-medium text-xs">Email:</span>
+                                                                <div className="flex items-center gap-1">
+                                                                    <span className="text-xs text-muted-foreground max-w-[150px] truncate">{selectedTx.beneficiary_data.details.email}</span>
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="h-6 w-6"
+                                                                        onClick={() => copyToClipboard(selectedTx.beneficiary_data?.details?.email || '')}
+                                                                    >
+                                                                        <Copy className="w-3 h-3" />
+                                                                    </Button>
+                                                                </div>
                                                             </div>
                                                         )}
                                                     </div>

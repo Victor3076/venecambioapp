@@ -457,7 +457,7 @@ export default function NewTransactionPage() {
                         <div className="p-3 bg-primary/5 rounded-lg border border-primary/20 flex justify-between items-center text-sm">
                             <span className="font-medium">Tasa de cambio:</span>
                             <span className="font-bold">
-                                1 {sourceCurrency === 'VENEZUELA' ? 'VES' : (sourceCurrency === 'PERU' ? 'PEN' : (sourceCurrency === 'CHILE' ? 'CLP' : (sourceCurrency === 'COLOMBIA' ? 'COP' : 'USD')))} = {formatRate(rate, targetCurrency, sourceCurrency)} {targetCurrency === 'VENEZUELA' ? 'VES' : (targetCurrency === 'PERU' ? 'PEN' : (targetCurrency === 'CHILE' ? 'CLP' : (targetCurrency === 'COLOMBIA' ? 'COP' : 'USD')))}
+                                1 {sourceCurrency === 'PERU' ? 'PEN' : (sourceCurrency === 'CHILE' ? 'CLP' : (sourceCurrency === 'COLOMBIA' ? 'COP' : (sourceCurrency === 'USA' ? 'USD' : 'VES')))} = {formatRate(rate, targetCurrency, sourceCurrency)} {targetCurrency === 'VES' || targetCurrency === 'VENEZUELA' ? 'VES' : (targetCurrency === 'PERU' ? 'PEN' : (targetCurrency === 'CHILE' ? 'CLP' : (targetCurrency === 'COLOMBIA' ? 'COP' : 'USD')))}
                             </span>
                         </div>
                     </CardContent>
