@@ -2,7 +2,7 @@
 
 import { ReactNode, useState, useEffect } from "react"
 import Link from "next/link"
-import { Home, User, History, LogOut, Shield, BarChart3, List, Globe, UserPlus, Bell, Menu, X } from "lucide-react"
+import { Home, User, History, LogOut, Shield, BarChart3, List, Globe, UserPlus, Bell, Menu, X, Wallet } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { supabase } from "@/lib/supabase"
 import { useRouter, usePathname } from "next/navigation"
@@ -164,6 +164,9 @@ function NavigationContent({ isStaff }: { isStaff: boolean }) {
                     </div>
                     <Link href="/admin" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-primary/10 font-medium text-foreground transition-all group">
                         <List className="w-4 h-4 text-primary" /> Operaciones
+                    </Link>
+                    <Link href="/admin/deposits" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-primary/10 font-medium text-foreground transition-all group">
+                        <Wallet className="w-4 h-4 text-primary" /> Depósitos
                     </Link>
                     <Link href="/admin/rates" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-primary/10 font-medium text-foreground transition-all group">
                         <BarChart3 className="w-4 h-4 text-primary" /> Gestión de Tasas

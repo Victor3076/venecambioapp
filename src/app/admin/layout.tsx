@@ -68,10 +68,10 @@ export default function AdminLayout({
 
     const navItems = [
         { href: "/admin/transactions", icon: List, label: "Operaciones" },
+        { href: "/admin/deposits", icon: Wallet, label: "Depósitos" },
         { href: "/admin/rates", icon: BarChart3, label: "Tasas" },
         { href: "/admin/users", icon: Settings, label: "Usuarios" },
         { href: "/admin/payment-methods", icon: LayoutDashboard, label: "Cuentas" },
-        { href: "/admin/deposits", icon: Wallet, label: "Depósitos" },
         { href: "/admin/balance", icon: Scale, label: "Cuadre", adminOnly: true },
         { href: "/admin/notifications", icon: Bell, label: "Notificaciones" },
         { href: "/admin/profits", icon: TrendingUp, label: "Ganancias", adminOnly: true },
