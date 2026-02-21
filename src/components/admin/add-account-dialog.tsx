@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { toast } from "sonner"
 import { supabase } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
@@ -29,7 +30,7 @@ export function AddAccountDialog({ userId, isOpen, onClose, onSuccess }: AddAcco
         try {
             // Validate basic fields
             if (!newAccount.alias || !newAccount.country || !newAccount.bank_name || !newAccount.account_number) {
-                alert("Por favor completa los campos obligatorios")
+                toast.error("Por favor completa los campos obligatorios")
                 setLoading(false)
                 return
             }
@@ -47,7 +48,7 @@ export function AddAccountDialog({ userId, isOpen, onClose, onSuccess }: AddAcco
 
             if (error) throw error
 
-            alert("Cuenta agregada correctamente")
+            toast.success("Cuenta agregada correctamente")
             onSuccess()
             onClose()
             // Reset form
@@ -60,7 +61,7 @@ export function AddAccountDialog({ userId, isOpen, onClose, onSuccess }: AddAcco
             })
         } catch (error: any) {
             console.error(error)
-            alert("Error al agregar cuenta: " + error.message)
+            toast.error("Error al agregar cuenta: " + error.message)
         } finally {
             setLoading(false)
         }

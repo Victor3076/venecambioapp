@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { toast } from "sonner"
 import { PaymentMethodsService, PaymentMethod } from "@/services/payment-methods"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -66,7 +67,7 @@ export default function AdminPaymentMethodsPage() {
             loadMethods()
         } catch (error) {
             console.error(error)
-            alert("Error al crear método")
+            toast.error("Error al crear método")
         } finally {
             setIsCreating(false)
         }

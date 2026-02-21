@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { toast } from "sonner"
 import { supabase } from "@/lib/supabase"
 import { useRouter } from "next/navigation"
 import { RatesService, RatesData } from "@/services/rates"
@@ -232,7 +233,7 @@ export default function NewTransactionPage() {
 
     const handleSaveNewAccount = async (shouldFinish: boolean) => {
         if (!newAccount.alias || !newAccount.bank_name || !newAccount.account_number) {
-            alert("Por favor completa los campos obligatorios")
+            toast.warning("Por favor completa los campos obligatorios")
             return
         }
 
@@ -245,7 +246,7 @@ export default function NewTransactionPage() {
             handleConfirmTransfer(acc, shouldFinish)
         } catch (error: any) {
             console.error(error)
-            alert("Error al guardar la cuenta")
+            toast.error("Error al guardar la cuenta")
             setLoading(false) // Only stop loading on error if we are not advancing
         }
         // Notice we don't have a finally { setLoading(false) } here 
@@ -292,7 +293,7 @@ export default function NewTransactionPage() {
             setStep(3)
         } catch (error: any) {
             console.error(error)
-            alert(`Error al crear transacciones: ${error.message || 'Error desconocido'}`)
+            toast.error(`Error al crear transacciones: ${error.message || 'Error desconocido'}`)
         } finally {
             setLoading(false)
         }
@@ -306,7 +307,7 @@ export default function NewTransactionPage() {
             setStep(4)
         } catch (error) {
             console.error(error)
-            alert("Error al subir comprobante. Nota: Asegúrate de que el bucket 'payments' exista en Supabase Storage y sea público.")
+            toast.error("Error al subir comprobante. Nota: Asegúrate de que el bucket 'payments' exista en Supabase Storage y sea público.")
         } finally {
             setLoading(false)
         }

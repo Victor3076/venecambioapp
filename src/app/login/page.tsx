@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -58,7 +59,7 @@ export default function LoginPage() {
             }
         } catch (error: any) {
             console.error("Error al ingresar:", error)
-            alert(error.message || "Error al iniciar sesión")
+            toast.error(error.message || "Error al iniciar sesión")
         } finally {
             setLoading(false)
         }

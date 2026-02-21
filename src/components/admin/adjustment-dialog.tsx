@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { toast } from "sonner"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -35,7 +36,7 @@ export function AdjustmentDialog({ isOpen, onClose, onSuccess, type }: Adjustmen
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault()
         if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
-            alert("Por favor ingresa un monto válido.")
+            toast.error("Por favor ingresa un monto válido.")
             return
         }
 
@@ -48,7 +49,7 @@ export function AdjustmentDialog({ isOpen, onClose, onSuccess, type }: Adjustmen
                 description: description || (type === 'initialization' ? 'Inicialización de saldo' : 'Retiro manual')
             })
 
-            alert(type === 'initialization' ? "Saldo inicializado con éxito" : "Retiro registrado con éxito")
+            toast.success(type === 'initialization' ? "Saldo inicializado con éxito" : "Retiro registrado con éxito")
             onSuccess()
             onClose()
             // Reset form
@@ -56,7 +57,7 @@ export function AdjustmentDialog({ isOpen, onClose, onSuccess, type }: Adjustmen
             setDescription('')
         } catch (error: any) {
             console.error(error)
-            alert("Error: " + error.message)
+            toast.error("Error: " + error.message)
         } finally {
             setLoading(false)
         }

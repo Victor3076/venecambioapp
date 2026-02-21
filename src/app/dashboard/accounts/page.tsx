@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { toast } from "sonner"
 import { AccountsService, UserAccount } from "@/services/accounts"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
@@ -45,9 +46,10 @@ export default function AccountsPage() {
                 details: { id_number: "", email: "", account_type: "", rut: "", venezuela_type: "Cuenta", peru_type: "Cuenta" }
             })
             loadAccounts()
+            toast.success("Cuenta agregada correctamente")
         } catch (error) {
             console.error(error)
-            alert("Error al agregar cuenta")
+            toast.error("Error al agregar cuenta")
         }
     }
 
@@ -58,7 +60,7 @@ export default function AccountsPage() {
             loadAccounts()
         } catch (error) {
             console.error(error)
-            alert("Error al eliminar")
+            toast.error("Error al eliminar")
         }
     }
 

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -159,7 +160,7 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDep
     const handleCreate = async () => {
         if (!selectedUser || !selectedAccount) return
         if (reconcileNow && !selectedDepositId) {
-            alert("Por favor selecciona un depósito para conciliar.")
+            toast.error("Por favor selecciona un depósito para conciliar.")
             return
         }
 
@@ -182,11 +183,11 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDep
                 await BankDepositsService.match(selectedDepositId, tx.id)
             }
 
-            alert(reconcileNow ? "Operación creada y conciliada con éxito" : "Operación creada con éxito (pendiente de conciliación)")
+            toast.success(reconcileNow ? "Operación creada y conciliada con éxito" : "Operación creada con éxito (pendiente de conciliación)")
             onSuccess()
             onClose()
         } catch (error: any) {
-            alert("Error: " + error.message)
+            toast.error("Error: " + error.message)
         } finally {
             setLoading(false)
         }

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -60,8 +61,8 @@ export default function AdminNotificationsPage() {
     })
 
     const handleSend = async () => {
-        if (!title || !message) return alert("Por favor completa título y mensaje")
-        if (!isBroadcast && !selectedUser) return alert("Selecciona un usuario o marca 'Enviar a todos'")
+        if (!title || !message) return toast.warning("Por favor completa título y mensaje")
+        if (!isBroadcast && !selectedUser) return toast.warning("Selecciona un usuario o marca 'Enviar a todos'")
 
         setSending(true)
         try {
@@ -82,7 +83,7 @@ export default function AdminNotificationsPage() {
                     // Also create a "log" entry in notifications for the admin history view
                     // We'll use a dummy/null user or just mark its type
                 }
-                alert("Notificación enviada a todos los usuarios")
+                toast.success("Notificación enviada a todos los usuarios")
             } else {
                 await NotificationsService.create({
                     user_id: selectedUser.id,
@@ -91,7 +92,7 @@ export default function AdminNotificationsPage() {
                     type: 'info',
                     data: { source: 'admin_direct' }
                 })
-                alert(`Notificación enviada a ${selectedUser.full_name}`)
+                toast.success(`Notificación enviada a ${selectedUser.full_name}`)
             }
 
             setTitle('')
@@ -100,7 +101,7 @@ export default function AdminNotificationsPage() {
             setIsBroadcast(false)
             loadData()
         } catch (error: any) {
-            alert("Error: " + error.message)
+            toast.error("Error: " + error.message)
         } finally {
             setSending(false)
         }

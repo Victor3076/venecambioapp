@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -19,11 +20,11 @@ export default function ChangePasswordPage() {
     const handleChangePassword = async (e: React.FormEvent) => {
         e.preventDefault()
         if (password !== confirmPassword) {
-            alert("Las contraseñas no coinciden")
+            toast.error("Las contraseñas no coinciden")
             return
         }
         if (password.length < 6) {
-            alert("La contraseña debe tener al menos 6 caracteres")
+            toast.error("La contraseña debe tener al menos 6 caracteres")
             return
         }
 
@@ -52,7 +53,7 @@ export default function ChangePasswordPage() {
             }, 2000)
         } catch (error: any) {
             console.error(error)
-            alert(error.message || "Error al cambiar contraseña")
+            toast.error(error.message || "Error al cambiar contraseña")
         } finally {
             setLoading(false)
         }

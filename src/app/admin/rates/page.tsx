@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
+import { toast } from "sonner"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -81,10 +82,10 @@ export default function RatesPage() {
         setSaving(true)
         try {
             await RatesService.update(usdtPrices, percentages)
-            alert("Tasas actualizadas correctamente.")
+            toast.success("Tasas actualizadas correctamente.")
         } catch (error: any) {
             console.error("Error saving rates:", error)
-            alert(`Error al guardar: ${error.message || "Error desconocido"}`)
+            toast.error(`Error al guardar: ${error.message || "Error desconocido"}`)
         } finally {
             setSaving(false)
         }
@@ -99,10 +100,10 @@ export default function RatesPage() {
                 broadcastMessage,
                 'info'
             )
-            alert("Notificación enviada a todos los clientes exitosamente.")
+            toast.success("Notificación enviada a todos los clientes exitosamente.")
         } catch (error: any) {
             console.error("Broadcast error:", error)
-            alert("Error al enviar notificación masiva.")
+            toast.error("Error al enviar notificación masiva.")
         } finally {
             setBroadcasting(false)
         }
@@ -117,10 +118,10 @@ export default function RatesPage() {
         try {
             const updated = await AdminSettingsService.updateSettings({ is_open: newStatus })
             setAdminSettings(updated)
-            alert(`Operaciones ${newStatus ? 'abiertas' : 'cerradas'} correctamente.`)
+            toast.success(`Operaciones ${newStatus ? 'abiertas' : 'cerradas'} correctamente.`)
         } catch (error) {
             console.error(error)
-            alert("Error al actualizar estado de operaciones.")
+            toast.error("Error al actualizar estado de operaciones.")
         } finally {
             setUpdatingSettings(false)
         }
@@ -132,10 +133,10 @@ export default function RatesPage() {
         try {
             const updated = await AdminSettingsService.updateSettings({ closed_message: adminSettings.closed_message })
             setAdminSettings(updated)
-            alert("Mensaje de cierre actualizado.")
+            toast.success("Mensaje de cierre actualizado.")
         } catch (error) {
             console.error(error)
-            alert("Error al actualizar mensaje.")
+            toast.error("Error al actualizar mensaje.")
         } finally {
             setUpdatingSettings(false)
         }

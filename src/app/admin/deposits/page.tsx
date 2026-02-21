@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { BankDepositsService, BankDeposit } from "@/services/bank-deposits"
+import { toast } from "sonner"
 import { TransactionsService, Transaction } from "@/services/transactions"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -59,10 +60,10 @@ export default function BankDepositsPage() {
 
             if (editingId) {
                 await BankDepositsService.update(editingId, depositData)
-                alert("Depósito actualizado exitosamente.")
+                toast.success("Depósito actualizado exitosamente.")
             } else {
                 await BankDepositsService.create(depositData)
-                alert("Depósito registrado exitosamente.")
+                toast.success("Depósito registrado exitosamente.")
             }
 
             // Reset form
@@ -73,7 +74,7 @@ export default function BankDepositsPage() {
             loadDeposits()
         } catch (error: any) {
             console.error("Error saving deposit:", error)
-            alert(`Error al guardar depósito: ${error.message || JSON.stringify(error)}`)
+            toast.error(`Error al guardar depósito: ${error.message || "Error desconocido"}`)
         } finally {
             setCreating(false)
         }
@@ -100,11 +101,11 @@ export default function BankDepositsPage() {
 
         try {
             await BankDepositsService.delete(id)
-            alert("Depósito eliminado exitosamente.")
+            toast.success("Depósito eliminado exitosamente.")
             loadDeposits()
         } catch (error: any) {
             console.error("Error deleting deposit:", error)
-            alert(`Error al eliminar depósito: ${error.message}`)
+            toast.error(`Error al eliminar depósito: ${error.message}`)
         }
     }
 
@@ -117,7 +118,7 @@ export default function BankDepositsPage() {
             setPendingTransactions(txs || [])
         } catch (error) {
             console.error("Error loading pending transactions:", error)
-            alert("Error al cargar transacciones pendientes.")
+            toast.error("Error al cargar transacciones pendientes.")
         }
     }
 
@@ -128,12 +129,12 @@ export default function BankDepositsPage() {
         setMatching(true)
         try {
             await BankDepositsService.match(selectedDeposit.id!, transactionId)
-            alert("Depósito conciliado exitosamente.")
+            toast.success("Depósito conciliado exitosamente.")
             setSelectedDeposit(null)
             loadDeposits()
         } catch (error: any) {
             console.error("Error matching:", error)
-            alert(`Error al conciliar: ${error.message}`)
+            toast.error(`Error al conciliar: ${error.message}`)
         } finally {
             setMatching(false)
         }

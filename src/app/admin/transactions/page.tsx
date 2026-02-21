@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { toast } from "sonner"
 import { TransactionsService, Transaction } from "@/services/transactions"
 import { BankDepositsService, BankDeposit } from "@/services/bank-deposits"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -69,13 +70,13 @@ export default function AdminTransactionsPage() {
         setMatching(true)
         try {
             await BankDepositsService.match(depositId, selectedTx.id!)
-            alert("Operación conciliada y verificada exitosamente.")
+            toast.success("Operación conciliada y verificada exitosamente.")
             setIsReconciliationOpen(false)
             setSelectedTx(null)
             loadTransactions()
         } catch (e: any) {
             console.error(e)
-            alert(`Error al conciliar: ${e.message}`)
+            toast.error(`Error al conciliar: ${e.message}`)
         } finally {
             setMatching(false)
         }
@@ -133,7 +134,7 @@ export default function AdminTransactionsPage() {
 
     const handleStatusUpdate = async (id: string, status: Transaction['status'], completionProofUrl?: string) => {
         if (status === 'completed' && !completionFile && !selectedTx?.completion_proof_url) {
-            alert("Por favor, carga o pega un comprobante para completar la operación.")
+            toast.warning("Por favor, carga o pega un comprobante para completar la operación.")
             return
         }
 
@@ -166,7 +167,7 @@ export default function AdminTransactionsPage() {
             loadTransactions()
         } catch (error) {
             console.error(error)
-            alert("Error al actualizar estado")
+            toast.error("Error al actualizar estado")
         } finally {
             setIsUploading(false)
         }

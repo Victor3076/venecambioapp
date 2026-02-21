@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
+import { toast } from "sonner"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import Link from "next/link"
@@ -53,16 +54,16 @@ export default function AdminUsersPage() {
         try {
             if (editingUser) {
                 await updateUser(editingUser.id, newUser)
-                alert("Usuario actualizado con éxito")
+                toast.success("Usuario actualizado con éxito")
             } else {
                 await createUser(newUser)
-                alert("Usuario creado con éxito. Clave inicial: 123456")
+                toast.success("Usuario creado con éxito. Clave inicial: 123456")
             }
             setNewUser({ phone: '', fullName: '', clientCode: '', role: 'user' })
             setEditingUser(null)
             loadUsers()
         } catch (error: any) {
-            alert("Error: " + error.message)
+            toast.error("Error: " + error.message)
         } finally {
             setIsCreating(false)
         }
@@ -74,9 +75,9 @@ export default function AdminUsersPage() {
         try {
             await deleteUser(id)
             loadUsers()
-            alert("Usuario eliminado")
+            toast.success("Usuario eliminado")
         } catch (error: any) {
-            alert("Error al eliminar: " + error.message)
+            toast.error("Error al eliminar: " + error.message)
         }
     }
 
