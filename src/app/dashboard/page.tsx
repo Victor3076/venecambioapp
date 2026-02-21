@@ -10,8 +10,11 @@ import { AccountsService } from "@/services/accounts"
 import { DashboardTour } from "@/components/DashboardTour"
 import { ImageModal } from "@/components/ImageModal"
 import { formatCurrency } from "@/lib/rates-utils"
+import { supabase } from "@/lib/supabase"
+import { useRouter } from "next/navigation"
 
 export default function DashboardPage() {
+    const router = useRouter()
     const [transactions, setTransactions] = useState<Transaction[]>([])
     const [accountsCount, setAccountsCount] = useState(0)
 
