@@ -127,26 +127,26 @@ export default function NewTransactionPage() {
             const numericValue = parseFormattedNumber(value)
             setAmountInput(value)
             const res = isInverse ? (rate > 0 ? numericValue / rate : 0) : numericValue * rate
-            setAmountReceivedInput(formatCurrency(res))
+            setAmountReceivedInput(formatCurrency(res, targetCurrency))
             if (targetCurrency === 'VES') {
-                setAmountBcvInput(formatCurrency(res / bcvRate))
+                setAmountBcvInput(formatCurrency(res / bcvRate, 'USA'))
             }
         } else if (direction === 'received') {
             const numericValue = parseFormattedNumber(value)
             setAmountReceivedInput(value)
             const res = isInverse ? numericValue * rate : (rate > 0 ? numericValue / rate : 0)
-            setAmountInput(formatCurrency(res))
+            setAmountInput(formatCurrency(res, sourceCurrency))
             if (targetCurrency === 'VES') {
-                setAmountBcvInput(formatCurrency(numericValue / bcvRate))
+                setAmountBcvInput(formatCurrency(numericValue / bcvRate, 'USA'))
             }
         } else if (direction === 'bcv') {
             const numericValue = parseFormattedNumber(value)
             setAmountBcvInput(value)
             if (targetCurrency === 'VES') {
                 const amountRec = numericValue * bcvRate
-                setAmountReceivedInput(formatCurrency(amountRec))
+                setAmountReceivedInput(formatCurrency(amountRec, targetCurrency))
                 const resultSent = isInverse ? amountRec * rate : (rate > 0 ? amountRec / rate : 0)
-                setAmountInput(formatCurrency(resultSent))
+                setAmountInput(formatCurrency(resultSent, sourceCurrency))
             }
         }
     }
@@ -168,11 +168,11 @@ export default function NewTransactionPage() {
             const r = Number(rr.toFixed(dec))
 
             const res = amountSent * r
-            setAmountReceivedInput(formatCurrency(res))
+            setAmountReceivedInput(formatCurrency(res, targetCurrency))
 
             if (targetCurrency === 'VES') {
                 const bcvRate = rates.usdt_prices.BCV || 1
-                setAmountBcvInput(formatCurrency(res / bcvRate))
+                setAmountBcvInput(formatCurrency(res / bcvRate, 'USA'))
             }
         }
     }, [sourceCurrency, targetCurrency, rates])
@@ -363,7 +363,7 @@ export default function NewTransactionPage() {
                                     <Input
                                         type="text"
                                         value={amountInput}
-                                        onBlur={() => setAmountInput(formatCurrency(parseFormattedNumber(amountInput)))}
+                                        onBlur={() => setAmountInput(formatCurrency(parseFormattedNumber(amountInput), sourceCurrency))}
                                         onChange={e => updateCalculation(e.target.value, 'sent')}
                                         onClick={(e) => (e.target as HTMLInputElement).select()}
                                         className={isBelowMin ? "border-red-500" : ""}
@@ -390,7 +390,7 @@ export default function NewTransactionPage() {
                                 {isBelowMin && (
                                     <p className="text-[10px] text-red-500 font-bold flex items-center gap-1 animate-pulse mt-1">
                                         <AlertCircle className="w-3 h-3" />
-                                        Monto mínimo: {formatCurrency(minAmount)} {sourceCurrency === 'USA' ? 'USD' : (sourceCurrency === 'PERU' ? 'PEN' : (sourceCurrency === 'CHILE' ? 'CLP' : 'COP'))}
+                                        Monto mínimo: {formatCurrency(minAmount, sourceCurrency)} {sourceCurrency === 'USA' ? 'USD' : (sourceCurrency === 'PERU' ? 'PEN' : (sourceCurrency === 'CHILE' ? 'CLP' : 'COP'))}
                                     </p>
                                 )}
                                 {pendingTransfers.length > 0 && !isBelowMin && (
@@ -436,7 +436,7 @@ export default function NewTransactionPage() {
                                         <Input
                                             type="text"
                                             value={amountBcvInput}
-                                            onBlur={() => setAmountBcvInput(formatCurrency(parseFormattedNumber(amountBcvInput)))}
+                                            onBlur={() => setAmountBcvInput(formatCurrency(parseFormattedNumber(amountBcvInput), 'USA'))}
                                             onChange={e => updateCalculation(e.target.value, 'bcv')}
                                             onClick={(e) => (e.target as HTMLInputElement).select()}
                                             className="pl-7 bg-background font-bold border-primary/20"
@@ -468,7 +468,7 @@ export default function NewTransactionPage() {
                                     <div key={i} className="flex justify-between items-center text-sm p-2 bg-muted rounded-md border">
                                         <div className="flex flex-col">
                                             <span className="font-bold">{t.account.alias}</span>
-                                            <span className="text-[10px] text-muted-foreground">{formatCurrency(t.amountSent)} {CURRENCY_LABELS[sourceCurrency]}</span>
+                                            <span className="text-[10px] text-muted-foreground">{formatCurrency(t.amountSent, sourceCurrency)} {CURRENCY_LABELS[sourceCurrency]}</span>
                                         </div>
                                         <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500" onClick={() => setPendingTransfers(pendingTransfers.filter((_, idx) => idx !== i))}>
                                             <Landmark className="w-3 h-3" />
@@ -477,7 +477,7 @@ export default function NewTransactionPage() {
                                 ))}
                                 <div className="pt-1 border-t flex justify-between font-bold text-sm">
                                     <span>Total Parcial:</span>
-                                    <span>{formatCurrency(totalToPay)} {CURRENCY_LABELS[sourceCurrency]}</span>
+                                    <span>{formatCurrency(totalToPay, sourceCurrency)} {CURRENCY_LABELS[sourceCurrency]}</span>
                                 </div>
                             </div>
                         )}
@@ -486,7 +486,7 @@ export default function NewTransactionPage() {
                         </Button>
                         {pendingTransfers.length > 0 && !isBelowMin && (
                             <Button className="w-full bg-green-600 hover:bg-green-700" onClick={() => handleCreateTransaction()} disabled={loading}>
-                                {loading ? "Procesando..." : `Finalizar y depositar ${formatCurrency(totalToPay)} ${CURRENCY_LABELS[sourceCurrency]}`}
+                                {loading ? "Procesando..." : `Finalizar y depositar ${formatCurrency(totalToPay, sourceCurrency)} ${CURRENCY_LABELS[sourceCurrency]}`}
                             </Button>
                         )}
                     </CardFooter>
@@ -624,7 +624,7 @@ export default function NewTransactionPage() {
                                 )}
 
                                 <div className="mt-4 p-3 bg-primary text-white rounded-md font-bold text-center text-xl shadow-md">
-                                    Total a pagar: {formatCurrency(totalToPay)} {CURRENCY_LABELS[sourceCurrency] || sourceCurrency}
+                                    Total a pagar: {formatCurrency(totalToPay, sourceCurrency)} {CURRENCY_LABELS[sourceCurrency] || sourceCurrency}
                                 </div>
                                 <div className="text-[10px] text-blue-800 text-center mt-2 italic">
                                     Este depósito cubrirá {pendingTransfers.length} transferencia(s).

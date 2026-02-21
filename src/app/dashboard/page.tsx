@@ -9,6 +9,7 @@ import { TransactionsService, Transaction } from "@/services/transactions"
 import { AccountsService } from "@/services/accounts"
 import { DashboardTour } from "@/components/DashboardTour"
 import { ImageModal } from "@/components/ImageModal"
+import { formatCurrency } from "@/lib/rates-utils"
 
 export default function DashboardPage() {
     const [transactions, setTransactions] = useState<Transaction[]>([])
@@ -137,7 +138,7 @@ export default function DashboardPage() {
                                         </div>
                                         <div>
                                             <div className="font-bold">
-                                                {tx.amount_sent} {tx.currency_sent} → {tx.amount_received.toLocaleString()} {tx.currency_received}
+                                                {formatCurrency(tx.amount_sent, tx.currency_sent)} {tx.currency_sent} → {formatCurrency(tx.amount_received, tx.currency_received)} {tx.currency_received}
                                             </div>
                                             <div className="text-xs text-muted-foreground">
                                                 {tx.created_at ? new Date(tx.created_at).toLocaleDateString() : 'Pendiente'}

@@ -10,7 +10,7 @@ import { Save, Calculator, RefreshCw, ArrowLeft, Bell, Power, AlertTriangle, Mes
 import { RatesService } from "@/services/rates"
 import { NotificationsService } from "@/services/notifications"
 import { AdminSettingsService, AdminSettings } from "@/services/admin-settings"
-import { calculateRate, formatRate } from "@/lib/rates-utils"
+import { calculateRate, formatRate, getRateDecimals } from "@/lib/rates-utils"
 
 export default function RatesPage() {
     const [loading, setLoading] = useState(true)
@@ -149,16 +149,8 @@ export default function RatesPage() {
             const currentMargin = percentages[marginKey] || 0;
             const rate = calculateRate(targetCode, currencyCode, targetPrice, basePrice, currentMargin);
 
-            // Custom decimal logic for Chile (CLP)
-            let decimals = 2; // Default
-            if (currencyCode === 'CHILE') {
-                if (targetCode === 'VES') decimals = 4;
-                if (targetCode === 'COLOMBIA') decimals = 2; // Explicitly 2
-                if (targetCode === 'PERU') decimals = 4;
-                if (targetCode === 'USA') decimals = 0;
-            } else if (targetCode === 'VES') {
-                decimals = 2; // Default for VES
-            }
+            // Dynamic decimal logic from configuration
+            const decimals = getRateDecimals(targetCode, currencyCode);
 
             const formattedRate = rate.toLocaleString('es-VE', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 

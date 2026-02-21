@@ -75,12 +75,20 @@ export const formatRate = (value: number, targetCode: string, sourceCode: string
     }).format(value);
 }
 
-// Formats a number with thousand separators and 2 fixed decimals (standard for PEN, USD, COP, VES)
-export const formatCurrency = (value: number | string) => {
+// Formats a number with thousand separators and specific decimals based on currency
+export const formatCurrency = (value: number | string, currencyCode?: string) => {
     const num = typeof value === 'string' ? parseFloat(value) || 0 : value;
+
+    let decimals = 2; // Default for PEN, USD, VES
+    if (currencyCode === 'CHILE' || currencyCode === 'CLP') {
+        decimals = 0;
+    } else if (currencyCode === 'COLOMBIA' || currencyCode === 'COP') {
+        decimals = 0;
+    }
+
     return new Intl.NumberFormat('es-VE', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals
     }).format(num);
 }
 

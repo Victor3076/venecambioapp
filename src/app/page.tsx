@@ -65,21 +65,21 @@ export default function Home() {
       const numericValue = parseFormattedNumber(value)
       setAmountInput(value) // Keep what user types for fluidity
       const result = isInverse ? (rate > 0 ? numericValue / rate : 0) : numericValue * rate
-      setAmountReceived(formatCurrency(result))
+      setAmountReceived(formatCurrency(result, targetCurrency))
       // Update BCV if target is VES
       if (targetCurrency === 'VES') {
         const bcvRate = rates.usdt_prices.BCV || 1
-        setAmountBcv(formatCurrency(result / bcvRate))
+        setAmountBcv(formatCurrency(result / bcvRate, 'USA'))
       }
     } else if (direction === 'received') {
       const numericValue = parseFormattedNumber(value)
       setAmountReceived(value)
       const result = isInverse ? numericValue * rate : (rate > 0 ? numericValue / rate : 0)
-      setAmountInput(formatCurrency(result))
+      setAmountInput(formatCurrency(result, sourceCurrency))
       // Update BCV if target is VES
       if (targetCurrency === 'VES') {
         const bcvRate = rates.usdt_prices.BCV || 1
-        setAmountBcv(formatCurrency(numericValue / bcvRate))
+        setAmountBcv(formatCurrency(numericValue / bcvRate, 'USA'))
       }
     } else if (direction === 'bcv') {
       const numericValue = parseFormattedNumber(value)
@@ -87,9 +87,9 @@ export default function Home() {
       if (targetCurrency === 'VES') {
         const bcvRate = rates.usdt_prices.BCV || 1
         const amountRec = numericValue * bcvRate
-        setAmountReceived(formatCurrency(amountRec))
+        setAmountReceived(formatCurrency(amountRec, targetCurrency))
         const resultSent = isInverse ? amountRec * rate : (rate > 0 ? amountRec / rate : 0)
-        setAmountInput(formatCurrency(resultSent))
+        setAmountInput(formatCurrency(resultSent, sourceCurrency))
       }
     }
   }
@@ -209,7 +209,7 @@ export default function Home() {
                         type="text"
                         placeholder="1.000,00"
                         value={amountInput}
-                        onBlur={() => setAmountInput(formatCurrency(parseFormattedNumber(amountInput)))}
+                        onBlur={() => setAmountInput(formatCurrency(parseFormattedNumber(amountInput), sourceCurrency))}
                         onChange={(e) => updateCalculation(e.target.value, 'sent')}
                         onClick={(e) => (e.target as HTMLInputElement).select()}
                         className={isBelowMin ? "border-red-500" : ""}
@@ -276,7 +276,7 @@ export default function Home() {
                           <Input
                             type="text"
                             value={amountBcv}
-                            onBlur={() => setAmountBcv(formatCurrency(parseFormattedNumber(amountBcv)))}
+                            onBlur={() => setAmountBcv(formatCurrency(parseFormattedNumber(amountBcv), 'USA'))}
                             onChange={(e) => updateCalculation(e.target.value, 'bcv')}
                             onClick={(e) => (e.target as HTMLInputElement).select()}
                             className="pl-7 bg-muted/30 font-bold border-primary/20"
