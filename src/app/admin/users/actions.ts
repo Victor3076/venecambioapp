@@ -1,11 +1,59 @@
 'use server'
 
 import { createClient } from '@supabase/supabase-js'
+import { cookies } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 
-// 1. Validar permisos: Solo ADMIN puede crear ADMIN u OPERATOR. OPERATOR solo puede crear USER.
-// NOTA: Para simplificar y dado que el frontend ocultará las opciones, asumiremos validación básica aquí.
+// Helper: verifica que el usuario activo sea admin u operador
+async function requireAdminOrOperator() {
+    const cookieStore = await cookies()
+    // Get Supabase session token from cookies
+    const authToken = cookieStore.getAll().find(c => c.name.includes('-auth-token'))
+    if (!authToken) throw new Error('No autorizado: sesión inválida')
+
+    // Parse the token to extract user info
+    let tokenData: any
+    try {
+        tokenData = JSON.parse(decodeURIComponent(authToken.value))
+    } catch {
+        throw new Error('No autorizado: token inválido')
+    }
+
+    const accessToken = tokenData?.access_token
+    if (!accessToken) throw new Error('No autorizado: access token no encontrado')
+
+    // Use the token to get the user from Supabase
+    const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
+
+    const { data: { user }, error } = await supabase.auth.getUser(accessToken)
+    if (error || !user) throw new Error('No autorizado: sesión expirada')
+
+    // Check their role in profiles
+    const supabaseAdmin = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        { auth: { autoRefreshToken: false, persistSession: false } }
+    )
+
+    const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    if (!profile || !['admin', 'operator'].includes(profile.role)) {
+        throw new Error('No autorizado: permisos insuficientes')
+    }
+
+    return { userId: user.id, role: profile.role as 'admin' | 'operator' }
+}
+
+// 1. Solo ADMIN puede crear ADMIN u OPERATOR. OPERATOR solo puede crear USER.
 export async function createUser(formData: { phone: string; fullName: string; clientCode?: string; role: 'user' | 'admin' | 'operator'; password?: string }) {
+    await requireAdminOrOperator()
     // Generar un email técnico basado en el teléfono para compatibilidad con Auth
     const technicalEmail = `${formData.phone.replace('+', '')}@venecambio.app`
     const finalPassword = formData.password || '123456'
@@ -42,6 +90,7 @@ export async function createUser(formData: { phone: string; fullName: string; cl
 }
 
 export async function updateUser(id: string, formData: { phone: string; fullName: string; clientCode?: string; role: 'user' | 'admin' | 'operator' }) {
+    await requireAdminOrOperator()
     const supabaseAdmin = createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -78,6 +127,7 @@ export async function updateUser(id: string, formData: { phone: string; fullName
 }
 
 export async function deleteUser(id: string) {
+    await requireAdminOrOperator()
     const supabaseAdmin = createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -97,6 +147,7 @@ export async function deleteUser(id: string) {
 }
 
 export async function resetPassword(id: string) {
+    await requireAdminOrOperator()
     const supabaseAdmin = createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!,
