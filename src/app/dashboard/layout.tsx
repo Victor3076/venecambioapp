@@ -50,6 +50,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     }
 
     const isAdmin = profile?.role === 'admin'
+    const isStaff = profile?.role === 'admin' || profile?.role === 'operator'
     const userInitial = profile?.full_name?.charAt(0).toUpperCase() || 'U'
 
     if (loading) {
@@ -117,9 +118,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                             <Menu className="h-5 w-5" />
                         </Button>
                         <h2 className="font-bold text-base sm:text-lg tracking-tight whitespace-nowrap overflow-hidden text-ellipsis">
-                            {isAdmin ? 'Panel Administrativo' : 'Panel de Usuario'}
+                            {isStaff ? 'Panel Administrativo' : 'Panel de Usuario'}
                         </h2>
-                        {isAdmin && <span className="hidden xs:inline-block text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-bold uppercase tracking-tighter ml-1">Admin</span>}
+                        {isStaff && <span className="hidden xs:inline-block text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-bold uppercase tracking-tighter ml-1">
+                            {profile?.role === 'admin' ? 'Admin' : 'Operador'}
+                        </span>}
                     </div>
                     <div className="flex items-center gap-4">
                         <NotificationBell />
@@ -140,7 +143,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     )
 }
 
-function NavigationContent({ isAdmin }: { isAdmin: boolean }) {
+function NavigationContent({ isStaff }: { isStaff: boolean }) {
     return (
         <nav className="p-4 space-y-1">
             <p className="px-3 py-2 text-[10px] uppercase font-bold text-muted-foreground/60 tracking-wider">Menú Principal</p>
@@ -154,7 +157,7 @@ function NavigationContent({ isAdmin }: { isAdmin: boolean }) {
                 <History className="w-4 h-4 group-hover:text-primary" /> Historial
             </Link>
 
-            {isAdmin && (
+            {isStaff && (
                 <>
                     <div className="pt-4 pb-2">
                         <p className="px-3 py-2 text-[10px] uppercase font-bold text-muted-foreground/60 tracking-wider">Administración</p>

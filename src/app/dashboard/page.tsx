@@ -29,6 +29,20 @@ export default function DashboardPage() {
     useEffect(() => {
         const loadData = async () => {
             try {
+                const { data: { user } } = await supabase.auth.getUser()
+                if (!user) return
+
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('role')
+                    .eq('id', user.id)
+                    .single()
+
+                if (profile?.role === 'operator') {
+                    router.push('/admin')
+                    return
+                }
+
                 const [txs, accounts] = await Promise.all([
                     TransactionsService.getMyTransactions(),
                     AccountsService.getMyAccounts()
@@ -42,7 +56,7 @@ export default function DashboardPage() {
             }
         }
         loadData()
-    }, [])
+    }, [router])
 
     const handleShare = async (tx: Transaction) => {
         const publicLink = `${window.location.origin}/v/${tx.id}`

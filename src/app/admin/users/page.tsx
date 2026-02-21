@@ -16,6 +16,7 @@ export default function AdminUsersPage() {
     const [isCreating, setIsCreating] = useState(false)
     const [newUser, setNewUser] = useState({ phone: '', fullName: '', clientCode: '', role: 'user' as 'user' | 'admin' | 'operator' })
     const [editingUser, setEditingUser] = useState<any>(null)
+    const [currentUserRole, setCurrentUserRole] = useState<string | null>(null)
     const [searchTerm, setSearchTerm] = useState('')
 
     // Account Modal State
@@ -31,6 +32,14 @@ export default function AdminUsersPage() {
 
         if (error) console.error(error)
         else setUsers(data || [])
+
+        // Get current user role
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+            const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+            setCurrentUserRole(profile?.role || 'user')
+        }
+
         setLoading(false)
     }
 
@@ -170,11 +179,19 @@ export default function AdminUsersPage() {
                                     className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
                                     value={newUser.role}
                                     onChange={e => setNewUser({ ...newUser, role: e.target.value as 'user' | 'admin' | 'operator' })}
+                                    disabled={currentUserRole === 'operator'}
                                 >
                                     <option value="user">Usuario (Cliente)</option>
-                                    <option value="operator">Operador (Solo Clientes)</option>
-                                    <option value="admin">Administrador (Manejador)</option>
+                                    {currentUserRole === 'admin' && (
+                                        <>
+                                            <option value="operator">Operador (Solo Clientes)</option>
+                                            <option value="admin">Administrador (Manejador)</option>
+                                        </>
+                                    )}
                                 </select>
+                                {currentUserRole === 'operator' && (
+                                    <p className="text-[10px] text-muted-foreground">Los operadores solo pueden crear cuentas de tipo Cliente.</p>
+                                )}
                             </div>
                             <div className="flex gap-2 pt-2">
                                 {editingUser && (
