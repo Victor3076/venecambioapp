@@ -82,8 +82,9 @@ export default function AdminUsersPage() {
     }
 
     const copyWelcomeMessage = (u: any) => {
-        const phone = u.phone || (u.email?.includes('@') ? u.email.split('@')[0] : '')
-        const message = `Hola, todas nuestras operaciones se realizarán exclusivamente a través de nuestra plataforma oficial: VeneCambio.com 🌐
+        const rawPhone = u.phone || (u.email?.includes('@') ? u.email.split('@')[0] : '')
+        const phone = rawPhone.startsWith('+') ? rawPhone : `+${rawPhone}`
+        const message = `Hola, todas nuestras operaciones se realizarán a través de nuestra plataforma oficial: VeneCambio.com 🌐
 
 Aquí tienes tus credenciales personales:
 
