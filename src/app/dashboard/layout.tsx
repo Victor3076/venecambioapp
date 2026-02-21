@@ -85,7 +85,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                     </Button>
                 </div>
                 <div className="flex-1 overflow-y-auto">
-                    <NavigationContent isAdmin={isAdmin} />
+                    <NavigationContent isStaff={isStaff} />
                 </div>
                 <div className="p-4 border-t bg-muted/5">
                     <LogoutButton onLogout={handleLogout} />
@@ -98,7 +98,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                     <Logo />
                 </div>
                 <div className="flex-1 overflow-y-auto">
-                    <NavigationContent isAdmin={isAdmin} />
+                    <NavigationContent isStaff={isStaff} />
                 </div>
                 <div className="p-4 border-t bg-muted/10">
                     <LogoutButton onLogout={handleLogout} />
