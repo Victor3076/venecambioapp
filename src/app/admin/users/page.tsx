@@ -73,8 +73,15 @@ export default function AdminUsersPage() {
 
     const startEditing = (u: any) => {
         setEditingUser(u)
+
+        // Try to extract phone from profile, then from technical email if phone is missing
+        let displayPhone = u.phone || ''
+        if (!displayPhone && u.email?.includes('@venecambio.app')) {
+            displayPhone = '+' + u.email.split('@')[0]
+        }
+
         setNewUser({
-            phone: u.phone || '',
+            phone: displayPhone,
             fullName: u.full_name || '',
             clientCode: u.client_code || '',
             role: u.role || 'user'
@@ -126,7 +133,7 @@ export default function AdminUsersPage() {
                             {editingUser ? 'Editar Usuario' : 'Nuevo Usuario'}
                         </CardTitle>
                         <CardDescription>
-                            {editingUser ? `Editando perfi de ${editingUser.full_name}` : 'La clave por defecto será: 123456'}
+                            {editingUser ? `Editando perfil de ${editingUser.full_name}` : 'La clave por defecto será: 123456'}
                         </CardDescription>
                     </CardHeader>
                     <CardContent>

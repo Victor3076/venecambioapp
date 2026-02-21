@@ -66,8 +66,8 @@ export async function updateUser(id: string, formData: { phone: string; fullName
         .update({
             full_name: formData.fullName,
             client_code: formData.clientCode,
-            role: formData.role
-            // Nota: El email/phone se maneja via auth
+            role: formData.role,
+            phone: formData.phone
         })
         .eq('id', id)
 
