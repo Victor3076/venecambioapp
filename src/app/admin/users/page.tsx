@@ -175,7 +175,14 @@ export default function AdminUsersPage() {
                                     required
                                     placeholder="+51999888777"
                                     value={newUser.phone}
-                                    onChange={e => setNewUser({ ...newUser, phone: e.target.value })}
+                                    onChange={e => {
+                                        const val = e.target.value
+                                        // Dejar solo números y el + inicial
+                                        const cleanVal = val.startsWith('+')
+                                            ? '+' + val.slice(1).replace(/\D/g, '')
+                                            : val.replace(/\D/g, '')
+                                        setNewUser({ ...newUser, phone: cleanVal })
+                                    }}
                                 />
                             </div>
                             <div className="space-y-2">
