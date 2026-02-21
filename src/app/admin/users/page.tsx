@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase"
 import { createUser, updateUser, deleteUser, resetPassword } from "./actions"
-import { User, Mail, UserPlus, Shield, Loader2, ArrowLeft, Search, Pencil, Trash2, X, Landmark, Plus, KeyRound } from "lucide-react"
+import { User, Mail, UserPlus, Shield, Loader2, ArrowLeft, Search, Pencil, Trash2, X, Landmark, Plus, KeyRound, MessageSquare } from "lucide-react"
 import { AddAccountDialog } from "@/components/admin/add-account-dialog"
 
 export default function AdminUsersPage() {
@@ -79,6 +79,27 @@ export default function AdminUsersPage() {
         } catch (error: any) {
             toast.error("Error al reiniciar: " + error.message)
         }
+    }
+
+    const copyWelcomeMessage = (u: any) => {
+        const phone = u.phone || (u.email?.includes('@') ? u.email.split('@')[0] : '')
+        const message = `Hola, todas nuestras operaciones se realizarán exclusivamente a través de nuestra plataforma oficial: VeneCambio.com 🌐
+
+Aquí tienes tus credenciales personales:
+
+👤 Usuario: ${phone}
+🔑 Clave: 123456
+
+Pasos para tu primer ingreso:
+ 1️⃣ Entra en 🔗 venecambio.com y presiona el botón Ingresar.
+ 2️⃣ Introduce tu usuario y clave mencionada arriba. 
+ 3️⃣ 💡 Por seguridad, el sistema te pedirá cambiar tu clave por una nueva al entrar. 
+ 4️⃣ 🔔 Es muy importante que ACEPTES las notificaciones cuando el navegador te lo pida; así recibirás el aviso de tus pagos al instante. 📲
+
+¡Estamos listos para seguir dándote la mejor atención! 🤝🔥`
+
+        navigator.clipboard.writeText(message)
+        toast.success("Mensaje de bienvenida copiado")
     }
 
     const handleDeleteUser = async (id: string) => {
@@ -293,6 +314,15 @@ export default function AdminUsersPage() {
                                                             <Landmark className="w-4 h-4" />
                                                         </Button>
                                                     )}
+                                                    <Button
+                                                        size="icon"
+                                                        variant="ghost"
+                                                        className="h-8 w-8 text-muted-foreground hover:text-green-600"
+                                                        onClick={() => copyWelcomeMessage(u)}
+                                                        title="Copiar Mensaje de Bienvenida"
+                                                    >
+                                                        <MessageSquare className="w-4 h-4" />
+                                                    </Button>
                                                     <Button
                                                         size="icon"
                                                         variant="ghost"
