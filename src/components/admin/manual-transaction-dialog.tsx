@@ -3,7 +3,7 @@ import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { X, Loader2, Search, User, Landmark, Calculator, Check, AlertCircle } from "lucide-react"
+import { X, Loader2, Search, User, Landmark, Calculator, Check, AlertCircle, MessageCircle } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { AccountsService, UserAccount } from "@/services/accounts"
 import { TransactionsService } from "@/services/transactions"
@@ -54,6 +54,8 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDep
     const [reconcileNow, setReconcileNow] = useState(false)
     const [availableDeposits, setAvailableDeposits] = useState<BankDeposit[]>([])
     const [selectedDepositId, setSelectedDepositId] = useState<string | null>(null)
+    const [whatsappMode, setWhatsappMode] = useState(false)
+    const [whatsappForm, setWhatsappForm] = useState({ alias: '', bank_name: '', account_number: '', country: 'VENEZUELA' })
 
     useEffect(() => {
         if (isOpen) {
@@ -64,6 +66,8 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDep
             setAmountSent("") // Reset amountSent
             setReconcileNow(!!initialDepositId) // Set reconcileNow based on initialDepositId
             setSelectedDepositId(initialDepositId || null) // Set selectedDepositId
+            setWhatsappMode(false)
+            setWhatsappForm({ alias: '', bank_name: '', account_number: '', country: 'VENEZUELA' })
             loadUsers()
             loadRates()
 
@@ -86,6 +90,8 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDep
             setUserSearch("")
             setSelectedDepositId(null)
             setReconcileNow(true)
+            setWhatsappMode(false)
+            setWhatsappForm({ alias: '', bank_name: '', account_number: '', country: 'VENEZUELA' })
         }
     }, [isOpen, initialDepositId])
 
@@ -277,40 +283,109 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDep
                                 <Button variant="ghost" size="sm" onClick={() => setStep(1)} className="text-xs">Cambiar Cliente</Button>
                             </div>
 
-                            {loading ? (
-                                <div className="flex justify-center py-10"><Loader2 className="animate-spin" /></div>
-                            ) : (
-                                <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
-                                    {accounts.map(acc => (
-                                        <div
-                                            key={acc.id}
-                                            className={`p-4 border rounded-xl cursor-pointer transition-all hover:border-primary hover:bg-primary/5 flex items-center justify-between ${selectedAccount?.id === acc.id ? 'border-primary bg-primary/5 ring-1 ring-primary' : ''}`}
-                                            onClick={() => {
-                                                setSelectedAccount(acc)
-                                                setTargetCurrency(acc.country === 'VENEZUELA' ? 'VES' : acc.country)
-                                                setStep(3)
-                                            }}
+                            {/* Formulario WhatsApp - siempre visible */}
+                            <div className="space-y-3 rounded-xl border-2 border-green-500 p-4 bg-green-50/40">
+                                <div className="flex items-center gap-2 text-green-700 font-semibold text-sm">
+                                    <MessageCircle className="w-4 h-4" />
+                                    Datos en WhatsApp
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="col-span-2 space-y-1">
+                                        <label className="text-xs font-medium text-muted-foreground uppercase">Nombre / Alias</label>
+                                        <input
+                                            className="w-full h-10 rounded-lg border px-3 bg-background text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
+                                            placeholder="Ej: María González"
+                                            value={whatsappForm.alias}
+                                            onChange={e => setWhatsappForm(f => ({ ...f, alias: e.target.value }))}
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-medium text-muted-foreground uppercase">Banco</label>
+                                        <input
+                                            className="w-full h-10 rounded-lg border px-3 bg-background text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
+                                            placeholder="Ej: Banesco"
+                                            value={whatsappForm.bank_name}
+                                            onChange={e => setWhatsappForm(f => ({ ...f, bank_name: e.target.value }))}
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-medium text-muted-foreground uppercase">País destino</label>
+                                        <select
+                                            className="w-full h-10 rounded-lg border px-3 bg-background text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
+                                            value={whatsappForm.country}
+                                            onChange={e => setWhatsappForm(f => ({ ...f, country: e.target.value }))}
                                         >
-                                            <div>
-                                                <div className="font-bold text-lg">{acc.alias}</div>
-                                                <div className="text-xs text-muted-foreground uppercase">{acc.bank_name} • {acc.account_number}</div>
-                                                <div className="text-[10px] mt-1 bg-muted px-2 py-0.5 rounded-full inline-block">{acc.country}</div>
+                                            <option value="VENEZUELA">Venezuela</option>
+                                            <option value="COLOMBIA">Colombia</option>
+                                            <option value="PERU">Perú</option>
+                                            <option value="CHILE">Chile</option>
+                                            <option value="USA">USA</option>
+                                        </select>
+                                    </div>
+                                    <div className="col-span-2 space-y-1">
+                                        <label className="text-xs font-medium text-muted-foreground uppercase">Número de cuenta / Teléfono</label>
+                                        <input
+                                            className="w-full h-10 rounded-lg border px-3 bg-background text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
+                                            placeholder="Ej: 0412-1234567 o 01020317120001871539"
+                                            value={whatsappForm.account_number}
+                                            onChange={e => setWhatsappForm(f => ({ ...f, account_number: e.target.value }))}
+                                        />
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    disabled={!whatsappForm.alias || !whatsappForm.account_number}
+                                    onClick={() => {
+                                        const manualAcc: UserAccount = {
+                                            id: 'whatsapp-manual',
+                                            user_id: selectedUser?.id || '',
+                                            alias: whatsappForm.alias,
+                                            bank_name: whatsappForm.bank_name,
+                                            account_number: whatsappForm.account_number,
+                                            country: whatsappForm.country,
+                                            details: null
+                                        }
+                                        setSelectedAccount(manualAcc)
+                                        setTargetCurrency(whatsappForm.country === 'VENEZUELA' ? 'VES' : whatsappForm.country)
+                                        setStep(3)
+                                    }}
+                                    className="w-full py-2.5 rounded-xl bg-green-500 text-white font-semibold text-sm hover:bg-green-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                                >
+                                    Continuar con estos datos →
+                                </button>
+                            </div>
+
+                            {/* Cuentas guardadas como alternativa */}
+                            {loading ? (
+                                <div className="flex justify-center py-4"><Loader2 className="animate-spin" /></div>
+                            ) : accounts.length > 0 && (
+                                <div className="space-y-2">
+                                    <p className="text-xs font-medium text-muted-foreground uppercase">O elegir cuenta guardada</p>
+                                    <div className="space-y-2 max-h-[25vh] overflow-y-auto pr-1">
+                                        {accounts.map(acc => (
+                                            <div
+                                                key={acc.id}
+                                                className={`p-3 border rounded-xl cursor-pointer transition-all hover:border-primary hover:bg-primary/5 flex items-center justify-between ${selectedAccount?.id === acc.id ? 'border-primary bg-primary/5 ring-1 ring-primary' : ''}`}
+                                                onClick={() => {
+                                                    setSelectedAccount(acc)
+                                                    setTargetCurrency(acc.country === 'VENEZUELA' ? 'VES' : acc.country)
+                                                    setStep(3)
+                                                }}
+                                            >
+                                                <div>
+                                                    <div className="font-bold text-sm">{acc.alias}</div>
+                                                    <div className="text-xs text-muted-foreground uppercase">{acc.bank_name} • {acc.account_number}</div>
+                                                    <div className="text-[10px] mt-0.5 bg-muted px-2 py-0.5 rounded-full inline-block">{acc.country}</div>
+                                                </div>
+                                                <Check className={`w-4 h-4 text-primary ${selectedAccount?.id === acc.id ? 'opacity-100' : 'opacity-0'}`} />
                                             </div>
-                                            <Check className={`w-5 h-5 text-primary ${selectedAccount?.id === acc.id ? 'opacity-100' : 'opacity-0'}`} />
-                                        </div>
-                                    ))}
-                                    {accounts.length === 0 && (
-                                        <div className="text-center py-10 border-2 border-dashed rounded-xl">
-                                            <p className="text-muted-foreground mb-4">El cliente no tiene beneficiarios registrados.</p>
-                                            <Button variant="outline" asChild>
-                                                <a href={`/admin/users`} target="_blank">Registrar uno en Usuarios</a>
-                                            </Button>
-                                        </div>
-                                    )}
+                                        ))}
+                                    </div>
                                 </div>
                             )}
                         </div>
                     )}
+
 
                     {step === 3 && (
                         <div className="p-6 space-y-6">
