@@ -364,6 +364,7 @@ Pasos para tu primer ingreso:
             {selectedUserForAccount && (
                 <AddAccountDialog
                     userId={selectedUserForAccount.id}
+                    userName={selectedUserForAccount.full_name}
                     isOpen={isAccountModalOpen}
                     onClose={() => {
                         setIsAccountModalOpen(false)

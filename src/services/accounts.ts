@@ -61,6 +61,17 @@ export const AccountsService = {
         return data[0]
     },
 
+    async updateAccount(id: string, account: Partial<Omit<UserAccount, 'id' | 'user_id' | 'created_at'>>) {
+        const { data, error } = await supabase
+            .from('user_accounts')
+            .update(account)
+            .eq('id', id)
+            .select()
+
+        if (error) throw error
+        return data[0]
+    },
+
     async deleteAccount(id: string) {
         const { error } = await supabase
             .from('user_accounts')
@@ -68,5 +79,15 @@ export const AccountsService = {
             .eq('id', id)
 
         if (error) throw error
+    },
+
+    async createAccountForUser(userId: string, account: Omit<UserAccount, 'id' | 'user_id' | 'created_at'>) {
+        const { data, error } = await supabase
+            .from('user_accounts')
+            .insert([{ ...account, user_id: userId }])
+            .select()
+
+        if (error) throw error
+        return data[0]
     }
 }
