@@ -161,7 +161,7 @@ export function BeneficiaryForm({ data, onChange, fixedCountry }: BeneficiaryFor
                             }
                             value={data.account_number}
                             onChange={e => {
-                                const val = e.target.value;
+                                const val = e.target.value.replace(/[\s\-\.\(\)]/g, '');
                                 const isPhone = (country === 'VENEZUELA' && data.details.venezuela_type === 'Pago Móvil') ||
                                     (country === 'PERU' && (data.details.peru_type === 'Yape' || data.details.peru_type === 'Plin')) ||
                                     (country === 'COLOMBIA' && (data.bank_name === 'NEQUI' || data.bank_name === 'LLAVES BRE-B'));
@@ -257,7 +257,7 @@ export function BeneficiaryForm({ data, onChange, fixedCountry }: BeneficiaryFor
                                         placeholder="12345678"
                                         value={data.details.id_number}
                                         onChange={e => {
-                                            const val = e.target.value;
+                                            const val = e.target.value.replace(/[\s\-\.\(\)]/g, '');
                                             if (country === 'VENEZUELA' && !/^\d*$/.test(val)) return;
                                             updateDetails({ id_number: val });
                                         }}
