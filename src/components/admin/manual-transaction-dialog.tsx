@@ -11,6 +11,7 @@ import { RatesService, RatesData } from "@/services/rates"
 import { BankDepositsService, BankDeposit } from "@/services/bank-deposits"
 import { calculateRate, formatRate, getRateDecimals, formatCurrency, parseFormattedNumber, isInversePair } from "@/lib/rates-utils"
 import { CURRENCY_LABELS, SUPPORTED_REGIONS } from "@/lib/constants"
+import { BeneficiaryForm, BeneficiaryData } from "@/components/BeneficiaryForm"
 
 interface ManualTransactionDialogProps {
     isOpen: boolean
@@ -54,6 +55,12 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDep
     const [reconcileNow, setReconcileNow] = useState(false)
     const [availableDeposits, setAvailableDeposits] = useState<BankDeposit[]>([])
     const [selectedDepositId, setSelectedDepositId] = useState<string | null>(null)
+    const [showRegisterForm, setShowRegisterForm] = useState(false)
+    const [registerSaving, setRegisterSaving] = useState(false)
+    const [registerFormData, setRegisterFormData] = useState<BeneficiaryData>({
+        alias: '', country: 'VENEZUELA', bank_name: '', account_number: '',
+        details: { venezuela_type: 'Cuenta' }
+    })
 
 
     useEffect(() => {
@@ -64,7 +71,9 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDep
             setUserSearch("")
             setAmountSent("") // Reset amountSent
             setReconcileNow(!!initialDepositId) // Set reconcileNow based on initialDepositId
-            setSelectedDepositId(initialDepositId || null) // Set selectedDepositId
+            setSelectedDepositId(initialDepositId || null)
+            setShowRegisterForm(false)
+            setRegisterFormData({ alias: '', country: 'VENEZUELA', bank_name: '', account_number: '', details: { venezuela_type: 'Cuenta' } })
 
             loadUsers()
             loadRates()
@@ -88,6 +97,8 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDep
             setUserSearch("")
             setSelectedDepositId(null)
             setReconcileNow(true)
+            setShowRegisterForm(false)
+            setRegisterFormData({ alias: '', country: 'VENEZUELA', bank_name: '', account_number: '', details: { venezuela_type: 'Cuenta' } })
         }
     }, [isOpen, initialDepositId])
 
@@ -309,15 +320,71 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDep
                                 </div>
                             )}
 
-                            {/* Botón omitir */}
-                            <button
-                                type="button"
-                                onClick={() => { setSelectedAccount(null); setStep(3) }}
-                                className="w-full flex items-center justify-center gap-2 py-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                            >
-                                <SkipForward className="w-3.5 h-3.5" />
-                                Omitir este paso
-                            </button>
+                            {/* Botones inferiores */}
+                            <div className="flex gap-2 pt-1">
+                                <button
+                                    type="button"
+                                    onClick={() => { setSelectedAccount(null); setStep(3) }}
+                                    className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs text-muted-foreground hover:text-foreground border border-dashed rounded-lg transition-colors"
+                                >
+                                    <SkipForward className="w-3.5 h-3.5" />
+                                    Omitir este paso
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowRegisterForm(v => !v)}
+                                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs border rounded-lg font-medium transition-colors ${showRegisterForm
+                                            ? 'bg-primary text-primary-foreground border-primary'
+                                            : 'text-primary border-primary hover:bg-primary/5'
+                                        }`}
+                                >
+                                    <Landmark className="w-3.5 h-3.5" />
+                                    {showRegisterForm ? 'Cancelar registro' : 'Registrar cuenta'}
+                                </button>
+                            </div>
+
+                            {/* Formulario de registro inline */}
+                            {showRegisterForm && (
+                                <div className="border rounded-xl p-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200 bg-muted/20">
+                                    <p className="text-xs font-semibold text-muted-foreground uppercase">Nueva cuenta para {selectedUser?.full_name}</p>
+                                    <BeneficiaryForm
+                                        data={registerFormData}
+                                        onChange={setRegisterFormData}
+                                    />
+                                    <button
+                                        type="button"
+                                        disabled={registerSaving || !registerFormData.alias || !registerFormData.account_number}
+                                        onClick={async () => {
+                                            setRegisterSaving(true)
+                                            try {
+                                                const newAcc = await AccountsService.createAccountForUser(selectedUser!.id, {
+                                                    alias: registerFormData.alias,
+                                                    country: registerFormData.country,
+                                                    bank_name: registerFormData.bank_name,
+                                                    account_number: registerFormData.account_number,
+                                                    details: registerFormData.details
+                                                })
+                                                toast.success('Cuenta registrada con éxito')
+                                                setShowRegisterForm(false)
+                                                setRegisterFormData({ alias: '', country: 'VENEZUELA', bank_name: '', account_number: '', details: { venezuela_type: 'Cuenta' } })
+                                                // Recargar cuentas y seleccionar la nueva
+                                                await loadUserAccounts(selectedUser!.id)
+                                                setSelectedAccount(newAcc)
+                                                setTargetCurrency(newAcc.country === 'VENEZUELA' ? 'VES' : newAcc.country)
+                                                setStep(3)
+                                            } catch (e: any) {
+                                                toast.error('Error al registrar: ' + e.message)
+                                            } finally {
+                                                setRegisterSaving(false)
+                                            }
+                                        }}
+                                        className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                                    >
+                                        {registerSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+                                        Guardar y seleccionar
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     )}
 
