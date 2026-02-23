@@ -25,8 +25,26 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-    // Basic fetch listener required for PWA "standalone" mode on some platforms
-    event.respondWith(fetch(event.request));
+    const url = new URL(event.request.url);
+
+    // Only handle GET requests from the same origin.
+    // Skip POST/PUT/etc. (e.g. Supabase auth calls) and cross-origin requests
+    // so they go directly to the network without the SW interfering.
+    if (event.request.method !== 'GET' || url.origin !== self.location.origin) {
+        return;
+    }
+
+    event.respondWith(
+        fetch(event.request).catch((err) => {
+            // Silently ignore AbortErrors — these happen when the browser
+            // cancels a navigation fetch (e.g. when opening the app from
+            // a notification tap) and are not real errors.
+            if (err && err.name === 'AbortError') {
+                return new Response('', { status: 408 });
+            }
+            throw err;
+        })
+    );
 });
 
 messaging.onBackgroundMessage((payload) => {
