@@ -9,6 +9,59 @@ import { formatCurrency, parseFormattedNumber } from "@/lib/rates-utils"
 import { ManualBalancesService, BalanceRowData } from "@/services/manual-balances"
 import { toast } from "sonner"
 
+const BalanceBlock = ({ title, data, onChange, color = "primary" }: { title: string, data: BalanceRowData, onChange: (d: BalanceRowData) => void, color?: string }) => (
+    <Card className="border-none shadow-lg bg-card">
+        <CardHeader className={`bg-${color}/5 border-b py-3 px-4`}>
+            <CardTitle className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full bg-${color}`} />
+                {title}
+            </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+            <table className="w-full text-sm border-collapse">
+                <tbody>
+                    <tr className="border-b hover:bg-muted/30 transition-colors">
+                        <td className="p-3 font-medium text-muted-foreground">Hasta Ayer</td>
+                        <td className="p-3 text-right">
+                            <Input
+                                className="h-8 text-right font-bold w-40 ml-auto border-dashed hover:border-primary/50 focus:border-primary transition-all bg-transparent border-0 shadow-none focus-visible:ring-0 p-0"
+                                value={data.yesterday}
+                                onChange={e => onChange({ ...data, yesterday: e.target.value })}
+                            />
+                        </td>
+                    </tr>
+                    <tr className="border-b hover:bg-muted/30 transition-colors">
+                        <td className="p-3 font-medium text-muted-foreground">Paso Hoy</td>
+                        <td className="p-3 text-right">
+                            <Input
+                                className={`h-8 text-right font-bold w-40 ml-auto border-dashed hover:border-primary/50 focus:border-primary transition-all bg-transparent border-0 shadow-none focus-visible:ring-0 p-0 ${parseFormattedNumber(data.today_pass) < 0 ? 'text-red-500' : ''}`}
+                                value={data.today_pass}
+                                onChange={e => onChange({ ...data, today_pass: e.target.value })}
+                            />
+                        </td>
+                    </tr>
+                    <tr className="border-b hover:bg-muted/30 transition-colors">
+                        <td className="p-3 font-medium text-muted-foreground">CLPS de Hoy</td>
+                        <td className="p-3 text-right">
+                            <Input
+                                className="h-8 text-right font-bold w-40 ml-auto border-dashed hover:border-primary/50 focus:border-primary transition-all bg-transparent border-0 shadow-none focus-visible:ring-0 p-0"
+                                value={data.today_clps}
+                                onChange={e => onChange({ ...data, today_clps: e.target.value })}
+                            />
+                        </td>
+                    </tr>
+                    <tr className="bg-muted/50">
+                        <td className="p-3 font-bold uppercase text-[10px] tracking-widest">Total</td>
+                        <td className="p-3 text-right font-black text-lg">
+                            {formatCurrency(data.total)}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </CardContent>
+    </Card>
+)
+
 export default function ManualCuadrePage() {
     const [egli, setEgli] = useState<BalanceRowData>({ yesterday: "0", today_pass: "0", today_clps: "0", total: 0 })
     const [vicmar, setVicmar] = useState<BalanceRowData>({ yesterday: "0", today_pass: "0", today_clps: "0", total: 0 })
@@ -86,59 +139,6 @@ export default function ManualCuadrePage() {
         setCyber(empty)
         setManualCuadre("0")
     }
-
-    const BalanceBlock = ({ title, data, onChange, color = "primary" }: { title: string, data: BalanceRowData, onChange: (d: BalanceRowData) => void, color?: string }) => (
-        <Card className="border-none shadow-lg bg-card">
-            <CardHeader className={`bg-${color}/5 border-b py-3 px-4`}>
-                <CardTitle className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full bg-${color}`} />
-                    {title}
-                </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-                <table className="w-full text-sm border-collapse">
-                    <tbody>
-                        <tr className="border-b hover:bg-muted/30 transition-colors">
-                            <td className="p-3 font-medium text-muted-foreground">Hasta Ayer</td>
-                            <td className="p-3 text-right">
-                                <Input
-                                    className="h-8 text-right font-bold w-40 ml-auto border-dashed hover:border-primary/50 focus:border-primary transition-all bg-transparent border-0 shadow-none focus-visible:ring-0 p-0"
-                                    value={data.yesterday}
-                                    onChange={e => onChange({ ...data, yesterday: e.target.value })}
-                                />
-                            </td>
-                        </tr>
-                        <tr className="border-b hover:bg-muted/30 transition-colors">
-                            <td className="p-3 font-medium text-muted-foreground">Paso Hoy</td>
-                            <td className="p-3 text-right">
-                                <Input
-                                    className={`h-8 text-right font-bold w-40 ml-auto border-dashed hover:border-primary/50 focus:border-primary transition-all bg-transparent border-0 shadow-none focus-visible:ring-0 p-0 ${parseFormattedNumber(data.today_pass) < 0 ? 'text-red-500' : ''}`}
-                                    value={data.today_pass}
-                                    onChange={e => onChange({ ...data, today_pass: e.target.value })}
-                                />
-                            </td>
-                        </tr>
-                        <tr className="border-b hover:bg-muted/30 transition-colors">
-                            <td className="p-3 font-medium text-muted-foreground">CLPS de Hoy</td>
-                            <td className="p-3 text-right">
-                                <Input
-                                    className="h-8 text-right font-bold w-40 ml-auto border-dashed hover:border-primary/50 focus:border-primary transition-all bg-transparent border-0 shadow-none focus-visible:ring-0 p-0"
-                                    value={data.today_clps}
-                                    onChange={e => onChange({ ...data, today_clps: e.target.value })}
-                                />
-                            </td>
-                        </tr>
-                        <tr className="bg-muted/50">
-                            <td className="p-3 font-bold uppercase text-[10px] tracking-widest">Total</td>
-                            <td className="p-3 text-right font-black text-lg">
-                                {formatCurrency(data.total)}
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </CardContent>
-        </Card>
-    )
 
     return (
         <div className="space-y-6 max-w-4xl mx-auto pb-10">
