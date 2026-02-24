@@ -218,7 +218,7 @@ export default function AdminBalancePage() {
                             <div className="flex items-center justify-between text-xs">
                                 <span className="text-muted-foreground flex items-center gap-1.5"><TrendingUp className="w-3 h-3 text-green-500" /> Ingresos (+)</span>
                                 <span className="font-medium text-green-600">
-                                    {formatCurrency((incomeByCurrency[curr] || 0) + (summaryByCurrency[curr] || 0))}
+                                    {formatCurrency(summaryByCurrency[curr] || 0)}
                                 </span>
                             </div>
                             <div className="flex items-center justify-between text-xs">
@@ -236,7 +236,6 @@ export default function AdminBalancePage() {
                                     <div className="text-lg font-black font-mono">
                                         {formatCurrency(
                                             (startBalanceByCurrency[curr] || 0) +
-                                            (incomeByCurrency[curr] || 0) +
                                             (summaryByCurrency[curr] || 0) -
                                             (outflowByCurrency[curr] || 0) -
                                             (withdrawalsByCurrency[curr] || 0)
