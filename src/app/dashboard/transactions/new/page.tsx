@@ -222,7 +222,9 @@ export default function NewTransactionPage() {
         setPendingTransfers(updatedTransfers)
 
         if (shouldFinish) {
-            handleCreateTransaction(updatedTransfers)
+            // No longer calling handleCreateTransaction here
+            // Instead, we just go to the payment instructions step
+            setStep(3)
         } else {
             setSelectedAccount(null)
             setAmountInput("100")
@@ -258,7 +260,6 @@ export default function NewTransactionPage() {
         const transfersToProcess = transfersOverride || pendingTransfers
         if (transfersToProcess.length === 0 || !rates) return
 
-        setLoading(true)
         try {
             const marginKey = `${sourceCurrency}_${targetCurrency}`
             const profit_percentage = rates.margins[marginKey] || rates.margins["GENERIC"] || 0
@@ -288,24 +289,37 @@ export default function NewTransactionPage() {
             const created = await TransactionsService.createBulk(txs)
             setCreatedTxIds(created.map((t: any) => t.id))
             setCreatedTxId(created[0].id)
-            setStep(3)
+            return created[0].id // Return the first ID for the upload
         } catch (error: any) {
             console.error(error)
             toast.error(`Error al crear transacciones: ${error.message || 'Error desconocido'}`)
-        } finally {
-            setLoading(false)
+            throw error
         }
     }
 
     const handleUpload = async () => {
-        if (!file || !createdTxId) return
+        if (!file) {
+            toast.warning("Por favor selecciona un comprobante")
+            return
+        }
+
         setLoading(true)
         try {
-            await TransactionsService.uploadProof(file, createdTxId)
+            // 1. Create the transaction records first in the DB
+            const txId = await handleCreateTransaction()
+
+            if (!txId) {
+                toast.error("No se pudo iniciar la transacción")
+                setLoading(false)
+                return
+            }
+
+            // 2. Upload the file
+            await TransactionsService.uploadProof(file, txId)
             setStep(4)
-        } catch (error) {
+        } catch (error: any) {
             console.error(error)
-            toast.error("Error al subir comprobante. Nota: Asegúrate de que el bucket 'payments' exista en Supabase Storage y sea público.")
+            toast.error("Error al procesar la operación. Por favor intenta de nuevo.")
         } finally {
             setLoading(false)
         }
@@ -484,7 +498,7 @@ export default function NewTransactionPage() {
                             {pendingTransfers.length > 0 ? "Añadir otro destinatario" : "Continuar"} <ChevronRight className="ml-2 w-4 h-4" />
                         </Button>
                         {pendingTransfers.length > 0 && !isBelowMin && (
-                            <Button className="w-full bg-green-600 hover:bg-green-700" onClick={() => handleCreateTransaction()} disabled={loading}>
+                            <Button className="w-full bg-green-600 hover:bg-green-700" onClick={() => setStep(3)} disabled={loading}>
                                 {loading ? "Procesando..." : `Finalizar y depositar ${formatCurrency(totalToPay, sourceCurrency)} ${CURRENCY_LABELS[sourceCurrency]}`}
                             </Button>
                         )}
