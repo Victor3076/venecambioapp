@@ -43,7 +43,7 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDep
     const [showRegisterForm, setShowRegisterForm] = useState(false)
     const [registerSaving, setRegisterSaving] = useState(false)
     const [registerFormData, setRegisterFormData] = useState<BeneficiaryData>({
-        alias: '', country: 'VENEZUELA', bank_name: '', account_number: '',
+        alias: '', country: 'VES', bank_name: '', account_number: '',
         details: { venezuela_type: 'Cuenta' }
     })
 
@@ -153,6 +153,15 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDep
         setAmountReceived(formatCurrency(result))
     }, [sourceCurrency, targetCurrency, amountSent, rates])
 
+    const getProfitData = () => {
+        if (!rates) return { percentage: 0, amount: 0 }
+        const marginKey = `${sourceCurrency}_${targetCurrency}`
+        const percentage = rates.margins[marginKey] || rates.margins["GENERIC"] || 0
+        const sourceUsdtPrice = rates.usdt_prices[sourceCurrency as keyof typeof rates.usdt_prices] || 1
+        const amount = ((parseFormattedNumber(amountSent) * percentage) / 100) / sourceUsdtPrice
+        return { percentage, amount }
+    }
+
     const handleCreate = async () => {
         if (!selectedUser) return
         if (reconcileNow && !selectedDepositId) {
@@ -162,6 +171,7 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDep
 
         setLoading(true)
         try {
+            const { percentage, amount } = getProfitData()
             const tx = await TransactionsService.createForUser(selectedUser.id, {
                 amount_sent: parseFormattedNumber(amountSent),
                 currency_sent: sourceCurrency,
@@ -169,7 +179,9 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDep
                 currency_received: targetCurrency,
                 exchange_rate: exchangeRate,
                 status: reconcileNow ? 'verified' : 'verifying',
-                beneficiary_data: selectedAccount
+                beneficiary_data: selectedAccount,
+                profit_percentage: percentage,
+                profit_amount: amount
             })
 
             if (reconcileNow && selectedDepositId && tx.id) {

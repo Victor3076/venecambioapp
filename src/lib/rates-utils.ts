@@ -1,27 +1,27 @@
 export const pairConfig: Record<string, { decimals: number, isInverse?: boolean }> = {
-    // PERU SOURCE
-    PERU_VES: { decimals: 2 },
-    PERU_CHILE: { decimals: 0 },
-    PERU_COLOMBIA: { decimals: 0 },
-    PERU_USA: { decimals: 2, isInverse: true },
+    // PEN SOURCE
+    PEN_VES: { decimals: 2 },
+    PEN_CLP: { decimals: 0 },
+    PEN_COP: { decimals: 0 },
+    PEN_USD: { decimals: 2, isInverse: true },
 
-    // CHILE SOURCE
-    CHILE_VES: { decimals: 4 },
-    CHILE_COLOMBIA: { decimals: 2 },
-    CHILE_PERU: { decimals: 4 },
-    CHILE_USA: { decimals: 0, isInverse: true },
+    // CLP SOURCE
+    CLP_VES: { decimals: 4 },
+    CLP_COP: { decimals: 2 },
+    CLP_PEN: { decimals: 4 },
+    CLP_USD: { decimals: 0, isInverse: true },
 
-    // COLOMBIA SOURCE
-    COLOMBIA_VES: { decimals: 2, isInverse: true }, // Special Case: COP per VES
-    COLOMBIA_CHILE: { decimals: 2 },
-    COLOMBIA_PERU: { decimals: 5 },
-    COLOMBIA_USA: { decimals: 0, isInverse: true },
+    // COP SOURCE
+    COP_VES: { decimals: 2, isInverse: true }, // Special Case: COP per VES
+    COP_CLP: { decimals: 2 },
+    COP_PEN: { decimals: 5 },
+    COP_USD: { decimals: 0, isInverse: true },
 
-    // USA SOURCE
-    USA_VES: { decimals: 2 },
-    USA_COLOMBIA: { decimals: 0 },
-    USA_PERU: { decimals: 2 },
-    USA_CHILE: { decimals: 0 },
+    // USD SOURCE
+    USD_VES: { decimals: 2 },
+    USD_COP: { decimals: 0 },
+    USD_PEN: { decimals: 2 },
+    USD_CLP: { decimals: 0 },
 }
 
 export const calculateRate = (targetCode: string, sourceCode: string, toPrice: number, fromPrice: number, marginPercentage: number = 0) => {
@@ -80,9 +80,9 @@ export const formatCurrency = (value: number | string, currencyCode?: string) =>
     const num = typeof value === 'string' ? parseFloat(value) || 0 : value;
 
     let decimals = 2; // Default for PEN, USD, VES
-    if (currencyCode === 'CHILE' || currencyCode === 'CLP') {
+    if (currencyCode === 'CLP') {
         decimals = 0;
-    } else if (currencyCode === 'COLOMBIA' || currencyCode === 'COP') {
+    } else if (currencyCode === 'COP') {
         decimals = 0;
     }
 

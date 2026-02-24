@@ -35,13 +35,15 @@ export default function AdminProfitsPage() {
                 const currency = tx.currency_sent
                 const profit = tx.profit_amount || 0
                 const volume = tx.amount_sent || 0
+                const margin = tx.profit_percentage || 0
 
                 acc.totalProfit += profit
                 acc.volumeByCurrency[currency] = (acc.volumeByCurrency[currency] || 0) + volume
                 acc.profitByCurrency[currency] = (acc.profitByCurrency[currency] || 0) + profit
+                acc.marginSumByCurrency[currency] = (acc.marginSumByCurrency[currency] || 0) + (margin * volume)
 
                 return acc
-            }, { totalProfit: 0, volumeByCurrency: {}, profitByCurrency: {} })
+            }, { totalProfit: 0, volumeByCurrency: {}, profitByCurrency: {}, marginSumByCurrency: {} })
 
             setTransactions(completed)
             setStats(summary)
@@ -108,16 +110,16 @@ export default function AdminProfitsPage() {
                 <Card>
                     <CardHeader className="pb-2">
                         <CardTitle className="text-sm font-medium flex items-center gap-2">
-                            <PieChart className="w-4 h-4 text-orange-500" /> Moneda Top
+                            <PieChart className="w-4 h-4 text-orange-500" /> Moneda Más Rentable
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">
-                            {Object.entries(stats.volumeByCurrency).length > 0
-                                ? Object.entries(stats.volumeByCurrency).sort((a: any, b: any) => b[1] - a[1])[0][0]
+                            {Object.entries(stats.profitByCurrency).length > 0
+                                ? Object.entries(stats.profitByCurrency).sort((a: any, b: any) => b[1] - a[1])[0][0]
                                 : "---"}
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1">Mayor volumen de envío.</p>
+                        <p className="text-xs text-muted-foreground mt-1">Mayor aporte a la ganancia total.</p>
                     </CardContent>
                 </Card>
             </div>
@@ -150,8 +152,8 @@ export default function AdminProfitsPage() {
                                         <td className="p-4 text-green-600 font-bold">+{stats.profitByCurrency[curr].toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                                         <td className="p-4 text-muted-foreground">
                                             {stats.volumeByCurrency[curr] > 0
-                                                ? (stats.profitByCurrency[curr] / (stats.totalProfit || 1) * 100).toFixed(1) + "% de ganancia"
-                                                : "0"}
+                                                ? (stats.marginSumByCurrency[curr] / stats.volumeByCurrency[curr]).toFixed(1) + "% de ganancia"
+                                                : "0%"}
                                         </td>
                                     </tr>
                                 ))}

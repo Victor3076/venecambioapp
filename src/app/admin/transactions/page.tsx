@@ -410,35 +410,40 @@ export default function AdminTransactionsPage() {
                             <tfoot className="bg-muted/20 border-t">
                                 <tr>
                                     <td colSpan={2} className="p-4 font-bold text-right text-muted-foreground">
-                                        Total {filterCurrency !== 'all' ? filterCurrency : ''} filtrado:
+                                        Total {filterCurrency !== 'all' ? CURRENCY_LABELS[filterCurrency] || filterCurrency : ''} filtrado:
                                     </td>
                                     <td className="p-4">
                                         <div className="font-black text-lg text-primary">
-                                            {formatCurrency(transactions
-                                                .map(tx => ({
-                                                    ...tx,
-                                                    deposit: allDeposits.find(d => d.matched_transaction_id === tx.id)
-                                                }))
-                                                .filter(tx => {
-                                                    const matchesStatus = filterStatus === 'all' || tx.status === filterStatus
-                                                    const matchesCurrency = filterCurrency === 'all' || tx.currency_sent === filterCurrency
-                                                    const matchesDate = !filterDate || (tx.created_at && tx.created_at.startsWith(filterDate))
+                                            {filterCurrency !== 'all'
+                                                ? formatCurrency(transactions
+                                                    .map(tx => ({
+                                                        ...tx,
+                                                        deposit: allDeposits.find(d => d.matched_transaction_id === tx.id)
+                                                    }))
+                                                    .filter(tx => {
+                                                        const matchesStatus = filterStatus === 'all' || tx.status === filterStatus
+                                                        const matchesCurrency = tx.currency_sent === filterCurrency
+                                                        const matchesDate = !filterDate || (tx.created_at && tx.created_at.startsWith(filterDate))
 
-                                                    const searchLower = searchTerm.toLowerCase()
-                                                    const matchesSearch = !searchTerm ||
-                                                        tx.profiles?.full_name?.toLowerCase().includes(searchLower) ||
-                                                        tx.amount_sent.toString().includes(searchTerm) ||
-                                                        tx.id?.toLowerCase().includes(searchLower) ||
-                                                        tx.deposit?.bank_name?.toLowerCase().includes(searchLower) ||
-                                                        tx.deposit?.reference_number?.toLowerCase().includes(searchLower)
+                                                        const searchLower = searchTerm.toLowerCase()
+                                                        const matchesSearch = !searchTerm ||
+                                                            tx.profiles?.full_name?.toLowerCase().includes(searchLower) ||
+                                                            tx.amount_sent.toString().includes(searchTerm) ||
+                                                            tx.id?.toLowerCase().includes(searchLower) ||
+                                                            tx.deposit?.bank_name?.toLowerCase().includes(searchLower) ||
+                                                            tx.deposit?.reference_number?.toLowerCase().includes(searchLower)
 
-                                                    return matchesStatus && matchesDate && matchesSearch && matchesCurrency
-                                                })
-                                                .reduce((sum, tx) => sum + Number(tx.amount_sent), 0)
-                                            )} {filterCurrency !== 'all' ? filterCurrency : ''}
+                                                        return matchesStatus && matchesDate && matchesSearch && matchesCurrency
+                                                    })
+                                                    .reduce((sum, tx) => sum + Number(tx.amount_sent), 0)
+                                                ) + " " + filterCurrency
+                                                : "---"
+                                            }
                                         </div>
                                     </td>
-                                    <td colSpan={3}></td>
+                                    <td colSpan={3}>
+                                        {filterCurrency === 'all' && <span className="text-[10px] text-muted-foreground italic">Filtra por moneda para ver el total</span>}
+                                    </td>
                                 </tr>
                             </tfoot>
                         </table>
