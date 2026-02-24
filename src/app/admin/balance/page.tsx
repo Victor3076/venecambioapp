@@ -107,11 +107,21 @@ export default function AdminBalancePage() {
         return acc
     }, {})
 
-    const outflowByCurrency = transactions
+    // 1. Income from Operations (What the client SENDS us in source currency)
+    const incomeByCurrency = transactions
         .filter(tx => tx.status === 'verified' || tx.status === 'completed')
         .reduce((acc: any, tx) => {
             const curr = REGION_TO_CURRENCY[tx.currency_sent] || tx.currency_sent
             acc[curr] = (acc[curr] || 0) + Number(tx.amount_sent)
+            return acc
+        }, {})
+
+    // 2. Outflow/Sales from Operations (What we PAY to beneficiaries in target currency)
+    const outflowByCurrency = transactions
+        .filter(tx => tx.status === 'verified' || tx.status === 'completed')
+        .reduce((acc: any, tx) => {
+            const curr = REGION_TO_CURRENCY[tx.currency_received] || tx.currency_received
+            acc[curr] = (acc[curr] || 0) + Number(tx.amount_received)
             return acc
         }, {})
 
@@ -183,14 +193,13 @@ export default function AdminBalancePage() {
                 </Button>
             </div>
 
-            {/* Summary Grid */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 {Object.keys(CURRENCY_LABELS).filter(k =>
-                    summaryByCurrency[k] ||
+                    incomeByCurrency[k] ||
                     startBalanceByCurrency[k] ||
                     outflowByCurrency[k] ||
                     withdrawalsByCurrency[k] ||
-                    k === 'USD' || k === 'VES' || k === 'COP'
+                    k === 'USD' || k === 'VES' || k === 'COP' || k === 'CLP' || k === 'PEN'
                 ).map(curr => (
                     <Card key={curr} className="overflow-hidden border-none shadow-md ring-1 ring-black/5">
                         <CardHeader className="pb-2 bg-muted/30">
@@ -208,7 +217,9 @@ export default function AdminBalancePage() {
                             </div>
                             <div className="flex items-center justify-between text-xs">
                                 <span className="text-muted-foreground flex items-center gap-1.5"><TrendingUp className="w-3 h-3 text-green-500" /> Ingresos (+)</span>
-                                <span className="font-medium text-green-600">{formatCurrency(summaryByCurrency[curr] || 0)}</span>
+                                <span className="font-medium text-green-600">
+                                    {formatCurrency((incomeByCurrency[curr] || 0) + (summaryByCurrency[curr] || 0))}
+                                </span>
                             </div>
                             <div className="flex items-center justify-between text-xs">
                                 <span className="text-muted-foreground flex items-center gap-1.5"><TrendingDown className="w-3 h-3 text-primary" /> Ops / Ventas (-)</span>
@@ -225,6 +236,7 @@ export default function AdminBalancePage() {
                                     <div className="text-lg font-black font-mono">
                                         {formatCurrency(
                                             (startBalanceByCurrency[curr] || 0) +
+                                            (incomeByCurrency[curr] || 0) +
                                             (summaryByCurrency[curr] || 0) -
                                             (outflowByCurrency[curr] || 0) -
                                             (withdrawalsByCurrency[curr] || 0)
@@ -284,7 +296,7 @@ export default function AdminBalancePage() {
                         <CardTitle className="text-lg flex items-center gap-2">
                             <TrendingDown className="w-5 h-5 text-primary" /> Egresos / Operaciones (Venta)
                         </CardTitle>
-                        <CardDescription>Total que el cliente envió (debería coincidir con ingresos).</CardDescription>
+                        <CardDescription>Total pagado a beneficiarios (salidas reales).</CardDescription>
                     </CardHeader>
                     <CardContent className="p-0">
                         <table className="w-full text-sm">
@@ -304,7 +316,7 @@ export default function AdminBalancePage() {
                                             <div className="font-bold">{CURRENCY_LABELS[curr] || curr}</div>
                                         </td>
                                         <td className="p-4 text-center text-muted-foreground">
-                                            {transactions.filter(tx => tx.currency_sent === curr).length} ops
+                                            {transactions.filter(tx => (REGION_TO_CURRENCY[tx.currency_received] || tx.currency_received) === curr).length} ops
                                         </td>
                                         <td className="p-4 text-right font-mono font-bold text-primary">
                                             {formatCurrency(outflowByCurrency[curr])}
@@ -315,7 +327,7 @@ export default function AdminBalancePage() {
                         </table>
                     </CardContent>
                     <div className="p-4 bg-primary/5 text-[11px] text-primary border-t">
-                        <strong>Nota:</strong> Este cuadro compara lo que ingresó físicamente al banco (Depósitos) vs lo que los clientes registraron en sus órdenes.
+                        <strong>Nota:</strong> Este cuadro muestra lo que hemos **pagado** a beneficiarios.
                     </div>
                 </Card>
             </div>
