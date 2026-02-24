@@ -29,6 +29,23 @@ export const RatesService = {
             return null
         }
 
+        if (data?.usdt_prices) {
+            const mapping: Record<string, string> = {
+                'USA': 'USD',
+                'PERU': 'PEN',
+                'CHILE': 'CLP',
+                'COLOMBIA': 'COP',
+                'VENEZUELA': 'VES'
+            }
+            const normalizedPrices: any = { ...data.usdt_prices }
+            Object.entries(mapping).forEach(([old, curr]) => {
+                if (data.usdt_prices[old as keyof typeof data.usdt_prices] !== undefined) {
+                    normalizedPrices[curr] = data.usdt_prices[old as keyof typeof data.usdt_prices]
+                }
+            })
+            data.usdt_prices = normalizedPrices
+        }
+
         if (data?.margins) {
             const normalizedMargins: Record<string, number> = {}
             const mapping: Record<string, string> = {
@@ -44,7 +61,6 @@ export const RatesService = {
                 Object.entries(mapping).forEach(([old, curr]) => {
                     newKey = newKey.replace(old, curr)
                 })
-                // Si la llave cambió o es nueva, la guardamos. Si ya existe la ISO, no la pisamos con la vieja.
                 if (!normalizedMargins[newKey]) {
                     normalizedMargins[newKey] = value as number
                 }

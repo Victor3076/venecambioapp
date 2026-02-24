@@ -47,7 +47,7 @@ export default function NewTransactionPage() {
     const [isAddingAccount, setIsAddingAccount] = useState(false)
     const [newAccount, setNewAccount] = useState<BeneficiaryData>({
         alias: '',
-        country: 'VENEZUELA',
+        country: 'VES',
         bank_name: '',
         account_number: '',
         details: {}
@@ -106,8 +106,7 @@ export default function NewTransactionPage() {
         if (!rates) return
 
         const getPrice = (code: string) => {
-            const key = code === 'VES' ? 'VENEZUELA' : code
-            return rates.usdt_prices[key as keyof typeof rates.usdt_prices] || 0
+            return rates.usdt_prices[code as keyof typeof rates.usdt_prices] || 0
         }
 
         const sourcePrice = getPrice(sourceCurrency)
@@ -179,10 +178,9 @@ export default function NewTransactionPage() {
 
     // Sync newAccount country when targetCurrency changes
     useEffect(() => {
-        const country = targetCurrency === 'VES' ? 'VENEZUELA' : targetCurrency
         setNewAccount(prev => ({
             ...prev,
-            country: country
+            country: targetCurrency
         }))
     }, [targetCurrency])
 
@@ -191,8 +189,7 @@ export default function NewTransactionPage() {
         if (!rates) return { rate: 0, received: 0 }
 
         const getPrice = (code: string) => {
-            const key = code === 'VES' ? 'VENEZUELA' : code
-            return rates.usdt_prices[key as keyof typeof rates.usdt_prices] || 0
+            return rates.usdt_prices[code as keyof typeof rates.usdt_prices] || 0
         }
         const sourcePrice = getPrice(sourceCurrency)
         const targetPrice = getPrice(targetCurrency)
@@ -535,7 +532,7 @@ export default function NewTransactionPage() {
                                 <BeneficiaryForm
                                     data={newAccount}
                                     onChange={setNewAccount}
-                                    fixedCountry={targetCurrency === 'VES' ? 'VENEZUELA' : targetCurrency}
+                                    fixedCountry={targetCurrency}
                                 />
                             </div>
                         ) : accounts.length === 0 ? (
