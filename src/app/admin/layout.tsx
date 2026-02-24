@@ -1,4 +1,5 @@
 "use client"
+// v1.1 - Added Manual Cuadre (CL)
 
 import Link from "next/link"
 import { BarChart3, List, Settings, LogOut, LayoutDashboard, Wallet, TrendingUp, Bell, Menu, X, Scale } from "lucide-react"
