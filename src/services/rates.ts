@@ -29,6 +29,29 @@ export const RatesService = {
             return null
         }
 
+        if (data?.margins) {
+            const normalizedMargins: Record<string, number> = {}
+            const mapping: Record<string, string> = {
+                'PERU': 'PEN',
+                'CHILE': 'CLP',
+                'COLOMBIA': 'COP',
+                'USA': 'USD',
+                'VENEZUELA': 'VES'
+            }
+
+            Object.entries(data.margins).forEach(([key, value]) => {
+                let newKey = key
+                Object.entries(mapping).forEach(([old, curr]) => {
+                    newKey = newKey.replace(old, curr)
+                })
+                // Si la llave cambió o es nueva, la guardamos. Si ya existe la ISO, no la pisamos con la vieja.
+                if (!normalizedMargins[newKey]) {
+                    normalizedMargins[newKey] = value as number
+                }
+            })
+            data.margins = normalizedMargins
+        }
+
         return data as RatesData
     },
 
