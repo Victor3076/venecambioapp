@@ -20,21 +20,6 @@ interface ManualTransactionDialogProps {
     initialDepositId?: string | null
 }
 
-const REGION_TO_CURRENCY: Record<string, string> = {
-    'PERU': 'PEN',
-    'CHILE': 'CLP',
-    'COLOMBIA': 'COP',
-    'USA': 'USD',
-    'VENEZUELA': 'VES'
-}
-
-const CURRENCY_TO_REGION: Record<string, string> = {
-    'PEN': 'PERU',
-    'CLP': 'CHILE',
-    'COP': 'COLOMBIA',
-    'USD': 'USA',
-    'VES': 'VENEZUELA'
-}
 
 export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDepositId }: ManualTransactionDialogProps) {
     const [step, setStep] = useState(1) // 1: Select User, 2: Select Beneficiary, 3: Transaction Details
@@ -47,7 +32,7 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDep
     const [rates, setRates] = useState<RatesData | null>(null)
 
     // Form fields
-    const [sourceCurrency, setSourceCurrency] = useState("CHILE")
+    const [sourceCurrency, setSourceCurrency] = useState("CLP")
     const [targetCurrency, setTargetCurrency] = useState("VES")
     const [amountSent, setAmountSent] = useState("100.000")
     const [amountReceived, setAmountReceived] = useState("0")
@@ -82,8 +67,7 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDep
                 BankDepositsService.getById(initialDepositId)
                     .then(dep => {
                         if (dep) {
-                            const region = CURRENCY_TO_REGION[dep.currency] || dep.currency
-                            setSourceCurrency(region)
+                            setSourceCurrency(dep.currency)
                             setAmountSent(dep.amount.toString())
                         }
                     })
@@ -136,7 +120,7 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDep
                     } else if (deps.length > 0) {
                         // Optional: don't auto-select unless it's a perfect match or initialDepositId
                         const amount = parseFormattedNumber(amountSent)
-                        const currencyCode = REGION_TO_CURRENCY[sourceCurrency] || sourceCurrency
+                        const currencyCode = sourceCurrency
                         const exactMatch = deps.find(d => Number(d.amount) === amount && d.currency === currencyCode)
                         if (exactMatch) setSelectedDepositId(exactMatch.id!)
                     }
@@ -150,8 +134,7 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDep
         if (!rates) return
 
         const getPrice = (code: string) => {
-            const key = code === 'VES' ? 'VENEZUELA' : code
-            return rates.usdt_prices[key as keyof typeof rates.usdt_prices] || 0
+            return rates.usdt_prices[code as keyof typeof rates.usdt_prices] || 0
         }
 
         const sourcePrice = getPrice(sourceCurrency)
@@ -179,14 +162,11 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDep
 
         setLoading(true)
         try {
-            const mappedSource = REGION_TO_CURRENCY[sourceCurrency] || sourceCurrency
-            const mappedTarget = REGION_TO_CURRENCY[targetCurrency] || targetCurrency
-
             const tx = await TransactionsService.createForUser(selectedUser.id, {
                 amount_sent: parseFormattedNumber(amountSent),
-                currency_sent: mappedSource,
+                currency_sent: sourceCurrency,
                 amount_received: parseFormattedNumber(amountReceived),
-                currency_received: mappedTarget,
+                currency_received: targetCurrency,
                 exchange_rate: exchangeRate,
                 status: reconcileNow ? 'verified' : 'verifying',
                 beneficiary_data: selectedAccount
@@ -300,7 +280,7 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDep
                                             className={`p-4 border rounded-xl cursor-pointer transition-all hover:border-primary hover:bg-primary/5 flex items-center justify-between ${selectedAccount?.id === acc.id ? 'border-primary bg-primary/5 ring-1 ring-primary' : ''}`}
                                             onClick={() => {
                                                 setSelectedAccount(acc)
-                                                setTargetCurrency(acc.country === 'VENEZUELA' ? 'VES' : acc.country)
+                                                setTargetCurrency(acc.country === 'VENEZUELA' || acc.country === 'VES' ? 'VES' : acc.country)
                                                 setStep(3)
                                             }}
                                         >
@@ -334,8 +314,8 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDep
                                     type="button"
                                     onClick={() => setShowRegisterForm(v => !v)}
                                     className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs border rounded-lg font-medium transition-colors ${showRegisterForm
-                                            ? 'bg-primary text-primary-foreground border-primary'
-                                            : 'text-primary border-primary hover:bg-primary/5'
+                                        ? 'bg-primary text-primary-foreground border-primary'
+                                        : 'text-primary border-primary hover:bg-primary/5'
                                         }`}
                                 >
                                     <Landmark className="w-3.5 h-3.5" />
@@ -370,7 +350,7 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDep
                                                 // Recargar cuentas y seleccionar la nueva
                                                 await loadUserAccounts(selectedUser!.id)
                                                 setSelectedAccount(newAcc)
-                                                setTargetCurrency(newAcc.country === 'VENEZUELA' ? 'VES' : newAcc.country)
+                                                setTargetCurrency(newAcc.country === 'VENEZUELA' || newAcc.country === 'VES' ? 'VES' : newAcc.country)
                                                 setStep(3)
                                             } catch (e: any) {
                                                 toast.error('Error al registrar: ' + e.message)
@@ -433,7 +413,7 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDep
 
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">
-                                        Envía ({sourceCurrency === 'PERU' ? 'Soles' : (sourceCurrency === 'CHILE' ? 'Pesos' : (sourceCurrency === 'COLOMBIA' ? 'Pesos' : sourceCurrency))})
+                                        Envía ({sourceCurrency === 'PEN' ? 'Soles' : (sourceCurrency === 'CLP' ? 'Pesos' : (sourceCurrency === 'COP' ? 'Pesos' : sourceCurrency))})
                                     </label>
                                     <Input
                                         value={amountSent}
@@ -497,8 +477,7 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDep
                                                         setSelectedDepositId(dep.id!)
                                                         // Auto-fill amount and currency
                                                         setAmountSent(dep.amount.toString())
-                                                        const region = CURRENCY_TO_REGION[dep.currency] || dep.currency
-                                                        setSourceCurrency(region)
+                                                        setSourceCurrency(dep.currency)
                                                     }}
                                                 >
                                                     <div>

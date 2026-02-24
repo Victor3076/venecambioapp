@@ -16,7 +16,7 @@ export default function Home() {
   const [rates, setRates] = useState<RatesData | null>(null)
   const [amountInput, setAmountInput] = useState<string>("100")
   const amountSent = parseFormattedNumber(amountInput)
-  const [sourceCurrency, setSourceCurrency] = useState<string>("PERU")
+  const [sourceCurrency, setSourceCurrency] = useState<string>("PEN")
   const [targetCurrency, setTargetCurrency] = useState<string>("VES")
   const [amountReceived, setAmountReceived] = useState<string>("0")
   const [amountBcv, setAmountBcv] = useState<string>("0")
@@ -43,8 +43,7 @@ export default function Home() {
     if (!rates) return
 
     const getPrice = (code: string) => {
-      const key = code === 'VES' ? 'VENEZUELA' : code
-      return rates.usdt_prices[key as keyof typeof rates.usdt_prices] || 0
+      return rates.usdt_prices[code as keyof typeof rates.usdt_prices] || 0
     }
 
     const sourcePrice = getPrice(sourceCurrency)
@@ -69,7 +68,7 @@ export default function Home() {
       // Update BCV if target is VES
       if (targetCurrency === 'VES') {
         const bcvRate = rates.usdt_prices.BCV || 1
-        setAmountBcv(formatCurrency(result / bcvRate, 'USA'))
+        setAmountBcv(formatCurrency(result / bcvRate, 'USD'))
       }
     } else if (direction === 'received') {
       const numericValue = parseFormattedNumber(value)
@@ -79,7 +78,7 @@ export default function Home() {
       // Update BCV if target is VES
       if (targetCurrency === 'VES') {
         const bcvRate = rates.usdt_prices.BCV || 1
-        setAmountBcv(formatCurrency(numericValue / bcvRate, 'USA'))
+        setAmountBcv(formatCurrency(numericValue / bcvRate, 'USD'))
       }
     } else if (direction === 'bcv') {
       const numericValue = parseFormattedNumber(value)
@@ -103,8 +102,7 @@ export default function Home() {
     if (!rates) return "Cargando..."
 
     const getPrice = (code: string) => {
-      const key = code === 'VES' ? 'VENEZUELA' : code
-      return rates.usdt_prices[key as keyof typeof rates.usdt_prices] || 0
+      return rates.usdt_prices[code as keyof typeof rates.usdt_prices] || 0
     }
 
     const sourcePrice = getPrice(sourceCurrency)
@@ -115,10 +113,7 @@ export default function Home() {
     const rate = calculateRate(targetCurrency, sourceCurrency, targetPrice, sourcePrice, margin)
 
     // Use short codes for the rate display ticker
-    const sourceShort = sourceCurrency === 'USA' ? 'USD' : (sourceCurrency === 'PERU' ? 'PEN' : (sourceCurrency === 'CHILE' ? 'CLP' : (sourceCurrency === 'COLOMBIA' ? 'COP' : sourceCurrency)))
-    const targetShort = targetCurrency === 'VES' ? 'VES' : (targetCurrency === 'USA' ? 'USD' : (targetCurrency === 'PERU' ? 'PEN' : (targetCurrency === 'CHILE' ? 'CLP' : (targetCurrency === 'COLOMBIA' ? 'COP' : targetCurrency))))
-
-    return `1 ${sourceShort} = ${formatRate(rate, targetCurrency, sourceCurrency)} ${targetShort}`
+    return `1 ${sourceCurrency} = ${formatRate(rate, targetCurrency, sourceCurrency)} ${targetCurrency}`
   }
 
   return (
@@ -225,9 +220,9 @@ export default function Home() {
                         }}
                         className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                       >
-                        {SUPPORTED_REGIONS.filter(r => r !== 'VENEZUELA').map(region => (
+                        {SUPPORTED_REGIONS.filter(r => r !== 'VES').map(region => (
                           <option key={region} value={region}>
-                            {CURRENCY_LABELS[region]}
+                            {CURRENCY_LABELS[region]} {region}
                           </option>
                         ))}
                       </select>
@@ -235,7 +230,7 @@ export default function Home() {
                     {isBelowMin && (
                       <p className="text-[10px] text-red-500 font-bold flex items-center gap-1 animate-pulse">
                         <AlertCircle className="w-3 h-3" />
-                        Monto mínimo: {minAmount} {sourceCurrency === 'USA' ? 'USD' : (sourceCurrency === 'PERU' ? 'PEN' : (sourceCurrency === 'CHILE' ? 'CLP' : 'COP'))}
+                        Monto mínimo: {minAmount} {sourceCurrency}
                       </p>
                     )}
                   </div>
@@ -255,9 +250,9 @@ export default function Home() {
                         onChange={(e) => setTargetCurrency(e.target.value)}
                         className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                       >
-                        {SUPPORTED_REGIONS.filter(region => (region === 'VENEZUELA' ? 'VES' : region) !== sourceCurrency).map(region => (
-                          <option key={region} value={region === 'VENEZUELA' ? 'VES' : region}>
-                            {CURRENCY_LABELS[region]}
+                        {SUPPORTED_REGIONS.filter(region => region !== sourceCurrency).map(region => (
+                          <option key={region} value={region}>
+                            {CURRENCY_LABELS[region]} {region}
                           </option>
                         ))}
                       </select>
@@ -276,7 +271,7 @@ export default function Home() {
                           <Input
                             type="text"
                             value={amountBcv}
-                            onBlur={() => setAmountBcv(formatCurrency(parseFormattedNumber(amountBcv), 'USA'))}
+                            onBlur={() => setAmountBcv(formatCurrency(parseFormattedNumber(amountBcv), 'USD'))}
                             onChange={(e) => updateCalculation(e.target.value, 'bcv')}
                             onClick={(e) => (e.target as HTMLInputElement).select()}
                             className="pl-7 bg-muted/30 font-bold border-primary/20"

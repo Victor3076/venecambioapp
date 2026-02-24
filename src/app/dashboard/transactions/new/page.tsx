@@ -26,7 +26,7 @@ export default function NewTransactionPage() {
     const [amountReceivedInput, setAmountReceivedInput] = useState("")
     const [amountBcvInput, setAmountBcvInput] = useState("")
     const amountSent = parseFormattedNumber(amountInput)
-    const [sourceCurrency, setSourceCurrency] = useState("PERU")
+    const [sourceCurrency, setSourceCurrency] = useState("PEN")
     const [targetCurrency, setTargetCurrency] = useState("VES")
     const [rates, setRates] = useState<RatesData | null>(null)
     const [adminSettings, setAdminSettings] = useState<AdminSettings | null>(null)
@@ -78,10 +78,10 @@ export default function NewTransactionPage() {
 
                 if (profile?.phone) {
                     let defaultSource = 'PERU'
-                    if (profile.phone.startsWith('+51')) defaultSource = 'PERU'
-                    else if (profile.phone.startsWith('+56')) defaultSource = 'CHILE'
-                    else if (profile.phone.startsWith('+57')) defaultSource = 'COLOMBIA'
-                    else if (profile.phone.startsWith('+1')) defaultSource = 'USA'
+                    if (profile.phone.startsWith('+51')) defaultSource = 'PEN'
+                    else if (profile.phone.startsWith('+56')) defaultSource = 'CLP'
+                    else if (profile.phone.startsWith('+57')) defaultSource = 'COP'
+                    else if (profile.phone.startsWith('+1')) defaultSource = 'USD'
 
                     setSourceCurrency(defaultSource)
                     const cAccounts = await PaymentMethodsService.getByCountry(defaultSource)
@@ -130,7 +130,7 @@ export default function NewTransactionPage() {
             const res = isInverse ? (rate > 0 ? numericValue / rate : 0) : numericValue * rate
             setAmountReceivedInput(formatCurrency(res, targetCurrency))
             if (targetCurrency === 'VES') {
-                setAmountBcvInput(formatCurrency(res / bcvRate, 'USA'))
+                setAmountBcvInput(formatCurrency(res / bcvRate, 'USD'))
             }
         } else if (direction === 'received') {
             const numericValue = parseFormattedNumber(value)
@@ -138,7 +138,7 @@ export default function NewTransactionPage() {
             const res = isInverse ? numericValue * rate : (rate > 0 ? numericValue / rate : 0)
             setAmountInput(formatCurrency(res, sourceCurrency))
             if (targetCurrency === 'VES') {
-                setAmountBcvInput(formatCurrency(numericValue / bcvRate, 'USA'))
+                setAmountBcvInput(formatCurrency(numericValue / bcvRate, 'USD'))
             }
         } else if (direction === 'bcv') {
             const numericValue = parseFormattedNumber(value)
@@ -156,8 +156,7 @@ export default function NewTransactionPage() {
     useEffect(() => {
         if (rates) {
             const getPrice = (code: string) => {
-                const key = code === 'VES' ? 'VENEZUELA' : code
-                return rates.usdt_prices[key as keyof typeof rates.usdt_prices] || 0
+                return rates.usdt_prices[code as keyof typeof rates.usdt_prices] || 0
             }
             const sp = getPrice(sourceCurrency)
             const tp = getPrice(targetCurrency)
@@ -173,7 +172,7 @@ export default function NewTransactionPage() {
 
             if (targetCurrency === 'VES') {
                 const bcvRate = rates.usdt_prices.BCV || 1
-                setAmountBcvInput(formatCurrency(res / bcvRate, 'USA'))
+                setAmountBcvInput(formatCurrency(res / bcvRate, 'USD'))
             }
         }
     }, [sourceCurrency, targetCurrency, rates])
@@ -265,8 +264,7 @@ export default function NewTransactionPage() {
             const profit_percentage = rates.margins[marginKey] || rates.margins["GENERIC"] || 0
 
             const getPrice = (code: string) => {
-                const key = code === 'VES' ? 'VENEZUELA' : code
-                return rates.usdt_prices[key as keyof typeof rates.usdt_prices] || 1
+                return rates.usdt_prices[code as keyof typeof rates.usdt_prices] || 1
             }
             const sourceUsdtPrice = getPrice(sourceCurrency)
 
@@ -375,15 +373,15 @@ export default function NewTransactionPage() {
                                             const newSource = e.target.value
                                             setSourceCurrency(newSource)
                                             if (newSource === targetCurrency) {
-                                                setTargetCurrency(newSource === 'VES' ? 'PERU' : 'VES')
+                                                setTargetCurrency(newSource === 'VES' ? 'PEN' : 'VES')
                                             }
                                         }}
                                         disabled={pendingTransfers.length > 0}
                                         className={`h-10 border rounded-md px-2 bg-background text-sm ${pendingTransfers.length > 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
                                     >
-                                        {SUPPORTED_REGIONS.filter(r => r !== 'VENEZUELA').map(region => (
+                                        {SUPPORTED_REGIONS.filter(r => r !== 'VES').map(region => (
                                             <option key={region} value={region}>
-                                                {CURRENCY_LABELS[region]}
+                                                {CURRENCY_LABELS[region]} {region}
                                             </option>
                                         ))}
                                     </select>
@@ -391,7 +389,7 @@ export default function NewTransactionPage() {
                                 {isBelowMin && (
                                     <p className="text-[10px] text-red-500 font-bold flex items-center gap-1 animate-pulse mt-1">
                                         <AlertCircle className="w-3 h-3" />
-                                        Monto mínimo: {formatCurrency(minAmount, sourceCurrency)} {sourceCurrency === 'USA' ? 'USD' : (sourceCurrency === 'PERU' ? 'PEN' : (sourceCurrency === 'CHILE' ? 'CLP' : 'COP'))}
+                                        Monto mínimo: {formatCurrency(minAmount, sourceCurrency)} {sourceCurrency}
                                     </p>
                                 )}
                                 {pendingTransfers.length > 0 && !isBelowMin && (
@@ -415,9 +413,9 @@ export default function NewTransactionPage() {
                                         onChange={e => setTargetCurrency(e.target.value)}
                                         className="h-10 border rounded-md px-2 bg-background text-sm"
                                     >
-                                        {SUPPORTED_REGIONS.filter(region => (region === 'VENEZUELA' ? 'VES' : region) !== sourceCurrency).map(region => (
-                                            <option key={region} value={region === 'VENEZUELA' ? 'VES' : region}>
-                                                {CURRENCY_LABELS[region]}
+                                        {SUPPORTED_REGIONS.filter(region => region !== sourceCurrency).map(region => (
+                                            <option key={region} value={region}>
+                                                {CURRENCY_LABELS[region]} {region}
                                             </option>
                                         ))}
                                     </select>
@@ -437,7 +435,7 @@ export default function NewTransactionPage() {
                                         <Input
                                             type="text"
                                             value={amountBcvInput}
-                                            onBlur={() => setAmountBcvInput(formatCurrency(parseFormattedNumber(amountBcvInput), 'USA'))}
+                                            onBlur={() => setAmountBcvInput(formatCurrency(parseFormattedNumber(amountBcvInput), 'USD'))}
                                             onChange={e => updateCalculation(e.target.value, 'bcv')}
                                             onClick={(e) => (e.target as HTMLInputElement).select()}
                                             className="pl-7 bg-background font-bold border-primary/20"
@@ -457,7 +455,7 @@ export default function NewTransactionPage() {
                         <div className="p-3 bg-primary/5 rounded-lg border border-primary/20 flex justify-between items-center text-sm">
                             <span className="font-medium">Tasa de cambio:</span>
                             <span className="font-bold">
-                                1 {sourceCurrency === 'PERU' ? 'PEN' : (sourceCurrency === 'CHILE' ? 'CLP' : (sourceCurrency === 'COLOMBIA' ? 'COP' : (sourceCurrency === 'USA' ? 'USD' : 'VES')))} = {formatRate(rate, targetCurrency, sourceCurrency)} {targetCurrency === 'VES' || targetCurrency === 'VENEZUELA' ? 'VES' : (targetCurrency === 'PERU' ? 'PEN' : (targetCurrency === 'CHILE' ? 'CLP' : (targetCurrency === 'COLOMBIA' ? 'COP' : 'USD')))}
+                                1 {sourceCurrency} = {formatRate(rate, targetCurrency, sourceCurrency)} {targetCurrency}
                             </span>
                         </div>
                     </CardContent>

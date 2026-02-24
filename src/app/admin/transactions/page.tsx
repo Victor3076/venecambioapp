@@ -34,13 +34,6 @@ export default function AdminTransactionsPage() {
     const [isManualModalOpen, setIsManualModalOpen] = useState(false)
     const [preSelectedDepositId, setPreSelectedDepositId] = useState<string | null>(null)
 
-    const REGION_TO_CURRENCY: Record<string, string> = {
-        'PERU': 'PEN',
-        'CHILE': 'CLP',
-        'COLOMBIA': 'COP',
-        'USA': 'USD',
-        'VENEZUELA': 'VES'
-    }
 
     useEffect(() => {
         if (selectedTx && selectedTx.status === 'verifying') {
@@ -343,13 +336,12 @@ export default function AdminTransactionsPage() {
                                 {loading ? (
                                     <tr><td colSpan={6} className="p-8 text-center text-muted-foreground">Cargando transacciones...</td></tr>
                                 ) : (() => {
-                                    const filtered = transactions.map(tx => ({
+                                    const filtered = (transactions.map(tx => ({
                                         ...tx,
                                         deposit: allDeposits.find(d => d.matched_transaction_id === tx.id)
-                                    })).filter(tx => {
-                                        const standardCurr = REGION_TO_CURRENCY[tx.currency_sent] || tx.currency_sent
+                                    })) as any[]).filter((tx: any) => {
                                         const matchesStatus = filterStatus === 'all' || tx.status === filterStatus
-                                        const matchesCurrency = filterCurrency === 'all' || standardCurr === filterCurrency
+                                        const matchesCurrency = filterCurrency === 'all' || tx.currency_sent === filterCurrency
                                         const matchesDate = !filterDate || (tx.created_at && tx.created_at.startsWith(filterDate))
 
                                         const searchLower = searchTerm.toLowerCase()
@@ -428,9 +420,8 @@ export default function AdminTransactionsPage() {
                                                     deposit: allDeposits.find(d => d.matched_transaction_id === tx.id)
                                                 }))
                                                 .filter(tx => {
-                                                    const standardCurr = REGION_TO_CURRENCY[tx.currency_sent] || tx.currency_sent
                                                     const matchesStatus = filterStatus === 'all' || tx.status === filterStatus
-                                                    const matchesCurrency = filterCurrency === 'all' || standardCurr === filterCurrency
+                                                    const matchesCurrency = filterCurrency === 'all' || tx.currency_sent === filterCurrency
                                                     const matchesDate = !filterDate || (tx.created_at && tx.created_at.startsWith(filterDate))
 
                                                     const searchLower = searchTerm.toLowerCase()

@@ -56,17 +56,17 @@ export function BeneficiaryForm({ data, onChange, fixedCountry }: BeneficiaryFor
                             });
                         }}
                     >
-                        <option value="VENEZUELA">Venezuela</option>
-                        <option value="PERU">Perú</option>
-                        <option value="CHILE">Chile</option>
-                        <option value="COLOMBIA">Colombia</option>
-                        <option value="USA">USA</option>
+                        <option value="VES">Venezuela</option>
+                        <option value="PEN">Perú</option>
+                        <option value="CLP">Chile</option>
+                        <option value="COP">Colombia</option>
+                        <option value="USD">USA</option>
                     </select>
                 </div>
             )}
 
             {/* 2. Type (Conditional for Venezuela/Peru) */}
-            {country === 'VENEZUELA' && (
+            {country === 'VES' && (
                 <div className="space-y-2">
                     <label className="text-sm font-medium">Tipo</label>
                     <select
@@ -80,7 +80,7 @@ export function BeneficiaryForm({ data, onChange, fixedCountry }: BeneficiaryFor
                 </div>
             )}
 
-            {country === 'PERU' && (
+            {country === 'PEN' && (
                 <div className="space-y-2">
                     <label className="text-sm font-medium">Tipo</label>
                     <select
@@ -113,11 +113,11 @@ export function BeneficiaryForm({ data, onChange, fixedCountry }: BeneficiaryFor
             </div>
 
             {/* 4. Banco & 5. Número / Teléfono (Hidden for USA) */}
-            {country !== 'USA' && (
+            {country !== 'USD' && (
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                         <label className="text-sm font-medium">Banco</label>
-                        {country === 'COLOMBIA' ? (
+                        {country === 'COP' ? (
                             <select
                                 className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
                                 value={data.bank_name}
@@ -128,7 +128,7 @@ export function BeneficiaryForm({ data, onChange, fixedCountry }: BeneficiaryFor
                                 <option value="NEQUI">NEQUI</option>
                                 <option value="LLAVES BRE-B">LLAVES BRE-B</option>
                             </select>
-                        ) : (country === 'PERU' && (data.details.peru_type === 'Yape' || data.details.peru_type === 'Plin')) ? (
+                        ) : (country === 'PEN' && (data.details.peru_type === 'Yape' || data.details.peru_type === 'Plin')) ? (
                             <Input
                                 value={data.bank_name}
                                 disabled
@@ -145,28 +145,28 @@ export function BeneficiaryForm({ data, onChange, fixedCountry }: BeneficiaryFor
 
                     <div className="space-y-2">
                         <label className="text-sm font-medium">
-                            {(country === 'VENEZUELA' && data.details.venezuela_type === 'Pago Móvil') ||
-                                (country === 'PERU' && (data.details.peru_type === 'Yape' || data.details.peru_type === 'Plin')) ||
-                                (country === 'COLOMBIA' && (data.bank_name === 'NEQUI' || data.bank_name === 'LLAVES BRE-B'))
+                            {(country === 'VES' && data.details.venezuela_type === 'Pago Móvil') ||
+                                (country === 'PEN' && (data.details.peru_type === 'Yape' || data.details.peru_type === 'Plin')) ||
+                                (country === 'COP' && (data.bank_name === 'NEQUI' || data.bank_name === 'LLAVES BRE-B'))
                                 ? 'Teléfono'
                                 : 'Cuenta'
                             }
                         </label>
                         <Input
                             placeholder={
-                                (country === 'VENEZUELA' && data.details.venezuela_type === 'Pago Móvil') ||
-                                    (country === 'PERU' && (data.details.peru_type === 'Yape' || data.details.peru_type === 'Plin')) ||
-                                    (country === 'COLOMBIA' && (data.bank_name === 'NEQUI' || data.bank_name === 'LLAVES BRE-B'))
+                                (country === 'VES' && data.details.venezuela_type === 'Pago Móvil') ||
+                                    (country === 'PEN' && (data.details.peru_type === 'Yape' || data.details.peru_type === 'Plin')) ||
+                                    (country === 'COP' && (data.bank_name === 'NEQUI' || data.bank_name === 'LLAVES BRE-B'))
                                     ? "310..." : "0102..."
                             }
                             value={data.account_number}
                             onChange={e => {
                                 const val = e.target.value.replace(/[\s\-\.\(\)]/g, '');
-                                const isPhone = (country === 'VENEZUELA' && data.details.venezuela_type === 'Pago Móvil') ||
-                                    (country === 'PERU' && (data.details.peru_type === 'Yape' || data.details.peru_type === 'Plin')) ||
-                                    (country === 'COLOMBIA' && (data.bank_name === 'NEQUI' || data.bank_name === 'LLAVES BRE-B'));
+                                const isPhone = (country === 'VES' && data.details.venezuela_type === 'Pago Móvil') ||
+                                    (country === 'PEN' && (data.details.peru_type === 'Yape' || data.details.peru_type === 'Plin')) ||
+                                    (country === 'COP' && (data.bank_name === 'NEQUI' || data.bank_name === 'LLAVES BRE-B'));
 
-                                if ((country === 'VENEZUELA' || isPhone) && !/^\d*$/.test(val)) return;
+                                if ((country === 'VES' || isPhone) && !/^\d*$/.test(val)) return;
                                 updateData({ account_number: val });
                             }}
                         />
@@ -175,7 +175,7 @@ export function BeneficiaryForm({ data, onChange, fixedCountry }: BeneficiaryFor
             )}
 
             {/* USA: Teléfono / Correo */}
-            {country === 'USA' && (
+            {country === 'USD' && (
                 <div className="space-y-2">
                     <label className="text-sm font-medium">Teléfono / Correo</label>
                     <Input
@@ -189,9 +189,9 @@ export function BeneficiaryForm({ data, onChange, fixedCountry }: BeneficiaryFor
             {/* 6. Detalles Adicionales (Hidden for USA) */}
             {country !== 'USA' && (
                 <div className="grid grid-cols-2 gap-4">
-                    {(country === 'CHILE' || country === 'COLOMBIA') ? (
+                    {(country === 'CLP' || country === 'COP') ? (
                         <>
-                            {country === 'CHILE' && (
+                            {country === 'CLP' && (
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">RUT</label>
                                     <Input
@@ -201,7 +201,7 @@ export function BeneficiaryForm({ data, onChange, fixedCountry }: BeneficiaryFor
                                     />
                                 </div>
                             )}
-                            {country === 'COLOMBIA' && (
+                            {country === 'COP' && (
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">Cédula (Opcional)</label>
                                     <Input
@@ -213,7 +213,7 @@ export function BeneficiaryForm({ data, onChange, fixedCountry }: BeneficiaryFor
                             )}
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">
-                                    Tipo de Cuenta {country === 'COLOMBIA' && '(Opcional)'}
+                                    Tipo de Cuenta {country === 'COP' && '(Opcional)'}
                                 </label>
                                 <select
                                     className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -221,7 +221,7 @@ export function BeneficiaryForm({ data, onChange, fixedCountry }: BeneficiaryFor
                                     onChange={e => updateDetails({ account_type: e.target.value })}
                                 >
                                     <option value="">Seleccionar...</option>
-                                    {country === 'COLOMBIA' ? (
+                                    {country === 'COP' ? (
                                         <>
                                             <option value="Corriente">Corriente</option>
                                             <option value="Ahorro">Ahorro</option>
@@ -231,12 +231,12 @@ export function BeneficiaryForm({ data, onChange, fixedCountry }: BeneficiaryFor
                                             <option value="Vista">Vista</option>
                                             <option value="Corriente">Corriente</option>
                                             <option value="Ahorro">Ahorro</option>
-                                            {country === 'CHILE' && <option value="RUT">RUT (Banco Estado)</option>}
+                                            {country === 'CLP' && <option value="RUT">RUT (Banco Estado)</option>}
                                         </>
                                     )}
                                 </select>
                             </div>
-                            {country === 'CHILE' && (
+                            {country === 'CLP' && (
                                 <div className="space-y-2 col-span-2">
                                     <label className="text-sm font-medium">Correo Electrónico</label>
                                     <Input
@@ -250,7 +250,7 @@ export function BeneficiaryForm({ data, onChange, fixedCountry }: BeneficiaryFor
                         </>
                     ) : (
                         <>
-                            {country !== 'PERU' && (
+                            {country !== 'PEN' && (
                                 <div className="space-y-2 col-span-2">
                                     <label className="text-sm font-medium">Documento (solo números)</label>
                                     <Input
@@ -258,7 +258,7 @@ export function BeneficiaryForm({ data, onChange, fixedCountry }: BeneficiaryFor
                                         value={data.details.id_number}
                                         onChange={e => {
                                             const val = e.target.value.replace(/[\s\-\.\(\)]/g, '');
-                                            if (country === 'VENEZUELA' && !/^\d*$/.test(val)) return;
+                                            if (country === 'VES' && !/^\d*$/.test(val)) return;
                                             updateDetails({ id_number: val });
                                         }}
                                     />

@@ -25,11 +25,11 @@ export default function RatesPage() {
 
     // State for USDT base prices
     const [usdtPrices, setUsdtPrices] = useState({
-        USA: 1.00,
-        PERU: 3.75, // PEN per USDT
-        CHILE: 980, // CLP per USDT
-        COLOMBIA: 3900, // COP per USDT
-        VENEZUELA: 38.5, // VES per USDT (Calculated/Implicit if needed, or manual)
+        USD: 1.00,
+        PEN: 3.75, // PEN per USDT
+        CLP: 980, // CLP per USDT
+        COP: 3900, // COP per USDT
+        VES: 38.5, // VES per USDT (Calculated/Implicit if needed, or manual)
         MONITOR: 40.5,
         BCV: 39.2
     })
@@ -39,7 +39,7 @@ export default function RatesPage() {
         PEN_VES: 5.0,
         CLP_VES: 7.0,
         COP_VES: 10.0,
-        USA_VES: 3.0,
+        USD_VES: 3.0,
         // Add defaults for others as needed
         GENERIC: 2.0
     })
@@ -190,14 +190,14 @@ export default function RatesPage() {
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3 p-4">
-                    {currencyCode !== 'PERU' && renderRateRow("Perú", "PERU", usdtPrices.PERU)}
-                    {currencyCode !== 'CHILE' && renderRateRow("Chile", "CHILE", usdtPrices.CHILE)}
-                    {currencyCode !== 'COLOMBIA' && renderRateRow("Colombia", "COLOMBIA", usdtPrices.COLOMBIA)}
-                    {currencyCode !== 'USA' && renderRateRow("USA", "USA", usdtPrices.USA)}
+                    {currencyCode !== 'PEN' && renderRateRow("Perú", "PEN", usdtPrices.PEN)}
+                    {currencyCode !== 'CLP' && renderRateRow("Chile", "CLP", usdtPrices.CLP)}
+                    {currencyCode !== 'COP' && renderRateRow("Colombia", "COP", usdtPrices.COP)}
+                    {currencyCode !== 'USD' && renderRateRow("USA", "USD", usdtPrices.USD)}
 
                     {/* Venezuela Highlighting */}
                     <div className="bg-muted/50 p-2 rounded -mx-2">
-                        {renderRateRow("Venezuela", "VES", usdtPrices.VENEZUELA)}
+                        {renderRateRow("Venezuela", "VES", usdtPrices.VES)}
                     </div>
                 </CardContent>
             </Card>
@@ -237,23 +237,23 @@ export default function RatesPage() {
                         <CardContent className="space-y-4">
                             <div className="grid grid-cols-2 gap-2 items-center">
                                 <label className="font-medium text-sm">🇺🇸 USA ($)</label>
-                                <Input type="number" value={usdtPrices.USA} onChange={(e) => setUsdtPrices({ ...usdtPrices, USA: parseFloat(e.target.value) })} />
+                                <Input type="number" value={usdtPrices.USD} onChange={(e) => setUsdtPrices({ ...usdtPrices, USD: parseFloat(e.target.value) })} />
                             </div>
                             <div className="grid grid-cols-2 gap-2 items-center">
                                 <label className="font-medium text-sm">🇵🇪 Perú (S/.)</label>
-                                <Input type="number" value={usdtPrices.PERU} onChange={(e) => setUsdtPrices({ ...usdtPrices, PERU: parseFloat(e.target.value) })} />
+                                <Input type="number" value={usdtPrices.PEN} onChange={(e) => setUsdtPrices({ ...usdtPrices, PEN: parseFloat(e.target.value) })} />
                             </div>
                             <div className="grid grid-cols-2 gap-2 items-center">
                                 <label className="font-medium text-sm">🇨🇱 Chile (CLP)</label>
-                                <Input type="number" value={usdtPrices.CHILE} onChange={(e) => setUsdtPrices({ ...usdtPrices, CHILE: parseFloat(e.target.value) })} />
+                                <Input type="number" value={usdtPrices.CLP} onChange={(e) => setUsdtPrices({ ...usdtPrices, CLP: parseFloat(e.target.value) })} />
                             </div>
                             <div className="grid grid-cols-2 gap-2 items-center">
                                 <label className="font-medium text-sm">🇨🇴 Col (COP)</label>
-                                <Input type="number" value={usdtPrices.COLOMBIA} onChange={(e) => setUsdtPrices({ ...usdtPrices, COLOMBIA: parseFloat(e.target.value) })} />
+                                <Input type="number" value={usdtPrices.COP} onChange={(e) => setUsdtPrices({ ...usdtPrices, COP: parseFloat(e.target.value) })} />
                             </div>
                             <div className="grid grid-cols-2 gap-2 items-center">
                                 <label className="font-medium text-sm">🇻🇪 Ven (Bs)</label>
-                                <Input type="number" value={usdtPrices.VENEZUELA} onChange={(e) => setUsdtPrices({ ...usdtPrices, VENEZUELA: parseFloat(e.target.value) })} />
+                                <Input type="number" value={usdtPrices.VES} onChange={(e) => setUsdtPrices({ ...usdtPrices, VES: parseFloat(e.target.value) })} />
                             </div>
                         </CardContent>
                     </Card>
@@ -278,10 +278,10 @@ export default function RatesPage() {
                 {/* COL 2 & 3: OUTPUT MATRIX */}
                 <div className="lg:col-span-2 space-y-6">
                     <div className="grid sm:grid-cols-2 gap-4">
-                        <RateGroup title="Perú (Soles)" flag="🇵🇪" currencyCode="PERU" basePrice={usdtPrices.PERU} />
-                        <RateGroup title="Chile (Pesos)" flag="🇨🇱" currencyCode="CHILE" basePrice={usdtPrices.CHILE} />
-                        <RateGroup title="Colombia (Pesos)" flag="🇨🇴" currencyCode="COLOMBIA" basePrice={usdtPrices.COLOMBIA} />
-                        <RateGroup title="Zelle (USA)" flag="🇺🇸" currencyCode="USA" basePrice={usdtPrices.USA} />
+                        <RateGroup title="Perú (Soles)" flag="🇵🇪" currencyCode="PEN" basePrice={usdtPrices.PEN} />
+                        <RateGroup title="Chile (Pesos)" flag="🇨🇱" currencyCode="CLP" basePrice={usdtPrices.CLP} />
+                        <RateGroup title="Colombia (Pesos)" flag="🇨🇴" currencyCode="COP" basePrice={usdtPrices.COP} />
+                        <RateGroup title="Zelle (USA)" flag="🇺🇸" currencyCode="USD" basePrice={usdtPrices.USD} />
                     </div>
 
                     {/* CONTROL PANEL */}

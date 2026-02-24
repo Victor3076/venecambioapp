@@ -3,11 +3,11 @@ import { supabase } from '@/lib/supabase'
 export interface RatesData {
     id?: string
     usdt_prices: {
-        USA: number
-        PERU: number
-        CHILE: number
-        COLOMBIA: number
-        VENEZUELA: number
+        USD: number
+        PEN: number
+        CLP: number
+        COP: number
+        VES: number
         MONITOR: number
         BCV: number
     }

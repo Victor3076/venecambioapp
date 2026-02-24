@@ -25,7 +25,7 @@ export default function AdminPaymentMethodsPage() {
     const [loading, setLoading] = useState(true)
     const [isCreating, setIsCreating] = useState(false)
     const [newMethod, setNewMethod] = useState<Partial<PaymentMethod>>({
-        country: 'PERU',
+        country: 'PEN',
         method_type: 'Transferencia',
         bank_name: '',
         account_number: '',
@@ -56,7 +56,7 @@ export default function AdminPaymentMethodsPage() {
         try {
             await PaymentMethodsService.create(newMethod as any)
             setNewMethod({
-                country: 'PERU',
+                country: 'PEN',
                 method_type: 'Transferencia',
                 bank_name: '',
                 account_number: '',
@@ -131,7 +131,7 @@ export default function AdminPaymentMethodsPage() {
                             </div>
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Nombre del Banco / App</label>
-                                {newMethod.country === 'COLOMBIA' ? (
+                                {newMethod.country === 'COP' ? (
                                     <select
                                         className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
                                         value={newMethod.bank_name}
@@ -170,7 +170,7 @@ export default function AdminPaymentMethodsPage() {
                                 />
                             </div>
 
-                            {(newMethod.country === 'CHILE' || newMethod.country === 'COLOMBIA') && (
+                            {(newMethod.country === 'CLP' || newMethod.country === 'COP') && (
                                 <div className="space-y-4 pt-2 border-t border-primary/10">
                                     {newMethod.country === 'CHILE' && (
                                         <div className="space-y-2">
@@ -185,7 +185,7 @@ export default function AdminPaymentMethodsPage() {
                                             />
                                         </div>
                                     )}
-                                    {newMethod.country === 'COLOMBIA' && (
+                                    {newMethod.country === 'COP' && (
                                         <div className="space-y-2">
                                             <label className="text-sm font-medium text-primary/80">Cédula (Opcional)</label>
                                             <Input
@@ -200,7 +200,7 @@ export default function AdminPaymentMethodsPage() {
                                     )}
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium text-primary/80">
-                                            Tipo de Cuenta {newMethod.country === 'COLOMBIA' && '(Opcional)'}
+                                            Tipo de Cuenta {newMethod.country === 'COP' && '(Opcional)'}
                                         </label>
                                         <select
                                             className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -211,7 +211,7 @@ export default function AdminPaymentMethodsPage() {
                                             })}
                                         >
                                             <option value="">Seleccionar...</option>
-                                            {newMethod.country === 'COLOMBIA' ? (
+                                            {newMethod.country === 'COP' ? (
                                                 <>
                                                     <option value="Corriente">Corriente</option>
                                                     <option value="Ahorro">Ahorro</option>
@@ -221,7 +221,7 @@ export default function AdminPaymentMethodsPage() {
                                                     <option value="Vista">Vista</option>
                                                     <option value="Corriente">Corriente</option>
                                                     <option value="Ahorro">Ahorro</option>
-                                                    {newMethod.country === 'CHILE' && <option value="RUT">RUT (Banco Estado)</option>}
+                                                    {newMethod.country === 'CLP' && <option value="RUT">RUT (Banco Estado)</option>}
                                                 </>
                                             )}
                                         </select>
@@ -286,7 +286,7 @@ export default function AdminPaymentMethodsPage() {
                                                                 <span className="uppercase">{m.holder_name}</span>
                                                                 {m.details?.rut && <span>RUT: {m.details.rut}</span>}
                                                                 {m.details?.id_number && (
-                                                                    <span>{m.country === 'COLOMBIA' ? 'Cédula:' : 'ID:'} {m.details.id_number}</span>
+                                                                    <span>{m.country === 'COP' ? 'Cédula:' : 'ID:'} {m.details.id_number}</span>
                                                                 )}
                                                                 {m.details?.account_type && <span>{m.details.account_type}</span>}
                                                             </div>

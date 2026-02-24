@@ -1,21 +1,16 @@
 export const CURRENCY_LABELS: Record<string, string> = {
-    'PERU': 'Soles (Peruanos)',
-    'CHILE': 'Pesos Chilenos',
-    'COLOMBIA': 'Pesos Colombianos',
-    'USA': 'Dólares (USA)',
-    'VENEZUELA': 'Bolívares (VES)',
-    'VES': 'Bolívares (VES)',
     'PEN': 'Soles (Peruanos)',
     'CLP': 'Pesos Chilenos',
     'COP': 'Pesos Colombianos',
-    'USD': 'Dólares (USA)'
+    'USD': 'Dólares (USA)',
+    'VES': 'Bolívares (VES)'
 }
 
-export const SUPPORTED_REGIONS = ['PERU', 'CHILE', 'COLOMBIA', 'USA', 'VENEZUELA']
+export const SUPPORTED_REGIONS = ['PEN', 'CLP', 'COP', 'USD', 'VES']
 
 export const MINIMUM_AMOUNTS: Record<string, number> = {
-    'PERU': 30,
-    'CHILE': 5000,
-    'COLOMBIA': 30000,
-    'USA': 20
+    'PEN': 30,
+    'CLP': 5000,
+    'COP': 30000,
+    'USD': 20
 }
