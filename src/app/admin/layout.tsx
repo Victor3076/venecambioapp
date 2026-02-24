@@ -10,6 +10,12 @@ import { useState, useEffect } from "react"
 import { Logo } from "@/components/logo"
 import { cn } from "@/lib/utils"
 
+const CLIcon = ({ className }: { className?: string }) => (
+    <div className={cn("flex items-center justify-center font-black text-[10px] border-2 border-current rounded-[4px] leading-none select-none", className)}>
+        CL
+    </div>
+)
+
 export default function AdminLayout({
     children,
 }: {
@@ -73,6 +79,7 @@ export default function AdminLayout({
         { href: "/admin/users", icon: Settings, label: "Usuarios" },
         { href: "/admin/payment-methods", icon: LayoutDashboard, label: "Cuentas" },
         { href: "/admin/balance", icon: Scale, label: "Cuadre", adminOnly: true },
+        { href: "/admin/manual-cuadre", icon: CLIcon, label: "Cierre CL", adminOnly: true },
         { href: "/admin/notifications", icon: Bell, label: "Notificaciones" },
         { href: "/admin/profits", icon: TrendingUp, label: "Ganancias", adminOnly: true },
     ].filter(item => !item.adminOnly || role === 'admin')
