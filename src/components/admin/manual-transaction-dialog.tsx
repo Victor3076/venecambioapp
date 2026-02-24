@@ -96,6 +96,15 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDep
         setRates(data)
     }
 
+    useEffect(() => {
+        if (isOpen) {
+            const unsubscribe = RatesService.subscribe((newRates) => {
+                setRates(newRates)
+            })
+            return () => unsubscribe()
+        }
+    }, [isOpen])
+
     const loadUserAccounts = async (userId: string) => {
         setLoading(true)
         const data = await AccountsService.getUserAccounts(userId)

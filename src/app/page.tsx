@@ -25,7 +25,7 @@ export default function Home() {
   const minAmount = MINIMUM_AMOUNTS[sourceCurrency] || 0
   const isBelowMin = amountSent < minAmount
 
-  // Load initial data
+  // Load initial data and subscribe to updates
   useEffect(() => {
     const loadData = async () => {
       const [ratesData, settingsData] = await Promise.all([
@@ -36,6 +36,13 @@ export default function Home() {
       if (settingsData) setAdminSettings(settingsData)
     }
     loadData()
+
+    // Subscribe to realtime rate changes
+    const unsubscribe = RatesService.subscribe((newRates) => {
+      setRates(newRates)
+    })
+
+    return () => unsubscribe()
   }, [])
 
   // Calculate based on which input changed

@@ -90,6 +90,13 @@ export default function NewTransactionPage() {
             }
         }
         loadInitial()
+
+        // Subscribe to realtime rate changes
+        const unsubscribe = RatesService.subscribe((newRates) => {
+            setRates(newRates)
+        })
+
+        return () => unsubscribe()
     }, [])
 
     useEffect(() => {
