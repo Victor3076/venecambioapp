@@ -148,66 +148,8 @@ export default function RatesPage() {
         }
     }
 
-    // Helper to render a group of rates
-    const RateGroup = ({ title, flag, currencyCode, basePrice }: { title: string, flag: string, currencyCode: string, basePrice: number }) => {
-
-        const renderRateRow = (targetName: string, targetCode: string, targetPrice: number) => {
-            const marginKey = `${currencyCode}_${targetCode}`;
-            const currentMargin = percentages[marginKey] || 0;
-            const rate = calculateRate(targetCode, currencyCode, targetPrice, basePrice, currentMargin);
-
-            // Dynamic decimal logic from configuration
-            const decimals = getRateDecimals(targetCode, currencyCode);
-
-            const formattedRate = rate.toLocaleString('es-VE', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
-
-            return (
-                <div className="flex flex-col gap-1 border-b pb-2 last:border-0 last:pb-0">
-                    <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium text-muted-foreground">A {targetName} ({targetCode})</span>
-                        <span className="font-bold text-lg">
-                            {formattedRate}
-                        </span>
-                    </div>
-                    <div className="flex items-center justify-end gap-2 text-xs text-muted-foreground">
-                        <span>Ganancia:</span>
-                        <Input
-                            type="number"
-                            step="0.01"
-                            placeholder="0.00"
-                            className="h-5 w-16 text-right px-1 text-xs"
-                            value={currentMargin}
-                            onChange={(e) => {
-                                const val = parseFloat(e.target.value)
-                                setPercentages(prev => ({ ...prev, [marginKey]: isNaN(val) ? 0 : val }))
-                            }}
-                        />
-                        <span>%</span>
-                    </div>
-                </div>
-            )
-        }
-
-        return (
-            <Card className="bg-background border-2">
-                <CardHeader className="pb-2 pt-4 px-4">
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                        <span className="text-2xl">{flag}</span> {title}
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3 p-4">
-                    {currencyCode !== 'PEN' && renderRateRow("Perú", "PEN", usdtPrices.PEN)}
-                    {currencyCode !== 'CLP' && renderRateRow("Chile", "CLP", usdtPrices.CLP)}
-                    {currencyCode !== 'COP' && renderRateRow("Colombia", "COP", usdtPrices.COP)}
-                    {currencyCode !== 'USD' && renderRateRow("USA", "USD", usdtPrices.USD)}
-
-                    {/* Venezuela Highlighting */}
-                    <div className="bg-muted/50 p-2 rounded -mx-2">
-                        {renderRateRow("Venezuela", "VES", usdtPrices.VES)}
-                    </div>
-                </CardContent>
-            </Card>
-        )
+    const onMarginChange = (key: string, val: number) => {
+        setPercentages(prev => ({ ...prev, [key]: val }))
     }
 
     if (loading) return <div className="p-6">Cargando tasas...</div>
@@ -233,7 +175,6 @@ export default function RatesPage() {
             </div>
 
             <div className="grid gap-6 lg:grid-cols-3">
-                {/* COL 1: INPUTS */}
                 <div className="space-y-6">
                     <Card>
                         <CardHeader>
@@ -281,16 +222,14 @@ export default function RatesPage() {
                     </Card>
                 </div>
 
-                {/* COL 2 & 3: OUTPUT MATRIX */}
                 <div className="lg:col-span-2 space-y-6">
                     <div className="grid sm:grid-cols-2 gap-4">
-                        <RateGroup title="Perú (Soles)" flag="🇵🇪" currencyCode="PEN" basePrice={usdtPrices.PEN} />
-                        <RateGroup title="Chile (Pesos)" flag="🇨🇱" currencyCode="CLP" basePrice={usdtPrices.CLP} />
-                        <RateGroup title="Colombia (Pesos)" flag="🇨🇴" currencyCode="COP" basePrice={usdtPrices.COP} />
-                        <RateGroup title="Zelle (USA)" flag="🇺🇸" currencyCode="USD" basePrice={usdtPrices.USD} />
+                        <RateGroup title="Perú (Soles)" flag="🇵🇪" currencyCode="PEN" basePrice={usdtPrices.PEN} percentages={percentages} usdtPrices={usdtPrices} onMarginChange={onMarginChange} />
+                        <RateGroup title="Chile (Pesos)" flag="🇨🇱" currencyCode="CLP" basePrice={usdtPrices.CLP} percentages={percentages} usdtPrices={usdtPrices} onMarginChange={onMarginChange} />
+                        <RateGroup title="Colombia (Pesos)" flag="🇨🇴" currencyCode="COP" basePrice={usdtPrices.COP} percentages={percentages} usdtPrices={usdtPrices} onMarginChange={onMarginChange} />
+                        <RateGroup title="Zelle (USA)" flag="🇺🇸" currencyCode="USD" basePrice={usdtPrices.USD} percentages={percentages} usdtPrices={usdtPrices} onMarginChange={onMarginChange} />
                     </div>
 
-                    {/* CONTROL PANEL */}
                     <div className="grid sm:grid-cols-2 gap-6 pt-4 border-t">
                         <Card className="border-primary/20 shadow-md">
                             <CardHeader className="pb-2">
@@ -305,11 +244,7 @@ export default function RatesPage() {
                                     value={broadcastMessage}
                                     onChange={(e) => setBroadcastMessage(e.target.value)}
                                 />
-                                <Button
-                                    className="w-full h-10 gap-2"
-                                    onClick={handleBroadcast}
-                                    disabled={broadcasting}
-                                >
+                                <Button className="w-full h-10 gap-2" onClick={handleBroadcast} disabled={broadcasting}>
                                     {broadcasting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Bell className="w-4 h-4" />}
                                     Notificar a Todos
                                 </Button>
@@ -327,24 +262,13 @@ export default function RatesPage() {
                                         {adminSettings?.is_open ? 'ABIERTO' : 'CERRADO'}
                                     </Badge>
                                 </CardTitle>
-                                <CardDescription className="text-xs">Control de operaciones del sistema.</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-bold text-muted-foreground uppercase">Mensaje de Cierre</label>
                                     <textarea
-                                        className="w-full min-h-[80px] text-xs p-2 rounded-md border text-foreground bg-background"
+                                        className="w-full min-h-[80px] text-xs p-2 rounded-md border"
                                         value={adminSettings?.closed_message || ""}
-                                        placeholder="Escribe el mensaje que verán los clientes cuando el sistema esté cerrado..."
-                                        onChange={(e) => {
-                                            const val = e.target.value;
-                                            setAdminSettings(prev => prev ? { ...prev, closed_message: val } : {
-                                                id: 'default',
-                                                is_open: true,
-                                                closed_message: val,
-                                                updated_at: new Date().toISOString()
-                                            });
-                                        }}
+                                        onChange={(e) => setAdminSettings(prev => prev ? { ...prev, closed_message: e.target.value } : null)}
                                     />
                                     <Button variant="outline" size="sm" className="w-full h-7 text-[10px]" onClick={updateClosedMessage} disabled={updatingSettings}>
                                         Actualizar Mensaje

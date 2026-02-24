@@ -438,8 +438,14 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDep
                                     </label>
                                     <Input
                                         value={amountSent}
-                                        onChange={e => setAmountSent(e.target.value)}
-                                        className="h-12 text-lg font-bold"
+                                        onChange={(e) => {
+                                            const rawValue = e.target.value;
+                                            // Allow only numbers and punctuation for formatting
+                                            const cleanValue = rawValue.replace(/[^0-9.,]/g, '');
+                                            const numericValue = parseFormattedNumber(cleanValue);
+                                            setAmountSent(formatCurrency(numericValue, sourceCurrency));
+                                        }}
+                                        className="text-lg font-bold border-2 focus:border-primary"
                                     />
                                 </div>
                                 <div className="space-y-2">
