@@ -23,6 +23,7 @@ export default function BankDepositsPage() {
     const [currency, setCurrency] = useState("VES")
     const [reference, setReference] = useState("")
     const [bankName, setBankName] = useState("")
+    const [notes, setNotes] = useState("")
     const [editingId, setEditingId] = useState<string | null>(null)
 
     // Reconciliation State
@@ -55,7 +56,8 @@ export default function BankDepositsPage() {
                 amount: parseFloat(amount),
                 currency,
                 reference_number: reference,
-                bank_name: bankName
+                bank_name: bankName,
+                notes: notes
             }
 
             if (editingId) {
@@ -70,6 +72,7 @@ export default function BankDepositsPage() {
             setAmount("")
             setReference("")
             setBankName("")
+            setNotes("")
             setEditingId(null)
             loadDeposits()
         } catch (error: any) {
@@ -85,6 +88,7 @@ export default function BankDepositsPage() {
         setCurrency(deposit.currency)
         setReference(deposit.reference_number)
         setBankName(deposit.bank_name || "")
+        setNotes(deposit.notes || "")
         setEditingId(deposit.id!)
         window.scrollTo({ top: 0, behavior: 'smooth' })
     }
@@ -93,6 +97,7 @@ export default function BankDepositsPage() {
         setAmount("")
         setReference("")
         setBankName("")
+        setNotes("")
         setEditingId(null)
     }
 
@@ -216,6 +221,15 @@ export default function BankDepositsPage() {
                                 />
                             </div>
 
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Comentario (Opcional)</label>
+                                <Input
+                                    placeholder="Ej. Pago de fulano..."
+                                    value={notes}
+                                    onChange={e => setNotes(e.target.value)}
+                                />
+                            </div>
+
                             <div className="flex gap-2 pt-2">
                                 <Button type="submit" className="flex-1" disabled={creating}>
                                     {creating ? "Guardando..." : editingId ? "Actualizar" : "Registrar"}
@@ -258,7 +272,10 @@ export default function BankDepositsPage() {
                                                 {new Date(deposit.created_at || "").toLocaleDateString()}
                                             </div>
                                             <div className="font-mono">{deposit.reference_number}</div>
-                                            <div className="truncate pr-2">{deposit.bank_name || "-"}</div>
+                                            <div className="truncate pr-2">
+                                                <div className="font-medium">{deposit.bank_name || "-"}</div>
+                                                {deposit.notes && <div className="text-[10px] text-muted-foreground italic truncate">{deposit.notes}</div>}
+                                            </div>
                                             <div className="font-bold">
                                                 {formatCurrency(deposit.amount)} {deposit.currency}
                                             </div>

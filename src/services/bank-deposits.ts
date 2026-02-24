@@ -9,6 +9,7 @@ export interface BankDeposit {
     status: 'available' | 'matched'
     matched_transaction_id?: string
     deposit_date?: string
+    notes?: string
     created_at?: string
 }
 
