@@ -277,7 +277,7 @@ export default function BankDepositsPage() {
                                                 {deposit.notes && <div className="text-[10px] text-muted-foreground italic truncate">{deposit.notes}</div>}
                                             </div>
                                             <div className="font-bold">
-                                                {formatCurrency(deposit.amount)} {deposit.currency}
+                                                {formatCurrency(deposit.amount, deposit.currency)} {deposit.currency}
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 <span className={`px-2 py-1 rounded-full text-xs font-bold ${deposit.status === 'matched'
@@ -380,7 +380,7 @@ function ReconciliationModal({
                         <div>
                             <CardTitle>Conciliar Depósito</CardTitle>
                             <CardDescription className="font-mono mt-1 text-primary font-bold">
-                                Ref: {deposit.reference_number} • {formatCurrency(deposit.amount)} {deposit.currency}
+                                Ref: {deposit.reference_number} • {formatCurrency(deposit.amount, deposit.currency)} {deposit.currency}
                             </CardDescription>
                         </div>
                         <Button variant="ghost" size="icon" onClick={onClose}>
@@ -417,9 +417,9 @@ function ReconciliationModal({
                                                 </span>
                                             </div>
                                             <div className="text-xs text-muted-foreground">
-                                                Enviado: <span className="font-medium text-foreground">{formatCurrency(tx.amount_sent)} {tx.currency_sent}</span>
+                                                Enviado: <span className="font-medium text-foreground">{formatCurrency(tx.amount_sent, tx.currency_sent)} {tx.currency_sent}</span>
                                                 <span className="mx-1">→</span>
-                                                Recibe: {formatCurrency(tx.amount_received)} {tx.currency_received}
+                                                Recibe: {formatCurrency(tx.amount_received, tx.currency_received)} {tx.currency_received}
                                             </div>
                                             <div className="text-[10px] text-muted-foreground">
                                                 {new Date(tx.created_at!).toLocaleString()}

@@ -68,7 +68,7 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDep
                     .then(dep => {
                         if (dep) {
                             setSourceCurrency(normalizeCurrency(dep.currency))
-                            setAmountSent(dep.amount.toString())
+                            setAmountSent(formatCurrency(dep.amount, normalizeCurrency(dep.currency)))
                         }
                     })
                     .catch(e => console.error("Error loading initial deposit:", e))
@@ -159,7 +159,7 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDep
         const isInverse = isInversePair(targetCurrency, sourceCurrency)
         const numericSource = parseFormattedNumber(amountSent)
         const result = isInverse ? (rate > 0 ? numericSource / rate : 0) : numericSource * rate
-        setAmountReceived(formatCurrency(result))
+        setAmountReceived(formatCurrency(result, targetCurrency))
     }, [sourceCurrency, targetCurrency, amountSent, rates])
 
     const getProfitData = () => {
@@ -428,7 +428,7 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDep
                                 <div className="space-y-2 text-right">
                                     <label className="text-sm font-medium">Tasa Actual</label>
                                     <div className="h-12 flex items-center justify-end font-bold text-primary font-mono text-xl">
-                                        {exchangeRate}
+                                        {formatRate(exchangeRate, targetCurrency, sourceCurrency)}
                                     </div>
                                 </div>
 
@@ -497,12 +497,13 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDep
                                                     onClick={() => {
                                                         setSelectedDepositId(dep.id!)
                                                         // Auto-fill amount and currency
-                                                        setAmountSent(dep.amount.toString())
-                                                        setSourceCurrency(normalizeCurrency(dep.currency))
+                                                        const normCurr = normalizeCurrency(dep.currency)
+                                                        setAmountSent(formatCurrency(dep.amount, normCurr))
+                                                        setSourceCurrency(normCurr)
                                                     }}
                                                 >
                                                     <div>
-                                                        <div className="font-bold">{formatCurrency(dep.amount)} {dep.currency}</div>
+                                                        <div className="font-bold">{formatCurrency(dep.amount, normalizeCurrency(dep.currency))} {dep.currency}</div>
                                                         <div className="text-[10px] text-muted-foreground">Ref: {dep.reference_number} • {dep.bank_name || '-'}</div>
                                                     </div>
                                                     <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${selectedDepositId === dep.id ? 'bg-primary border-primary' : 'border-muted'}`}>
