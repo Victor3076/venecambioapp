@@ -80,9 +80,15 @@ export default function RatesPage() {
 
     const handleSave = async () => {
         setSaving(true)
+        console.log('--- AdminRates: Guardando valores ---')
+        console.log('Valores de referencia:', usdtPrices)
+        console.log('Márgenes:', percentages)
+
         try {
             await RatesService.update(usdtPrices, percentages)
-            toast.success("Tasas actualizadas correctamente.")
+            toast.success("Tasas e Indicadores actualizados correctamente.", {
+                description: `Guardados: USD, PEN, CLP, COP, VES, Monitor y BCV.`
+            })
         } catch (error: any) {
             console.error("Error saving rates:", error)
             toast.error(`Error al guardar: ${error.message || "Error desconocido"}`)

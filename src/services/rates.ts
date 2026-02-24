@@ -76,34 +76,45 @@ export const RatesService = {
     // The schema allows multiple rows. Let's just update the existing one or insert if empty to keep it simple for now, 
     // but a single-row pattern is easier for this app.
     async update(usdtPrices: RatesData['usdt_prices'], margins: RatesData['margins']) {
+        console.log('--- RatesService: Iniciando actualización ---');
+        console.log('Precios a guardar:', usdtPrices);
+        console.log('Márgenes a guardar:', margins);
 
         // First, check if a row exists
         const existing = await this.getLatest()
 
+        const payload = {
+            usdt_prices: usdtPrices,
+            margins: margins,
+            updated_at: new Date().toISOString()
+        }
+
         if (existing?.id) {
+            console.log('Actualizando registro existente con ID:', existing.id);
             const { data, error } = await supabase
                 .from('rates_configuration')
-                .update({
-                    usdt_prices: usdtPrices,
-                    margins: margins,
-                    updated_at: new Date().toISOString()
-                })
+                .update(payload)
                 .eq('id', existing.id)
                 .select()
 
-            if (error) throw error
+            if (error) {
+                console.error('Error de Supabase al actualizar:', error);
+                throw error
+            }
+            console.log('Actualización exitosa. Datos devueltos:', data);
             return { data, error }
         } else {
-            // Fallback insert if table is empty
+            console.log('No hay registro previo. Insertando nuevo...');
             const { data, error } = await supabase
                 .from('rates_configuration')
-                .insert([{
-                    usdt_prices: usdtPrices,
-                    margins: margins
-                }])
+                .insert([payload])
                 .select()
 
-            if (error) throw error
+            if (error) {
+                console.error('Error de Supabase al insertar:', error);
+                throw error
+            }
+            console.log('Inserción exitosa. Datos devueltos:', data);
             return { data, error }
         }
     }
