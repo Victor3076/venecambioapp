@@ -8,12 +8,19 @@ import { Button } from "@/components/ui/button"
 import { ArrowLeft, TrendingUp, DollarSign, PieChart, Landmark } from "lucide-react"
 import Link from "next/link"
 import { CURRENCY_LABELS } from "@/lib/constants"
+const REGION_TO_ISO: Record<string, string> = {
+    'PERU': 'PEN',
+    'CHILE': 'CLP',
+    'COLOMBIA': 'COP',
+    'USA': 'USD',
+    'VENEZUELA': 'VES'
+}
 
 export default function AdminProfitsPage() {
     const [transactions, setTransactions] = useState<Transaction[]>([])
     const [loading, setLoading] = useState(true)
     const [filterDate, setFilterDate] = useState("")
-    const [stats, setStats] = useState<any>({ totalProfit: 0, volumeByCurrency: {}, profitByCurrency: {} })
+    const [stats, setStats] = useState<any>({ totalProfit: 0, volumeByCurrency: {}, profitByCurrency: {}, marginSumByCurrency: {} })
 
     useEffect(() => {
         loadData()
@@ -37,7 +44,10 @@ export default function AdminProfitsPage() {
             const completed = rawTxs.filter(tx => tx.status === 'completed')
 
             const summary = completed.reduce((acc: any, tx) => {
-                const currency = tx.currency_sent
+                // STANDARDIZE CURRENCY
+                const rawCurrency = tx.currency_sent
+                const currency = REGION_TO_ISO[rawCurrency] || rawCurrency
+
                 let profit = tx.profit_amount || 0
                 const volume = tx.amount_sent || 0
                 let margin = tx.profit_percentage || 0
@@ -45,7 +55,7 @@ export default function AdminProfitsPage() {
                 // SMART FALLBACK: Si no hay ganancia guardada (operaciones antiguas), 
                 // estimamos usando las tasas actuales para no mostrar 0.
                 if (profit === 0 && volume > 0 && latestRates) {
-                    const fallbackMargin = latestRates.margins[`${currency}_VES`] || latestRates.margins["GENERIC"] || 0
+                    const fallbackMargin = latestRates.margins[`${currency}_VES`] || latestRates.margins["GENERIC"] || 5
                     const fallbackPrice = latestRates.usdt_prices[currency as keyof typeof latestRates.usdt_prices] || 1
                     margin = fallbackMargin
                     profit = ((volume * margin) / 100) / fallbackPrice
@@ -133,7 +143,7 @@ export default function AdminProfitsPage() {
                                 ? Object.entries(stats.profitByCurrency).sort((a: any, b: any) => b[1] - a[1])[0][0]
                                 : "---"}
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1">Mayor aporte a la ganancia total.</p>
+                        <p className="text-xs text-muted-foreground mt-1">Mayor aporte a la ganancia total (USDT).</p>
                     </CardContent>
                 </Card>
             </div>
@@ -159,9 +169,12 @@ export default function AdminProfitsPage() {
                                     <tr><td colSpan={4} className="p-8 text-center text-muted-foreground">Calculando estadísticas...</td></tr>
                                 ) : Object.keys(stats.volumeByCurrency).length === 0 ? (
                                     <tr><td colSpan={4} className="p-8 text-center text-muted-foreground">No hay datos para mostrar.</td></tr>
-                                ) : Object.keys(stats.volumeByCurrency).map(curr => (
+                                ) : Object.keys(stats.volumeByCurrency).sort().map(curr => (
                                     <tr key={curr} className="hover:bg-muted/30 transition-colors">
-                                        <td className="p-4 font-bold">{CURRENCY_LABELS[curr as keyof typeof CURRENCY_LABELS] || curr}</td>
+                                        <td className="p-4">
+                                            <div className="font-bold">{CURRENCY_LABELS[curr as keyof typeof CURRENCY_LABELS] || curr}</div>
+                                            {(REGION_TO_ISO[curr] || curr) !== curr && <div className="text-[10px] text-muted-foreground">Legacy: {curr}</div>}
+                                        </td>
                                         <td className="p-4">{stats.volumeByCurrency[curr].toLocaleString()} {curr}</td>
                                         <td className="p-4 text-green-600 font-bold">+{stats.profitByCurrency[curr].toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                                         <td className="p-4 text-muted-foreground">
@@ -180,7 +193,7 @@ export default function AdminProfitsPage() {
             <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg flex gap-3 text-yellow-800">
                 <PieChart className="w-5 h-5 mt-0.5 shrink-0" />
                 <div className="text-sm">
-                    <strong>Nota sobre Cálculos:</strong> La ganancia estimada se calcula prioritariamente con el margen configurado en el momento de la creación de la orden. Para transacciones antiguas que no tienen este dato, el sistema aplica un "Estimado Inteligente" basado en las tasas y márgenes vigentes actualmente.
+                    <strong>Nota sobre Cálculos:</strong> La ganancia se basa en el margen configurado al momento de la orden. Para transacciones históricas sin este dato, el sistema utiliza un <strong>Estimado Inteligente</strong> basado en tus márgenes actuales para asegurar que el resumen sea completo y útil.
                 </div>
             </div>
         </div>

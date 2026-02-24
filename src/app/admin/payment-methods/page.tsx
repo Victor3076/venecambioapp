@@ -172,7 +172,7 @@ export default function AdminPaymentMethodsPage() {
 
                             {(newMethod.country === 'CLP' || newMethod.country === 'COP') && (
                                 <div className="space-y-4 pt-2 border-t border-primary/10">
-                                    {newMethod.country === 'CHILE' && (
+                                    {newMethod.country === 'CLP' && (
                                         <div className="space-y-2">
                                             <label className="text-sm font-medium text-primary/80">RUT (Empresa/Personal)</label>
                                             <Input
@@ -226,7 +226,7 @@ export default function AdminPaymentMethodsPage() {
                                             )}
                                         </select>
                                     </div>
-                                    {newMethod.country === 'CHILE' && (
+                                    {newMethod.country === 'CLP' && (
                                         <div className="space-y-2">
                                             <label className="text-sm font-medium text-primary/80">
                                                 Correo para Notificación

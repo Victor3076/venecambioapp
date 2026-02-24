@@ -52,7 +52,7 @@ export function BeneficiaryForm({ data, onChange, fixedCountry }: BeneficiaryFor
                             onChange({
                                 ...data,
                                 country: newCountry,
-                                bank_name: newCountry === 'PERU' && (data.details.peru_type === 'Yape' || data.details.peru_type === 'Plin') ? data.details.peru_type.toUpperCase() : ""
+                                bank_name: newCountry === 'PEN' && (data.details.peru_type === 'Yape' || data.details.peru_type === 'Plin') ? data.details.peru_type.toUpperCase() : ""
                             });
                         }}
                     >
@@ -187,7 +187,7 @@ export function BeneficiaryForm({ data, onChange, fixedCountry }: BeneficiaryFor
             )}
 
             {/* 6. Detalles Adicionales (Hidden for USA) */}
-            {country !== 'USA' && (
+            {country !== 'USD' && (
                 <div className="grid grid-cols-2 gap-4">
                     {(country === 'CLP' || country === 'COP') ? (
                         <>

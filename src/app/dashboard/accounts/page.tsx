@@ -17,7 +17,7 @@ export default function AccountsPage() {
     const [isAddOpen, setIsAddOpen] = useState(false)
     const [newAccount, setNewAccount] = useState<BeneficiaryData>({
         alias: "",
-        country: "VENEZUELA",
+        country: "VES",
         bank_name: "",
         account_number: "",
         details: { id_number: "", email: "", account_type: "", rut: "", venezuela_type: "Cuenta", peru_type: "Cuenta" }
@@ -40,7 +40,7 @@ export default function AccountsPage() {
             setIsAddOpen(false)
             setNewAccount({
                 alias: "",
-                country: "VENEZUELA",
+                country: "VES",
                 bank_name: "",
                 account_number: "",
                 details: { id_number: "", email: "", account_type: "", rut: "", venezuela_type: "Cuenta", peru_type: "Cuenta" }
@@ -125,7 +125,7 @@ export default function AccountsPage() {
                                 {acc.details?.id_number && (
                                     <div className="flex items-center gap-2">
                                         <span className="text-muted-foreground font-semibold">
-                                            {acc.country === 'COLOMBIA' ? 'Cédula:' : 'ID:'}
+                                            {acc.country === 'COP' ? 'Cédula:' : 'ID:'}
                                         </span>
                                         <span>{acc.details.id_number}</span>
                                     </div>

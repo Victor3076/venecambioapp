@@ -58,7 +58,7 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDep
             setReconcileNow(!!initialDepositId) // Set reconcileNow based on initialDepositId
             setSelectedDepositId(initialDepositId || null)
             setShowRegisterForm(false)
-            setRegisterFormData({ alias: '', country: 'VENEZUELA', bank_name: '', account_number: '', details: { venezuela_type: 'Cuenta' } })
+            setRegisterFormData({ alias: '', country: 'VES', bank_name: '', account_number: '', details: { venezuela_type: 'Cuenta' } })
 
             loadUsers()
             loadRates()
@@ -82,7 +82,7 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDep
             setSelectedDepositId(null)
             setReconcileNow(true)
             setShowRegisterForm(false)
-            setRegisterFormData({ alias: '', country: 'VENEZUELA', bank_name: '', account_number: '', details: { venezuela_type: 'Cuenta' } })
+            setRegisterFormData({ alias: '', country: 'VES', bank_name: '', account_number: '', details: { venezuela_type: 'Cuenta' } })
         }
     }, [isOpen, initialDepositId])
 
@@ -292,7 +292,7 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDep
                                             className={`p-4 border rounded-xl cursor-pointer transition-all hover:border-primary hover:bg-primary/5 flex items-center justify-between ${selectedAccount?.id === acc.id ? 'border-primary bg-primary/5 ring-1 ring-primary' : ''}`}
                                             onClick={() => {
                                                 setSelectedAccount(acc)
-                                                setTargetCurrency(acc.country === 'VENEZUELA' || acc.country === 'VES' ? 'VES' : acc.country)
+                                                setTargetCurrency(acc.country === 'VES' ? 'VES' : acc.country)
                                                 setStep(3)
                                             }}
                                         >
@@ -358,11 +358,11 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDep
                                                 })
                                                 toast.success('Cuenta registrada con éxito')
                                                 setShowRegisterForm(false)
-                                                setRegisterFormData({ alias: '', country: 'VENEZUELA', bank_name: '', account_number: '', details: { venezuela_type: 'Cuenta' } })
+                                                setRegisterFormData({ alias: '', country: 'VES', bank_name: '', account_number: '', details: { venezuela_type: 'Cuenta' } })
                                                 // Recargar cuentas y seleccionar la nueva
                                                 await loadUserAccounts(selectedUser!.id)
                                                 setSelectedAccount(newAcc)
-                                                setTargetCurrency(newAcc.country === 'VENEZUELA' || newAcc.country === 'VES' ? 'VES' : newAcc.country)
+                                                setTargetCurrency(newAcc.country === 'VES' ? 'VES' : newAcc.country)
                                                 setStep(3)
                                             } catch (e: any) {
                                                 toast.error('Error al registrar: ' + e.message)

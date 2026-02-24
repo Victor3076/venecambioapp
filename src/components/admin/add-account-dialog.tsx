@@ -21,7 +21,7 @@ type View = "list" | "add" | "edit"
 
 const emptyAccount = {
     alias: "",
-    country: "VENEZUELA",
+    country: "VES",
     bank_name: "",
     account_number: "",
     details: { id_number: "", email: "", account_type: "", rut: "", venezuela_type: "Cuenta", peru_type: "Cuenta" }
@@ -240,21 +240,21 @@ export function AddAccountDialog({ userId, userName, isOpen, onClose, onSuccess 
                                         setFormData({
                                             ...formData,
                                             country,
-                                            bank_name: country === 'PERU' && (formData.details.peru_type === 'Yape' || formData.details.peru_type === 'Plin')
+                                            bank_name: country === 'PEN' && (formData.details.peru_type === 'Yape' || formData.details.peru_type === 'Plin')
                                                 ? formData.details.peru_type.toUpperCase() : ""
                                         })
                                     }}
                                 >
-                                    <option value="VENEZUELA">Venezuela</option>
-                                    <option value="PERU">Perú</option>
-                                    <option value="CHILE">Chile</option>
-                                    <option value="COLOMBIA">Colombia</option>
-                                    <option value="USA">USA</option>
+                                    <option value="VES">Venezuela</option>
+                                    <option value="PEN">Perú</option>
+                                    <option value="CLP">Chile</option>
+                                    <option value="COP">Colombia</option>
+                                    <option value="USD">USA</option>
                                 </select>
                             </div>
 
                             {/* TIPO Venezuela */}
-                            {formData.country === 'VENEZUELA' && (
+                            {formData.country === 'VES' && (
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">Tipo</label>
                                     <select
@@ -269,7 +269,7 @@ export function AddAccountDialog({ userId, userName, isOpen, onClose, onSuccess 
                             )}
 
                             {/* TIPO Perú */}
-                            {formData.country === 'PERU' && (
+                            {formData.country === 'PEN' && (
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">Tipo</label>
                                     <select
@@ -302,11 +302,11 @@ export function AddAccountDialog({ userId, userName, isOpen, onClose, onSuccess 
                             </div>
 
                             {/* BANCO + NÚMERO (no USA) */}
-                            {formData.country !== 'USA' && (
+                            {formData.country !== 'USD' && (
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium">Banco</label>
-                                        {formData.country === 'COLOMBIA' ? (
+                                        {formData.country === 'COP' ? (
                                             <select
                                                 className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
                                                 value={formData.bank_name}
@@ -317,7 +317,7 @@ export function AddAccountDialog({ userId, userName, isOpen, onClose, onSuccess 
                                                 <option value="NEQUI">NEQUI</option>
                                                 <option value="LLAVES BRE-B">LLAVES BRE-B</option>
                                             </select>
-                                        ) : (formData.country === 'PERU' && (formData.details.peru_type === 'Yape' || formData.details.peru_type === 'Plin')) ? (
+                                        ) : (formData.country === 'PEN' && (formData.details.peru_type === 'Yape' || formData.details.peru_type === 'Plin')) ? (
                                             <Input value={formData.bank_name} disabled className="bg-muted" />
                                         ) : (
                                             <Input
@@ -329,16 +329,16 @@ export function AddAccountDialog({ userId, userName, isOpen, onClose, onSuccess 
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium">
-                                            {(formData.country === 'VENEZUELA' && formData.details.venezuela_type === 'Pago Móvil') ||
-                                                (formData.country === 'PERU' && (formData.details.peru_type === 'Yape' || formData.details.peru_type === 'Plin')) ||
-                                                (formData.country === 'COLOMBIA' && (formData.bank_name === 'NEQUI' || formData.bank_name === 'LLAVES BRE-B'))
+                                            {(formData.country === 'VES' && formData.details.venezuela_type === 'Pago Móvil') ||
+                                                (formData.country === 'PEN' && (formData.details.peru_type === 'Yape' || formData.details.peru_type === 'Plin')) ||
+                                                (formData.country === 'COP' && (formData.bank_name === 'NEQUI' || formData.bank_name === 'LLAVES BRE-B'))
                                                 ? 'Teléfono' : 'Cuenta'}
                                         </label>
                                         <Input
                                             placeholder={
-                                                (formData.country === 'VENEZUELA' && formData.details.venezuela_type === 'Pago Móvil') ||
-                                                    (formData.country === 'PERU' && (formData.details.peru_type === 'Yape' || formData.details.peru_type === 'Plin')) ||
-                                                    (formData.country === 'COLOMBIA' && (formData.bank_name === 'NEQUI' || formData.bank_name === 'LLAVES BRE-B'))
+                                                (formData.country === 'VES' && formData.details.venezuela_type === 'Pago Móvil') ||
+                                                    (formData.country === 'PEN' && (formData.details.peru_type === 'Yape' || formData.details.peru_type === 'Plin')) ||
+                                                    (formData.country === 'COP' && (formData.bank_name === 'NEQUI' || formData.bank_name === 'LLAVES BRE-B'))
                                                     ? "310..." : "0102..."
                                             }
                                             value={formData.account_number}
@@ -349,7 +349,7 @@ export function AddAccountDialog({ userId, userName, isOpen, onClose, onSuccess 
                             )}
 
                             {/* USA: Teléfono / Correo */}
-                            {formData.country === 'USA' && (
+                            {formData.country === 'USD' && (
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">Teléfono / Correo</label>
                                     <Input
@@ -361,11 +361,11 @@ export function AddAccountDialog({ userId, userName, isOpen, onClose, onSuccess 
                             )}
 
                             {/* DETALLES ADICIONALES */}
-                            {formData.country !== 'USA' && (
+                            {formData.country !== 'USD' && (
                                 <div className="grid grid-cols-2 gap-4">
-                                    {(formData.country === 'CHILE' || formData.country === 'COLOMBIA') ? (
+                                    {(formData.country === 'CLP' || formData.country === 'COP') ? (
                                         <>
-                                            {formData.country === 'CHILE' && (
+                                            {formData.country === 'CLP' && (
                                                 <div className="space-y-2">
                                                     <label className="text-sm font-medium">RUT</label>
                                                     <Input
@@ -375,7 +375,7 @@ export function AddAccountDialog({ userId, userName, isOpen, onClose, onSuccess 
                                                     />
                                                 </div>
                                             )}
-                                            {formData.country === 'COLOMBIA' && (
+                                            {formData.country === 'COP' && (
                                                 <div className="space-y-2">
                                                     <label className="text-sm font-medium">Cédula (Opcional)</label>
                                                     <Input
@@ -387,7 +387,7 @@ export function AddAccountDialog({ userId, userName, isOpen, onClose, onSuccess 
                                             )}
                                             <div className="space-y-2">
                                                 <label className="text-sm font-medium">
-                                                    Tipo de Cuenta {formData.country === 'COLOMBIA' && '(Opcional)'}
+                                                    Tipo de Cuenta {formData.country === 'COP' && '(Opcional)'}
                                                 </label>
                                                 <select
                                                     className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -395,7 +395,7 @@ export function AddAccountDialog({ userId, userName, isOpen, onClose, onSuccess 
                                                     onChange={e => setFormData({ ...formData, details: { ...formData.details, account_type: e.target.value } })}
                                                 >
                                                     <option value="">Seleccionar...</option>
-                                                    {formData.country === 'COLOMBIA' ? (
+                                                    {formData.country === 'COP' ? (
                                                         <>
                                                             <option value="Corriente">Corriente</option>
                                                             <option value="Ahorro">Ahorro</option>
@@ -405,12 +405,12 @@ export function AddAccountDialog({ userId, userName, isOpen, onClose, onSuccess 
                                                             <option value="Vista">Vista</option>
                                                             <option value="Corriente">Corriente</option>
                                                             <option value="Ahorro">Ahorro</option>
-                                                            {formData.country === 'CHILE' && <option value="RUT">RUT (Banco Estado)</option>}
+                                                            {formData.country === 'CLP' && <option value="RUT">RUT (Banco Estado)</option>}
                                                         </>
                                                     )}
                                                 </select>
                                             </div>
-                                            {formData.country === 'CHILE' && (
+                                            {formData.country === 'CLP' && (
                                                 <div className="space-y-2 col-span-2">
                                                     <label className="text-sm font-medium">Correo Electrónico</label>
                                                     <Input
@@ -424,7 +424,7 @@ export function AddAccountDialog({ userId, userName, isOpen, onClose, onSuccess 
                                         </>
                                     ) : (
                                         <>
-                                            {formData.country !== 'PERU' && (
+                                            {formData.country !== 'PEN' && (
                                                 <div className="space-y-2 col-span-2">
                                                     <label className="text-sm font-medium">Documento (solo números)</label>
                                                     <Input
@@ -432,7 +432,7 @@ export function AddAccountDialog({ userId, userName, isOpen, onClose, onSuccess 
                                                         value={formData.details.id_number}
                                                         onChange={e => {
                                                             const val = e.target.value
-                                                            if (formData.country === 'VENEZUELA' && !/^\d*$/.test(val)) return
+                                                            if (formData.country === 'VES' && !/^\d*$/.test(val)) return
                                                             setFormData({ ...formData, details: { ...formData.details, id_number: val } })
                                                         }}
                                                     />
