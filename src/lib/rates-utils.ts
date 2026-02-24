@@ -111,3 +111,15 @@ export const isInversePair = (targetCode: string, sourceCode: string): boolean =
     const pairKey = `${sourceCode}_${targetCode}`;
     return !!pairConfig[pairKey]?.isInverse;
 }
+
+export const normalizeCurrency = (code: string): string => {
+    const mapping: Record<string, string> = {
+        'VENEZUELA': 'VES',
+        'PERU': 'PEN',
+        'CHILE': 'CLP',
+        'COLOMBIA': 'COP',
+        'USA': 'USD',
+        'ZELLE': 'USD'
+    }
+    return mapping[code.toUpperCase()] || code.toUpperCase()
+}

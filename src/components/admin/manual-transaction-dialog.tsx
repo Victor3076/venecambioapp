@@ -9,7 +9,7 @@ import { AccountsService, UserAccount } from "@/services/accounts"
 import { TransactionsService } from "@/services/transactions"
 import { RatesService, RatesData } from "@/services/rates"
 import { BankDepositsService, BankDeposit } from "@/services/bank-deposits"
-import { calculateRate, formatRate, getRateDecimals, formatCurrency, parseFormattedNumber, isInversePair } from "@/lib/rates-utils"
+import { calculateRate, formatRate, getRateDecimals, formatCurrency, parseFormattedNumber, isInversePair, normalizeCurrency } from "@/lib/rates-utils"
 import { CURRENCY_LABELS, SUPPORTED_REGIONS } from "@/lib/constants"
 import { BeneficiaryForm, BeneficiaryData } from "@/components/BeneficiaryForm"
 
@@ -67,7 +67,7 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDep
                 BankDepositsService.getById(initialDepositId)
                     .then(dep => {
                         if (dep) {
-                            setSourceCurrency(dep.currency)
+                            setSourceCurrency(normalizeCurrency(dep.currency))
                             setAmountSent(dep.amount.toString())
                         }
                     })
@@ -292,7 +292,7 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDep
                                             className={`p-4 border rounded-xl cursor-pointer transition-all hover:border-primary hover:bg-primary/5 flex items-center justify-between ${selectedAccount?.id === acc.id ? 'border-primary bg-primary/5 ring-1 ring-primary' : ''}`}
                                             onClick={() => {
                                                 setSelectedAccount(acc)
-                                                setTargetCurrency(acc.country === 'VES' ? 'VES' : acc.country)
+                                                setTargetCurrency(normalizeCurrency(acc.country))
                                                 setStep(3)
                                             }}
                                         >
@@ -362,7 +362,7 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDep
                                                 // Recargar cuentas y seleccionar la nueva
                                                 await loadUserAccounts(selectedUser!.id)
                                                 setSelectedAccount(newAcc)
-                                                setTargetCurrency(newAcc.country === 'VES' ? 'VES' : newAcc.country)
+                                                setTargetCurrency(normalizeCurrency(newAcc.country))
                                                 setStep(3)
                                             } catch (e: any) {
                                                 toast.error('Error al registrar: ' + e.message)
@@ -409,7 +409,7 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDep
                                     <select
                                         className="w-full h-12 rounded-lg border px-3 bg-background"
                                         value={sourceCurrency}
-                                        onChange={e => setSourceCurrency(e.target.value)}
+                                        onChange={e => setSourceCurrency(normalizeCurrency(e.target.value))}
                                     >
                                         {SUPPORTED_REGIONS.map(region => (
                                             <option key={region} value={region}>{region}</option>
@@ -489,7 +489,7 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDep
                                                         setSelectedDepositId(dep.id!)
                                                         // Auto-fill amount and currency
                                                         setAmountSent(dep.amount.toString())
-                                                        setSourceCurrency(dep.currency)
+                                                        setSourceCurrency(normalizeCurrency(dep.currency))
                                                     }}
                                                 >
                                                     <div>
