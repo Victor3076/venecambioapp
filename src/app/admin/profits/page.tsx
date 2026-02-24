@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { TransactionsService, Transaction } from "@/services/transactions"
+import { RatesService } from "@/services/rates"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, TrendingUp, DollarSign, PieChart, Landmark } from "lucide-react"
@@ -21,7 +22,11 @@ export default function AdminProfitsPage() {
     const loadData = async () => {
         setLoading(true)
         try {
-            const data = await TransactionsService.getAll()
+            const [data, latestRates] = await Promise.all([
+                TransactionsService.getAll(),
+                RatesService.getLatest()
+            ])
+
             // Filter by date if selected
             let rawTxs = data as Transaction[]
             if (filterDate) {
@@ -33,9 +38,18 @@ export default function AdminProfitsPage() {
 
             const summary = completed.reduce((acc: any, tx) => {
                 const currency = tx.currency_sent
-                const profit = tx.profit_amount || 0
+                let profit = tx.profit_amount || 0
                 const volume = tx.amount_sent || 0
-                const margin = tx.profit_percentage || 0
+                let margin = tx.profit_percentage || 0
+
+                // SMART FALLBACK: Si no hay ganancia guardada (operaciones antiguas), 
+                // estimamos usando las tasas actuales para no mostrar 0.
+                if (profit === 0 && volume > 0 && latestRates) {
+                    const fallbackMargin = latestRates.margins[`${currency}_VES`] || latestRates.margins["GENERIC"] || 0
+                    const fallbackPrice = latestRates.usdt_prices[currency as keyof typeof latestRates.usdt_prices] || 1
+                    margin = fallbackMargin
+                    profit = ((volume * margin) / 100) / fallbackPrice
+                }
 
                 acc.totalProfit += profit
                 acc.volumeByCurrency[currency] = (acc.volumeByCurrency[currency] || 0) + volume
@@ -166,7 +180,7 @@ export default function AdminProfitsPage() {
             <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg flex gap-3 text-yellow-800">
                 <PieChart className="w-5 h-5 mt-0.5 shrink-0" />
                 <div className="text-sm">
-                    <strong>Nota sobre Cálculos:</strong> La ganancia estimada se calcula multiplicando el monto enviado por el margen configurado en el momento de la creación de la orden. Para transacciones pasadas sin estos datos, el valor aparecerá como cero.
+                    <strong>Nota sobre Cálculos:</strong> La ganancia estimada se calcula prioritariamente con el margen configurado en el momento de la creación de la orden. Para transacciones antiguas que no tienen este dato, el sistema aplica un "Estimado Inteligente" basado en las tasas y márgenes vigentes actualmente.
                 </div>
             </div>
         </div>
