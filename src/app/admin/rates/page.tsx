@@ -448,32 +448,31 @@ export default function RatesPage() {
                 <div
                     ref={templateRef}
                     data-id="whatsapp-template"
-                    className="w-[1080px] h-[1920px] p-12 flex flex-col justify-between text-white font-sans"
+                    className="w-[1080px] h-[1920px] p-12 flex flex-col items-center justify-between text-white font-sans"
                     style={{
                         background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 50%, #1e40af 100%)',
                         backgroundColor: '#2563eb',
                         color: '#ffffff'
                     }}
                 >
-                    {/* Header: Logo and Date */}
-                    <div className="flex justify-between items-start">
-                        <div>
-                            <h2 className="text-5xl font-extrabold uppercase tracking-widest opacity-90" style={{ color: '#ffffff' }}>Tasas del Día</h2>
-                            <p className="text-3xl font-medium mt-2 px-4 py-1 rounded-full inline-block" style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: '#ffffff' }}>
-                                {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
-                            </p>
-                        </div>
-                        <div className="flex items-center gap-4 p-6 rounded-3xl" style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}>
+                    {/* Header: Centered Logo and Title */}
+                    <div className="w-full flex flex-col items-center gap-6 mt-8">
+                        <div className="flex items-center justify-center p-6 rounded-3xl" style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}>
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src="/logo.png" alt="Logo" className="w-32 h-32 object-contain" />
-                            <span className="text-6xl font-black italic" style={{ color: '#ffffff' }}>VENECAMBIO</span>
+                        </div>
+                        <div className="text-center">
+                            <h2 className="text-7xl font-extrabold uppercase tracking-[0.2em] opacity-90" style={{ color: '#ffffff' }}>Tasas del Día</h2>
+                            <p className="text-4xl font-medium mt-4 px-6 py-2 rounded-full inline-block" style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: '#ffffff' }}>
+                                {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
+                            </p>
                         </div>
                     </div>
 
                     {/* Main Content: Rates */}
-                    <div className="flex-1 flex flex-col justify-center gap-12 py-20">
-                        <div className="text-center space-y-4 mb-8">
-                            <span className="text-4xl font-bold p-3 rounded-lg inline-block shadow-xl" style={{ backgroundColor: '#facc15', color: '#1e3a8a' }}>¡ENVIAMOS A VENEZUELA! 🇻🇪</span>
+                    <div className="w-full flex-1 flex flex-col justify-center gap-10 py-12">
+                        <div className="text-center space-y-4 mb-4">
+                            <span className="text-5xl font-bold p-4 rounded-xl inline-block shadow-2xl" style={{ backgroundColor: '#facc15', color: '#1e3a8a' }}>¡ENVIAMOS A VENEZUELA! 🇻🇪</span>
                         </div>
 
                         {[
@@ -482,8 +481,8 @@ export default function RatesPage() {
                             { name: "Colombia (Pesos)", label: "1 COP →", value: getFormattedRate('COP'), icon: "🇨🇴" },
                             { name: "USA (Zelle)", label: "1 USD →", value: getFormattedRate('USD'), icon: "🇺🇸" }
                         ].map((item, idx) => (
-                            <div key={idx} className="p-10 rounded-[40px] shadow-2xl flex items-center justify-between border-b-[12px]" style={{ backgroundColor: '#ffffff', color: '#1e3a8a', borderColor: '#e5e7eb' }}>
-                                <div className="flex items-center gap-6">
+                            <div key={idx} className="p-8 rounded-[40px] shadow-2xl flex items-center justify-between border-b-[10px]" style={{ backgroundColor: '#ffffff', color: '#1e3a8a', borderColor: '#e5e7eb' }}>
+                                <div className="flex items-center gap-8">
                                     <span className="text-8xl">{item.icon}</span>
                                     <div className="flex flex-col">
                                         <span className="text-4xl font-black uppercase" style={{ color: '#1e40af' }}>{item.name}</span>
@@ -491,27 +490,22 @@ export default function RatesPage() {
                                     </div>
                                 </div>
                                 <div className="text-right">
-                                    <span className="text-9xl font-black italic" style={{ color: '#2563eb' }}>{item.value}</span>
-                                    <div className="text-3xl font-bold uppercase tracking-tighter" style={{ color: '#60a5fa' }}>Bolívares Digitales</div>
+                                    <span className="text-8xl font-black italic" style={{ color: '#2563eb' }}>{item.value}</span>
                                 </div>
                             </div>
                         ))}
                     </div>
 
                     {/* Footer: Contacts */}
-                    <div className="mt-auto space-y-8">
-                        <div className="grid grid-cols-2 gap-8">
-                            <div className="p-8 rounded-3xl border text-center" style={{ backgroundColor: 'rgba(30,58,138,0.4)', borderColor: 'rgba(255,255,255,0.2)' }}>
-                                <div className="text-3xl opacity-70 mb-2 font-bold uppercase tracking-widest" style={{ color: '#ffffff' }}>Monitor</div>
-                                <div className="text-6xl font-black" style={{ color: '#facc15' }}>{usdtPrices.MONITOR.toLocaleString('es-VE')}</div>
-                            </div>
-                            <div className="p-8 rounded-3xl border text-center" style={{ backgroundColor: 'rgba(30,58,138,0.4)', borderColor: 'rgba(255,255,255,0.2)' }}>
-                                <div className="text-3xl opacity-70 mb-2 font-bold uppercase tracking-widest" style={{ color: '#ffffff' }}>BCV</div>
+                    <div className="w-full mt-auto space-y-8 pb-12">
+                        <div className="w-full flex justify-center">
+                            <div className="w-2/3 p-8 rounded-3xl border text-center" style={{ backgroundColor: 'rgba(30,58,138,0.4)', borderColor: 'rgba(255,255,255,0.2)' }}>
+                                <div className="text-3xl opacity-70 mb-2 font-bold uppercase tracking-widest" style={{ color: '#ffffff' }}>Tasa BCV</div>
                                 <div className="text-6xl font-black" style={{ color: '#ffffff' }}>{usdtPrices.BCV.toLocaleString('es-VE')}</div>
                             </div>
                         </div>
 
-                        <div className="p-10 rounded-[40px] shadow-2xl flex items-center justify-center gap-8 border-b-[12px]" style={{ backgroundColor: '#22c55e', borderColor: '#15803d', color: '#ffffff' }}>
+                        <div className="w-full p-10 rounded-[40px] shadow-2xl flex items-center justify-center gap-8 border-b-[12px]" style={{ backgroundColor: '#22c55e', borderColor: '#15803d', color: '#ffffff' }}>
                             <svg viewBox="0 0 24 24" width="80" height="80" fill="currentColor" style={{ color: '#ffffff' }}>
                                 <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.767 5.767 0 1.267.405 2.436 1.096 3.391l-.715 2.614 2.684-.705c.82.493 1.774.787 2.796.787 3.181 0 5.767-2.586 5.767-5.767.001-3.181-2.585-5.767-5.761-5.767zm3.387 8.264c-.147.412-.852.792-1.185.839-.333.047-.733.064-1.2-.086-.296-.095-1.263-.487-2.46-1.553-1.02-.91-1.708-2.038-1.907-2.38-.198-.342-.021-.527.151-.699.155-.155.342-.403.513-.605.171-.202.228-.342.342-.57.114-.228.057-.427-.028-.598-.085-.171-.77-1.854-.855-2.062-.232-.563-.513-.57-.855-.57h-.798c-.285 0-.741.107-1.126.541-.385.435-1.481 1.453-1.481 3.535 0 2.083 1.511 4.09 1.725 4.375.214.285 2.97 4.536 7.189 6.354 1.004.433 1.788.691 2.399.885 1.008.32 1.926.275 2.651.167.808-.121 2.479-1.011 2.822-1.983.342-.972.342-1.805.239-1.983-.1-.178-.37-.285-.77-.492z" />
                                 <path d="M12.031 0C5.385 0 0 5.385 0 12.031c0 2.122.551 4.11 1.503 5.836l-1.503 5.49 5.626-1.478a11.97 11.97 0 0 0 6.405 1.838c6.646 0 12.031-5.385 12.031-12.031C24.062 5.385 18.677 0 12.031 0zm.014 21.841a9.754 9.754 0 0 1-4.965-1.358l-.356-.211-3.692.969 1.031-3.766-.231-.387a9.752 9.752 0 0 1-1.492-5.127c0-5.397 4.39-9.787 9.787-9.787 5.397 0 9.787 4.39 9.787 9.787.001 5.398-4.383 9.781-9.87 9.781z" />
