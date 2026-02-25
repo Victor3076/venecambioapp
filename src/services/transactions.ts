@@ -265,6 +265,21 @@ export const TransactionsService = {
         }
 
         return data as Transaction
+    },
+
+    subscribe(callback: () => void) {
+        const channel = supabase
+            .channel('admin-transactions-updates')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'transactions' },
+                () => callback()
+            )
+            .subscribe()
+
+        return () => {
+            supabase.removeChannel(channel)
+        }
     }
 }
 

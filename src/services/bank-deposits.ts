@@ -197,5 +197,20 @@ export const BankDepositsService = {
             .eq('id', id)
 
         if (error) throw error
+    },
+
+    subscribe(callback: () => void) {
+        const channel = supabase
+            .channel('admin-deposits-updates')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'bank_deposits' },
+                () => callback()
+            )
+            .subscribe()
+
+        return () => {
+            supabase.removeChannel(channel)
+        }
     }
 }

@@ -85,6 +85,20 @@ export default function AdminTransactionsPage() {
 
     useEffect(() => {
         loadTransactions()
+
+        // Real-time subscriptions
+        const unsubTransactions = TransactionsService.subscribe(() => {
+            loadTransactions()
+        })
+
+        const unsubDeposits = BankDepositsService.subscribe(() => {
+            loadTransactions()
+        })
+
+        return () => {
+            unsubTransactions()
+            unsubDeposits()
+        }
     }, [])
 
     const loadTransactions = async () => {
