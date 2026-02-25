@@ -3,12 +3,15 @@
 import { useState, useEffect } from "react"
 import { TransactionsService, Transaction } from "@/services/transactions"
 import { Card, CardContent } from "@/components/ui/card"
-import { ArrowRightLeft, Clock, CheckCircle2, XCircle } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { ArrowRightLeft, Clock, CheckCircle2, XCircle, ExternalLink } from "lucide-react"
 import { formatCurrency } from "@/lib/rates-utils"
+import { ImageModal } from "@/components/ImageModal"
 
 export default function TransactionsHistoryPage() {
     const [transactions, setTransactions] = useState<Transaction[]>([])
     const [loading, setLoading] = useState(true)
+    const [selectedReceipt, setSelectedReceipt] = useState<string | null>(null)
 
     useEffect(() => {
         const load = async () => {
@@ -55,7 +58,7 @@ export default function TransactionsHistoryPage() {
                                     <div className="bg-primary/10 p-2 rounded-full text-primary hidden sm:block">
                                         <ArrowRightLeft className="w-5 h-5" />
                                     </div>
-                                    <div>
+                                    <div className="flex flex-col">
                                         <div className="font-bold">ID: #{tx.id?.split('-')[0]}</div>
                                         <div className="text-sm text-muted-foreground">
                                             {tx.created_at ? new Date(tx.created_at).toLocaleDateString() : ''} {tx.created_at ? new Date(tx.created_at).toLocaleTimeString() : ''}
@@ -65,17 +68,35 @@ export default function TransactionsHistoryPage() {
 
                                 <div className="flex-1 flex flex-col items-center sm:items-start text-center sm:text-left">
                                     <div className="text-lg font-bold">
-                                        {formatCurrency(tx.amount_sent)} {tx.currency_sent} → {formatCurrency(tx.amount_received)} {tx.currency_received}
+                                        {formatCurrency(tx.amount_sent, tx.currency_sent)} {tx.currency_sent} → {formatCurrency(tx.amount_received, tx.currency_received)} {tx.currency_received}
                                     </div>
                                     <div className="text-xs text-muted-foreground">Tasa: {tx.exchange_rate}</div>
                                 </div>
 
-                                <StatusBadge status={tx.status} />
+                                <div className="flex flex-col items-center sm:items-end gap-2">
+                                    <StatusBadge status={tx.status} />
+                                    {tx.completion_proof_url && (
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-7 text-[10px] px-2"
+                                            onClick={() => setSelectedReceipt(tx.completion_proof_url as string)}
+                                        >
+                                            <ExternalLink className="w-3 h-3 mr-1" /> Ver Comprobante
+                                        </Button>
+                                    )}
+                                </div>
                             </CardContent>
                         </Card>
                     ))}
                 </div>
             )}
+
+            <ImageModal
+                isOpen={!!selectedReceipt}
+                onClose={() => setSelectedReceipt(null)}
+                imageUrl={selectedReceipt || ""}
+            />
         </div>
     )
 }
