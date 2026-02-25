@@ -274,11 +274,17 @@ export const TransactionsService = {
             .on(
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'transactions' },
-                () => callback()
+                (payload) => {
+                    console.log('TX Change detected:', payload.eventType)
+                    callback()
+                }
             )
-            .subscribe()
+            .subscribe((status) => {
+                console.log(`TX Subscription Status [${uniqueId}]:`, status)
+            })
 
         return () => {
+            console.log(`Removing TX channel [${uniqueId}]`)
             supabase.removeChannel(channel)
         }
     }

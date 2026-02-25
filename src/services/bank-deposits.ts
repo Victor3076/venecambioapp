@@ -206,11 +206,17 @@ export const BankDepositsService = {
             .on(
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'bank_deposits' },
-                () => callback()
+                (payload) => {
+                    console.log('Deposit Change detected:', payload.eventType)
+                    callback()
+                }
             )
-            .subscribe()
+            .subscribe((status) => {
+                console.log(`Deposit Subscription Status [${uniqueId}]:`, status)
+            })
 
         return () => {
+            console.log(`Removing Deposit channel [${uniqueId}]`)
             supabase.removeChannel(channel)
         }
     }
