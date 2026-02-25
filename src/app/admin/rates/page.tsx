@@ -1,17 +1,18 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
-import { Save, Calculator, RefreshCw, ArrowLeft, Bell, Power, AlertTriangle, MessageSquare } from "lucide-react"
+import { Save, Calculator, RefreshCw, ArrowLeft, Bell, Power, AlertTriangle, MessageSquare, Image as ImageIcon, Download } from "lucide-react"
 import { RatesService } from "@/services/rates"
 import { NotificationsService } from "@/services/notifications"
 import { AdminSettingsService, AdminSettings } from "@/services/admin-settings"
 import { calculateRate, formatRate, getRateDecimals } from "@/lib/rates-utils"
+import html2canvas from "html2canvas"
 
 // Helper to render a group of rates
 const RateGroup = ({
@@ -97,6 +98,8 @@ const RateGroup = ({
 export default function RatesPage() {
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
+    const [generating, setGenerating] = useState(false)
+    const templateRef = useRef<HTMLDivElement>(null)
 
     // State for Admin Settings (Open/Closed)
     const [adminSettings, setAdminSettings] = useState<AdminSettings | null>(null)
@@ -233,6 +236,46 @@ export default function RatesPage() {
         setPercentages(prev => ({ ...prev, [key]: val }))
     }
 
+    const handleGenerateImage = async () => {
+        if (!templateRef.current) return
+        setGenerating(true)
+        try {
+            // Give browser time to ensure template is rendered (even if hidden via absolute positioning)
+            await new Promise(resolve => setTimeout(resolve, 500))
+
+            const canvas = await html2canvas(templateRef.current, {
+                useCORS: true,
+                scale: 2, // Higher resolution
+                backgroundColor: "#ffffff"
+            })
+
+            const image = canvas.toDataURL("image/png")
+            const link = document.createElement("a")
+            link.href = image
+            link.download = `tasas-venecambio-${new Date().toLocaleDateString().replace(/\//g, '-')}.png`
+            link.click()
+            toast.success("Imagen generada y descargada correctamente.")
+        } catch (error) {
+            console.error("Error generating image:", error)
+            toast.error("Error al generar la imagen.")
+        } finally {
+            setGenerating(false)
+        }
+    }
+
+    const getFormattedRate = (source: string) => {
+        const target = 'VES'
+        const marginKey = `${source}_${target}`
+        const margin = percentages[marginKey] || percentages['GENERIC'] || 0
+        const rate = calculateRate(target, source, usdtPrices.VES, usdtPrices[source as keyof typeof usdtPrices], margin)
+        const decimals = getRateDecimals(target, source)
+
+        return rate.toLocaleString('es-VE', {
+            minimumFractionDigits: decimals,
+            maximumFractionDigits: decimals
+        })
+    }
+
     if (loading) return <div className="p-6">Cargando tasas...</div>
 
     return (
@@ -286,21 +329,41 @@ export default function RatesPage() {
                         </CardContent>
                     </Card>
 
-                    <Card className="bg-blue-50/50 border-blue-100">
-                        <CardHeader>
-                            <CardTitle>Indicadores Vzla</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="grid grid-cols-2 gap-2 items-center">
-                                <label className="font-medium text-sm">Monitor</label>
-                                <Input type="number" value={usdtPrices.MONITOR} onChange={(e) => setUsdtPrices({ ...usdtPrices, MONITOR: parseFloat(e.target.value) })} />
-                            </div>
-                            <div className="grid grid-cols-2 gap-2 items-center">
-                                <label className="font-medium text-sm">BCV</label>
-                                <Input type="number" value={usdtPrices.BCV} onChange={(e) => setUsdtPrices({ ...usdtPrices, BCV: parseFloat(e.target.value) })} />
-                            </div>
-                        </CardContent>
-                    </Card>
+                    <div className="space-y-6">
+                        <Card className="bg-blue-50/50 border-blue-100">
+                            <CardHeader>
+                                <CardTitle>Indicadores Vzla</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="grid grid-cols-2 gap-2 items-center">
+                                    <label className="font-medium text-sm">Monitor</label>
+                                    <Input type="number" value={usdtPrices.MONITOR} onChange={(e) => setUsdtPrices({ ...usdtPrices, MONITOR: parseFloat(e.target.value) })} />
+                                </div>
+                                <div className="grid grid-cols-2 gap-2 items-center">
+                                    <label className="font-medium text-sm">BCV</label>
+                                    <Input type="number" value={usdtPrices.BCV} onChange={(e) => setUsdtPrices({ ...usdtPrices, BCV: parseFloat(e.target.value) })} />
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        <Card className="border-dashed border-2 border-primary/30">
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-sm">Generador de Imagen</CardTitle>
+                                <CardDescription className="text-xs">Exporta las tasas para WhatsApp Status.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <Button
+                                    className="w-full h-12 gap-2 font-bold"
+                                    variant="outline"
+                                    onClick={handleGenerateImage}
+                                    disabled={generating}
+                                >
+                                    {generating ? <RefreshCw className="w-4 h-4 animate-spin" /> : <ImageIcon className="w-4 h-4" />}
+                                    {generating ? "Generando..." : "GENERAR IMAGEN"}
+                                </Button>
+                            </CardContent>
+                        </Card>
+                    </div>
                 </div>
 
                 <div className="lg:col-span-2 space-y-6">
@@ -366,6 +429,79 @@ export default function RatesPage() {
                                 </Button>
                             </CardContent>
                         </Card>
+                    </div>
+                </div>
+            </div>
+
+            {/* Hidden WhatsApp Status Template (9:16) */}
+            <div className="absolute left-[-9999px] top-0">
+                <div
+                    ref={templateRef}
+                    className="w-[1080px] h-[1920px] bg-gradient-to-br from-blue-600 via-blue-500 to-blue-700 p-12 flex flex-col justify-between text-white font-sans"
+                >
+                    {/* Header: Logo and Date */}
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <h2 className="text-5xl font-extrabold uppercase tracking-widest opacity-90">Tasas del Día</h2>
+                            <p className="text-3xl font-medium mt-2 bg-white/20 px-4 py-1 rounded-full inline-block">
+                                {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-4 bg-white/10 p-6 rounded-3xl backdrop-blur-md">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src="/logo.png" alt="Logo" className="w-32 h-32 object-contain" />
+                            <span className="text-6xl font-black italic">VENECAMBIO</span>
+                        </div>
+                    </div>
+
+                    {/* Main Content: Rates */}
+                    <div className="flex-1 flex flex-col justify-center gap-12 py-20">
+                        <div className="text-center space-y-4 mb-8">
+                            <span className="text-4xl font-bold p-3 bg-yellow-400 text-blue-900 rounded-lg inline-block shadow-xl">¡ENVIAMOS A VENEZUELA! 🇻🇪</span>
+                        </div>
+
+                        {[
+                            { name: "Perú (Soles)", label: "1 PEN →", value: getFormattedRate('PEN'), icon: "🇵🇪" },
+                            { name: "Chile (Pesos)", label: "1 CLP →", value: getFormattedRate('CLP'), icon: "🇨🇱" },
+                            { name: "Colombia (Pesos)", label: "1 COP →", value: getFormattedRate('COP'), icon: "🇨🇴" },
+                            { name: "USA (Zelle)", label: "1 USD →", value: getFormattedRate('USD'), icon: "🇺🇸" }
+                        ].map((item, idx) => (
+                            <div key={idx} className="bg-white/95 text-blue-900 p-10 rounded-[40px] shadow-2xl transform transition-all flex items-center justify-between border-b-8 border-gray-300">
+                                <div className="flex items-center gap-6">
+                                    <span className="text-8xl">{item.icon}</span>
+                                    <div className="flex flex-col">
+                                        <span className="text-4xl font-black uppercase text-blue-800">{item.name}</span>
+                                        <span className="text-5xl font-medium text-gray-500">{item.label}</span>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <span className="text-9xl font-black text-blue-600 italic">{item.value}</span>
+                                    <div className="text-3xl font-bold uppercase tracking-tighter text-blue-400">Bolívares Digitales</div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Footer: Contacts */}
+                    <div className="mt-auto space-y-8">
+                        <div className="grid grid-cols-2 gap-8">
+                            <div className="bg-blue-950/40 p-8 rounded-3xl border border-white/20 text-center">
+                                <div className="text-3xl opacity-70 mb-2">Monitor</div>
+                                <div className="text-6xl font-black text-yellow-400">{usdtPrices.MONITOR.toLocaleString('es-VE')}</div>
+                            </div>
+                            <div className="bg-blue-950/40 p-8 rounded-3xl border border-white/20 text-center">
+                                <div className="text-3xl opacity-70 mb-2">BCV</div>
+                                <div className="text-6xl font-black text-white">{usdtPrices.BCV.toLocaleString('es-VE')}</div>
+                            </div>
+                        </div>
+
+                        <div className="bg-green-500 p-10 rounded-[40px] shadow-2xl flex items-center justify-center gap-8 border-b-8 border-green-700 animate-pulse">
+                            <svg viewBox="0 0 24 24" width="80" height="80" fill="currentColor" className="text-white">
+                                <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.767 5.767 0 1.267.405 2.436 1.096 3.391l-.715 2.614 2.684-.705c.82.493 1.774.787 2.796.787 3.181 0 5.767-2.586 5.767-5.767.001-3.181-2.585-5.767-5.761-5.767zm3.387 8.264c-.147.412-.852.792-1.185.839-.333.047-.733.064-1.2-.086-.296-.095-1.263-.487-2.46-1.553-1.02-.91-1.708-2.038-1.907-2.38-.198-.342-.021-.527.151-.699.155-.155.342-.403.513-.605.171-.202.228-.342.342-.57.114-.228.057-.427-.028-.598-.085-.171-.77-1.854-.855-2.062-.232-.563-.513-.57-.855-.57h-.798c-.285 0-.741.107-1.126.541-.385.435-1.481 1.453-1.481 3.535 0 2.083 1.511 4.09 1.725 4.375.214.285 2.97 4.536 7.189 6.354 1.004.433 1.788.691 2.399.885 1.008.32 1.926.275 2.651.167.808-.121 2.479-1.011 2.822-1.983.342-.972.342-1.805.239-1.983-.1-.178-.37-.285-.77-.492z" />
+                                <path d="M12.031 0C5.385 0 0 5.385 0 12.031c0 2.122.551 4.11 1.503 5.836l-1.503 5.49 5.626-1.478a11.97 11.97 0 0 0 6.405 1.838c6.646 0 12.031-5.385 12.031-12.031C24.062 5.385 18.677 0 12.031 0zm.014 21.841a9.754 9.754 0 0 1-4.965-1.358l-.356-.211-3.692.969 1.031-3.766-.231-.387a9.752 9.752 0 0 1-1.492-5.127c0-5.397 4.39-9.787 9.787-9.787 5.397 0 9.787 4.39 9.787 9.787.001 5.398-4.383 9.781-9.87 9.781z" />
+                            </svg>
+                            <span className="text-8xl font-black tracking-tight">+58 422 717 3725</span>
+                        </div>
                     </div>
                 </div>
             </div>
