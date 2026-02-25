@@ -629,8 +629,19 @@ export default function NewTransactionPage() {
                                                 Opción {idx + 1}
                                             </div>
                                             <p className="font-bold text-primary mb-1">{acc.bank_name}</p>
-                                            <p><strong>Número:</strong> {acc.account_number}</p>
-                                            <p><strong>Titular:</strong> {acc.holder_name}</p>
+                                            <div className="space-y-0.5">
+                                                <p><strong>Número:</strong> {acc.account_number}</p>
+                                                <p><strong>Titular:</strong> {acc.holder_name}</p>
+                                                {(acc.holder_id || acc.details?.rut || acc.details?.id_number) && (
+                                                    <p><strong>{acc.country === 'CLP' ? 'RUT' : (acc.country === 'COP' ? 'Cédula' : 'ID')}:</strong> {acc.holder_id || acc.details?.rut || acc.details?.id_number}</p>
+                                                )}
+                                                {acc.details?.account_type && (
+                                                    <p><strong>Tipo:</strong> {acc.details.account_type}</p>
+                                                )}
+                                                {acc.details?.email && (
+                                                    <p className="text-[11px] text-primary/70 mt-1"><strong>Aviso:</strong> {acc.details.email}</p>
+                                                )}
+                                            </div>
                                         </div>
                                     ))
                                 ) : (
