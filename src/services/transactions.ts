@@ -268,8 +268,9 @@ export const TransactionsService = {
     },
 
     subscribe(callback: () => void) {
+        const uniqueId = Math.random().toString(36).substring(2, 9)
         const channel = supabase
-            .channel('admin-transactions-updates')
+            .channel(`admin-txs-${uniqueId}`)
             .on(
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'transactions' },

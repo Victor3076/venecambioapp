@@ -200,8 +200,9 @@ export const BankDepositsService = {
     },
 
     subscribe(callback: () => void) {
+        const uniqueId = Math.random().toString(36).substring(2, 9)
         const channel = supabase
-            .channel('admin-deposits-updates')
+            .channel(`admin-deps-${uniqueId}`)
             .on(
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'bank_deposits' },

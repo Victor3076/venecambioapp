@@ -86,13 +86,13 @@ export default function AdminTransactionsPage() {
     useEffect(() => {
         loadTransactions()
 
-        // Real-time subscriptions
+        // Real-time subscriptions - with silent refreshes to avoid UI flicker
         const unsubTransactions = TransactionsService.subscribe(() => {
-            loadTransactions()
+            loadTransactions(true)
         })
 
         const unsubDeposits = BankDepositsService.subscribe(() => {
-            loadTransactions()
+            loadTransactions(true)
         })
 
         return () => {
@@ -101,8 +101,8 @@ export default function AdminTransactionsPage() {
         }
     }, [])
 
-    const loadTransactions = async () => {
-        setLoading(true)
+    const loadTransactions = async (silent = false) => {
+        if (!silent) setLoading(true)
         try {
             const [txData, depData] = await Promise.all([
                 TransactionsService.getAll(),
@@ -113,7 +113,7 @@ export default function AdminTransactionsPage() {
         } catch (error) {
             console.error("Error loading data:", error)
         } finally {
-            setLoading(false)
+            if (!silent) setLoading(false)
         }
     }
 
@@ -223,7 +223,7 @@ export default function AdminTransactionsPage() {
                     <Button variant="outline" asChild>
                         <Link href="/admin/users">Gestionar Usuarios</Link>
                     </Button>
-                    <Button variant="outline" onClick={loadTransactions}>Actualizar Lista</Button>
+                    <Button variant="outline" onClick={() => loadTransactions()}>Actualizar Lista</Button>
                     <Button className="bg-primary hover:bg-primary/90" onClick={() => setIsManualModalOpen(true)}>
                         <Plus className="w-4 h-4 mr-2" /> Nueva Operación (WhatsApp)
                     </Button>
