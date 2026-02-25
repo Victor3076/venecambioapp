@@ -450,11 +450,24 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDep
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">Recibe ({targetCurrency})</label>
-                                    <Input
-                                        value={amountReceived}
-                                        readOnly
-                                        className="h-12 text-lg font-bold bg-muted"
-                                    />
+                                    <div className="flex gap-2">
+                                        <Input
+                                            value={amountReceived}
+                                            readOnly
+                                            className="flex-1 h-12 text-lg font-bold bg-muted"
+                                        />
+                                        {!selectedAccount && (
+                                            <select
+                                                className="w-24 h-12 rounded-lg border px-2 bg-background font-bold text-sm"
+                                                value={targetCurrency}
+                                                onChange={e => setTargetCurrency(normalizeCurrency(e.target.value))}
+                                            >
+                                                {SUPPORTED_REGIONS.map(region => (
+                                                    <option key={region} value={region}>{region}</option>
+                                                ))}
+                                            </select>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 
