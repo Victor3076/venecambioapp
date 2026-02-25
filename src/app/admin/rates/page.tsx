@@ -13,6 +13,87 @@ import { NotificationsService } from "@/services/notifications"
 import { AdminSettingsService, AdminSettings } from "@/services/admin-settings"
 import { calculateRate, formatRate, getRateDecimals } from "@/lib/rates-utils"
 
+// Helper to render a group of rates
+const RateGroup = ({
+    title,
+    flag,
+    currencyCode,
+    basePrice,
+    percentages,
+    usdtPrices,
+    onMarginChange
+}: {
+    title: string,
+    flag: string,
+    currencyCode: string,
+    basePrice: number,
+    percentages: Record<string, number>,
+    usdtPrices: any,
+    onMarginChange: (key: string, val: number) => void
+}) => {
+
+    const renderRateRow = (targetName: string, targetCode: string, targetPrice: number) => {
+        const marginKey = `${currencyCode}_${targetCode}`;
+        const currentMargin = percentages[marginKey] || 0;
+        const rate = calculateRate(targetCode, currencyCode, targetPrice, basePrice, currentMargin);
+
+        // Dynamic decimal logic from configuration
+        const decimals = getRateDecimals(targetCode, currencyCode);
+
+        const formattedRate = rate.toLocaleString('es-VE', {
+            minimumFractionDigits: decimals,
+            maximumFractionDigits: decimals
+        });
+
+        return (
+            <div className="flex flex-col gap-1 border-b pb-2 last:border-0 last:pb-0" key={targetCode}>
+                <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-muted-foreground">A {targetName} ({targetCode})</span>
+                    <span className="font-bold text-lg">
+                        {formattedRate}
+                    </span>
+                </div>
+                <div className="flex items-center justify-end gap-2 text-xs text-muted-foreground">
+                    <span>Ganancia:</span>
+                    <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="0.00"
+                        className="h-5 w-16 text-right px-1 text-xs"
+                        value={currentMargin}
+                        onChange={(e) => {
+                            const val = parseFloat(e.target.value)
+                            onMarginChange(marginKey, isNaN(val) ? 0 : val)
+                        }}
+                    />
+                    <span>%</span>
+                </div>
+            </div>
+        )
+    }
+
+    return (
+        <Card className="bg-background border-2">
+            <CardHeader className="pb-2 pt-4 px-4">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                    <span className="text-2xl">{flag}</span> {title}
+                </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 p-4">
+                {currencyCode !== 'PEN' && renderRateRow("Perú", "PEN", usdtPrices.PEN)}
+                {currencyCode !== 'CLP' && renderRateRow("Chile", "CLP", usdtPrices.CLP)}
+                {currencyCode !== 'COP' && renderRateRow("Colombia", "COP", usdtPrices.COP)}
+                {currencyCode !== 'USD' && renderRateRow("USA", "USD", usdtPrices.USD)}
+
+                {/* Venezuela Highlighting */}
+                <div className="bg-muted/50 p-2 rounded -mx-2">
+                    {renderRateRow("Venezuela", "VES", usdtPrices.VES)}
+                </div>
+            </CardContent>
+        </Card>
+    )
+}
+
 export default function RatesPage() {
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
