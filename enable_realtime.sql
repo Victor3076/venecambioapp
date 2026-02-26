@@ -6,6 +6,7 @@
 
 ALTER PUBLICATION supabase_realtime ADD TABLE transactions;
 ALTER PUBLICATION supabase_realtime ADD TABLE bank_deposits;
+ALTER PUBLICATION supabase_realtime ADD TABLE rates_configuration;
 
 -- Verify it was added correctly
 -- SELECT * FROM pg_publication_tables WHERE pubname = 'supabase_realtime';

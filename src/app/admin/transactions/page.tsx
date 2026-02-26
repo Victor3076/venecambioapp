@@ -403,6 +403,11 @@ export default function AdminTransactionsPage() {
                                                                 <Hash className="w-3 h-3" />
                                                                 {deposit.reference_number}
                                                             </div>
+                                                            {deposit.notes && (
+                                                                <div className="text-[10px] text-blue-600 font-medium truncate max-w-[120px]">
+                                                                    {deposit.notes}
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     ) : (
                                                         <span className="text-[10px] text-muted-foreground italic">Sin conciliar</span>

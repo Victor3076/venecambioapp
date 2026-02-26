@@ -273,8 +273,10 @@ export default function BankDepositsPage() {
                                             </div>
                                             <div className="font-mono">{deposit.reference_number}</div>
                                             <div className="truncate pr-2">
-                                                <div className="font-medium">{deposit.bank_name || "-"}</div>
-                                                {deposit.notes && <div className="text-[10px] text-muted-foreground italic truncate">{deposit.notes}</div>}
+                                                <div className="font-medium">
+                                                    {deposit.bank_name || "-"}
+                                                    {deposit.notes && <span className="ml-2 text-[10px] text-muted-foreground italic">/ {deposit.notes}</span>}
+                                                </div>
                                             </div>
                                             <div className="font-bold">
                                                 {formatCurrency(deposit.amount, deposit.currency)} {deposit.currency}
