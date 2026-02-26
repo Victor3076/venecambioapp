@@ -290,12 +290,27 @@ export const TransactionsService = {
     },
 
     async delete(id: string) {
-        const { error } = await supabase
+        // Step 1: Unlink any bank deposits and return them to available status
+        const { error: unlinkError } = await supabase
+            .from('bank_deposits')
+            .update({
+                matched_transaction_id: null,
+                status: 'available'
+            })
+            .eq('matched_transaction_id', id)
+
+        if (unlinkError) {
+            console.error("Error unlinking deposits before deletion:", unlinkError)
+            throw unlinkError
+        }
+
+        // Step 2: Delete the transaction
+        const { error: deleteError } = await supabase
             .from('transactions')
             .delete()
             .eq('id', id)
 
-        if (error) throw error
+        if (deleteError) throw deleteError
     }
 }
 
