@@ -287,6 +287,15 @@ export const TransactionsService = {
             console.log(`Removing TX channel [${uniqueId}]`)
             supabase.removeChannel(channel)
         }
+    },
+
+    async delete(id: string) {
+        const { error } = await supabase
+            .from('transactions')
+            .delete()
+            .eq('id', id)
+
+        if (error) throw error
     }
 }
 

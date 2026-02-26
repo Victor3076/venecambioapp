@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Eye, Check, X, ImageIcon, Upload, ClipboardPaste, ArrowLeft, Copy, User, Landmark, CreditCard, Mail, Phone, Hash, Search, FileUp, Plus, AlertCircle } from "lucide-react"
+import { Eye, Check, X, ImageIcon, Upload, ClipboardPaste, ArrowLeft, Copy, User, Landmark, CreditCard, Mail, Phone, Hash, Search, FileUp, Plus, AlertCircle, Trash2 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import Link from "next/link"
 import { formatCurrency } from "@/lib/rates-utils"
@@ -33,6 +33,7 @@ export default function AdminTransactionsPage() {
     const [filterCurrency, setFilterCurrency] = useState<string>('all')
     const [isManualModalOpen, setIsManualModalOpen] = useState(false)
     const [preSelectedDepositId, setPreSelectedDepositId] = useState<string | null>(null)
+    const [userRole, setUserRole] = useState<string | null>(null)
 
 
     useEffect(() => {
@@ -85,6 +86,14 @@ export default function AdminTransactionsPage() {
 
     useEffect(() => {
         loadTransactions()
+
+        // Get user role for restricted actions
+        supabase.auth.getUser().then(({ data: { user } }) => {
+            if (user) {
+                supabase.from('profiles').select('role').eq('id', user.id).single()
+                    .then(({ data }) => setUserRole(data?.role || null))
+            }
+        })
 
         // Real-time subscriptions - with silent refreshes to avoid UI flicker
         const unsubTransactions = TransactionsService.subscribe(() => {
@@ -175,6 +184,23 @@ export default function AdminTransactionsPage() {
         } catch (error) {
             console.error(error)
             toast.error("Error al actualizar estado")
+        } finally {
+            setIsUploading(false)
+        }
+    }
+
+    const handleDelete = async (id: string) => {
+        if (!confirm("¿Esta seguro de eliminar esta operacion?")) return
+
+        setIsUploading(true)
+        try {
+            await TransactionsService.delete(id)
+            toast.success("Operación eliminada exitosamente.")
+            setSelectedTx(null)
+            loadTransactions()
+        } catch (error: any) {
+            console.error(error)
+            toast.error(`Error al eliminar: ${error.message}`)
         } finally {
             setIsUploading(false)
         }
@@ -679,6 +705,12 @@ export default function AdminTransactionsPage() {
                                                 <Button variant="outline" className="col-span-2 h-10" onClick={openReconciliation} disabled={selectedTx.status === 'rejected' || !!(selectedTx as any).deposit}>
                                                     Conciliar Depósito
                                                 </Button>
+
+                                                {userRole === 'admin' && (
+                                                    <Button variant="ghost" className="col-span-2 h-10 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => handleDelete(selectedTx.id!)} disabled={isUploading}>
+                                                        <Trash2 className="w-4 h-4 mr-2" /> Eliminar Operación
+                                                    </Button>
+                                                )}
                                             </div>
                                         </div>
 
