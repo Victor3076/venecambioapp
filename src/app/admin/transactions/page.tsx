@@ -676,7 +676,7 @@ export default function AdminTransactionsPage() {
                                                 <Button variant="destructive" className="h-11" onClick={() => handleStatusUpdate(selectedTx.id!, 'rejected')} disabled={selectedTx.status === 'rejected' || isUploading}>
                                                     <X className="w-4 h-4 mr-2" /> Rechazar
                                                 </Button>
-                                                <Button variant="outline" className="col-span-2 h-10" onClick={openReconciliation} disabled={selectedTx.status === 'verified' || selectedTx.status === 'completed'}>
+                                                <Button variant="outline" className="col-span-2 h-10" onClick={openReconciliation} disabled={selectedTx.status === 'rejected' || !!selectedTx.deposit}>
                                                     Conciliar Depósito
                                                 </Button>
                                             </div>

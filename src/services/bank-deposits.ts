@@ -123,10 +123,11 @@ export const BankDepositsService = {
 
         if (depositError) throw depositError
 
-        // Step 4: Update transaction(s) status
+        // Step 4: Update transaction(s) status ONLY if they are in 'verifying' state
         const updateQuery = supabase
             .from('transactions')
             .update({ status: 'verified' })
+            .eq('status', 'verifying') // Added protection
 
         if (tx.group_id) {
             updateQuery.eq('group_id', tx.group_id)
