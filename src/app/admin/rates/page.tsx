@@ -8,10 +8,11 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 import { Save, Calculator, RefreshCw, ArrowLeft, Bell, Power, AlertTriangle, MessageSquare, Image as ImageIcon, Download } from "lucide-react"
-import { RatesService } from "@/services/rates"
+import { RatesService, RatesData } from "@/services/rates"
 import { NotificationsService } from "@/services/notifications"
 import { AdminSettingsService, AdminSettings } from "@/services/admin-settings"
 import { calculateRate, formatRate, getRateDecimals } from "@/lib/rates-utils"
+import { DailyRatesModal } from "@/components/daily-rates-modal"
 import html2canvas from "html2canvas"
 
 // Helper to render a group of rates
@@ -99,6 +100,7 @@ export default function RatesPage() {
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
     const [generating, setGenerating] = useState(false)
+    const [isRatesModalOpen, setIsRatesModalOpen] = useState(false)
     const templateRef = useRef<HTMLDivElement>(null)
 
     // State for Admin Settings (Open/Closed)
@@ -365,11 +367,10 @@ export default function RatesPage() {
                                 <Button
                                     className="w-full h-12 gap-2 font-bold"
                                     variant="outline"
-                                    onClick={handleGenerateImage}
-                                    disabled={generating}
+                                    onClick={() => setIsRatesModalOpen(true)}
                                 >
-                                    {generating ? <RefreshCw className="w-4 h-4 animate-spin" /> : <ImageIcon className="w-4 h-4" />}
-                                    {generating ? "Generando..." : "GENERAR IMAGEN"}
+                                    <ImageIcon className="w-4 h-4" />
+                                    GENERAR IMAGEN
                                 </Button>
                             </CardContent>
                         </Card>
@@ -515,6 +516,12 @@ export default function RatesPage() {
                     </div>
                 </div>
             </div>
+
+            <DailyRatesModal
+                rates={{ usdt_prices: usdtPrices, margins: percentages } as RatesData}
+                isOpen={isRatesModalOpen}
+                onClose={() => setIsRatesModalOpen(false)}
+            />
         </div>
     )
 }
