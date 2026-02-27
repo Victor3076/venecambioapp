@@ -307,8 +307,36 @@ export default function NewTransactionPage() {
             return
         }
 
+        // Limit size validation to prevent UI freeze
+        if (file.size > 15 * 1024 * 1024) {
+            toast.error("El archivo es demasiado gigantesco. Por favor recórtalo o usa otra foto.")
+            return
+        }
+
         setLoading(true)
         try {
+            let fileToUpload = file
+
+            if (file.type.startsWith('image/')) {
+                try {
+                    const imageCompression = (await import('browser-image-compression')).default
+                    const options = {
+                        maxSizeMB: 0.8,
+                        maxWidthOrHeight: 1280,
+                        useWebWorker: true
+                    }
+                    const compressedBlob = await imageCompression(file, options)
+                    fileToUpload = new File([compressedBlob], file.name || "receipt.jpg", { type: compressedBlob.type })
+                } catch (compressError) {
+                    console.error("Compression error:", compressError)
+                    // fallback to original if compression fails
+                }
+            } else if (fileToUpload.size > 5 * 1024 * 1024) {
+                toast.warning("Los documentos PDF deben ser menores a 5MB.")
+                setLoading(false)
+                return
+            }
+
             // 1. Create the transaction records first in the DB
             const txId = await handleCreateTransaction()
 
@@ -319,11 +347,11 @@ export default function NewTransactionPage() {
             }
 
             // 2. Upload the file
-            await TransactionsService.uploadProof(file, txId)
+            await TransactionsService.uploadProof(fileToUpload, txId)
             setStep(4)
         } catch (error: any) {
-            console.error(error)
-            toast.error("Error al procesar la operación. Por favor intenta de nuevo.")
+            console.error("Full upload error object:", error)
+            toast.error("Error al procesar la operación. Por favor revisa tu conexión e intenta de nuevo.")
         } finally {
             setLoading(false)
         }
