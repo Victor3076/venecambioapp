@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Loader2, TrendingDown, Landmark, AlertCircle, X } from "lucide-react"
-import { AdjustmentsService } from "@/services/adjustments"
+import { AdjustmentsService, CashflowAdjustment } from "@/services/adjustments"
 import { SUPPORTED_REGIONS, CURRENCY_LABELS } from "@/lib/constants"
 
 const REGION_TO_CURRENCY: Record<string, string> = {
@@ -23,13 +23,38 @@ interface AdjustmentDialogProps {
     onClose: () => void
     onSuccess: () => void
     type: 'withdrawal' | 'initialization'
+    adjustmentToEdit?: CashflowAdjustment | null
 }
 
-export function AdjustmentDialog({ isOpen, onClose, onSuccess, type }: AdjustmentDialogProps) {
+export function AdjustmentDialog({ isOpen, onClose, onSuccess, type, adjustmentToEdit }: AdjustmentDialogProps) {
     const [loading, setLoading] = useState(false)
     const [region, setRegion] = useState('PERU')
     const [amount, setAmount] = useState('')
     const [description, setDescription] = useState('')
+
+    // Reset when modal opens or closes
+    useState(() => {
+        if (!isOpen) {
+            setAmount('')
+            setDescription('')
+            setRegion('PERU')
+        }
+    })
+
+    // Populate form if editing
+    import('react').then(react => {
+        react.useEffect(() => {
+            if (isOpen && adjustmentToEdit) {
+                setAmount(adjustmentToEdit.amount.toString())
+                setDescription(adjustmentToEdit.description || '')
+                const currRegion = Object.keys(REGION_TO_CURRENCY).find(k => REGION_TO_CURRENCY[k] === adjustmentToEdit.currency) || 'PERU'
+                setRegion(currRegion)
+            } else if (isOpen && !adjustmentToEdit) {
+                setAmount('')
+                setDescription('')
+            }
+        }, [isOpen, adjustmentToEdit])
+    })
 
     if (!isOpen) return null
 
@@ -42,14 +67,23 @@ export function AdjustmentDialog({ isOpen, onClose, onSuccess, type }: Adjustmen
 
         setLoading(true)
         try {
-            await AdjustmentsService.create({
-                amount: Number(amount),
-                currency: REGION_TO_CURRENCY[region] || region,
-                type,
-                description: description || (type === 'initialization' ? 'Inicialización de saldo' : 'Retiro manual')
-            })
+            if (adjustmentToEdit && adjustmentToEdit.id) {
+                await AdjustmentsService.update(adjustmentToEdit.id, {
+                    amount: Number(amount),
+                    currency: REGION_TO_CURRENCY[region] || region,
+                    description: description || (type === 'initialization' ? 'Inicialización de saldo' : 'Retiro manual')
+                })
+                toast.success("Registro actualizado exitosamente")
+            } else {
+                await AdjustmentsService.create({
+                    amount: Number(amount),
+                    currency: REGION_TO_CURRENCY[region] || region,
+                    type,
+                    description: description || (type === 'initialization' ? 'Inicialización de saldo' : 'Retiro manual')
+                })
+                toast.success(type === 'initialization' ? "Saldo inicializado con éxito" : "Retiro registrado con éxito")
+            }
 
-            toast.success(type === 'initialization' ? "Saldo inicializado con éxito" : "Retiro registrado con éxito")
             onSuccess()
             onClose()
             // Reset form
@@ -70,9 +104,9 @@ export function AdjustmentDialog({ isOpen, onClose, onSuccess, type }: Adjustmen
                     <CardHeader className="border-b relative">
                         <CardTitle className="flex items-center gap-2">
                             {type === 'initialization' ? (
-                                <><Landmark className="w-5 h-5 text-primary" /> Inicializar Saldo</>
+                                <><Landmark className="w-5 h-5 text-primary" /> {adjustmentToEdit ? "Editar Inicialización" : "Inicializar Saldo"}</>
                             ) : (
-                                <><TrendingDown className="w-5 h-5 text-destructive" /> Registrar Retiro</>
+                                <><TrendingDown className="w-5 h-5 text-destructive" /> {adjustmentToEdit ? "Editar Retiro" : "Registrar Retiro"}</>
                             )}
                         </CardTitle>
                         <CardDescription>
@@ -136,7 +170,7 @@ export function AdjustmentDialog({ isOpen, onClose, onSuccess, type }: Adjustmen
                         </Button>
                         <Button type="submit" className="flex-1" disabled={loading} variant={type === 'withdrawal' ? 'destructive' : 'default'}>
                             {loading && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                            {type === 'initialization' ? "Guardar Saldo" : "Confirmar Retiro"}
+                            {adjustmentToEdit ? "Actualizar" : (type === 'initialization' ? "Guardar Saldo" : "Confirmar Retiro")}
                         </Button>
                     </CardFooter>
                 </form>

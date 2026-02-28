@@ -5,7 +5,7 @@ import { TransactionsService, Transaction } from "@/services/transactions"
 import { BankDepositsService, BankDeposit } from "@/services/bank-deposits"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Scale, Landmark, TrendingUp, TrendingDown, Wallet, Calendar } from "lucide-react"
+import { ArrowLeft, Scale, Landmark, TrendingUp, TrendingDown, Wallet, Calendar, Trash2, Edit } from "lucide-react"
 import Link from "next/link"
 import { CURRENCY_LABELS } from "@/lib/constants"
 import { formatCurrency } from "@/lib/rates-utils"
@@ -33,6 +33,7 @@ export default function AdminBalancePage() {
 
     const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false)
     const [adjustType, setAdjustType] = useState<'withdrawal' | 'initialization'>('withdrawal')
+    const [adjustmentToEdit, setAdjustmentToEdit] = useState<CashflowAdjustment | null>(null)
 
     useEffect(() => {
         const checkRole = async () => {
@@ -149,9 +150,24 @@ export default function AdminBalancePage() {
             return acc
         }, {})
 
-    const openAdjustment = (type: 'withdrawal' | 'initialization') => {
+    const openAdjustment = (type: 'withdrawal' | 'initialization', adjustment?: CashflowAdjustment) => {
         setAdjustType(type)
+        setAdjustmentToEdit(adjustment || null)
         setIsAdjustModalOpen(true)
+    }
+
+    const handleDeleteAdjustment = async (id: string) => {
+        if (!confirm("¿Estás seguro de que deseas eliminar este registro? Esto afectará el saldo final.")) return
+
+        try {
+            await AdjustmentsService.delete(id)
+            setAdjustments(adjustments.filter(a => a.id !== id))
+            toast.success("Registro eliminado exitosamente")
+            loadData()
+        } catch (error: any) {
+            console.error(error)
+            toast.error("Error al eliminar: " + error.message)
+        }
     }
 
     return (
@@ -357,6 +373,7 @@ export default function AdminBalancePage() {
                                         <th className="p-4 text-left">Tipo</th>
                                         <th className="p-4 text-left">Descripción</th>
                                         <th className="p-4 text-right">Monto</th>
+                                        <th className="p-4 text-right">Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y text-xs">
@@ -374,6 +391,16 @@ export default function AdminBalancePage() {
                                             <td className={`p-4 text-right font-bold ${adj.type === 'initialization' ? 'text-green-600' : 'text-destructive'}`}>
                                                 {adj.type === 'initialization' ? '+' : '-'} {formatCurrency(adj.amount)} {adj.currency}
                                             </td>
+                                            <td className="p-4 text-right">
+                                                <div className="flex justify-end gap-1">
+                                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => openAdjustment(adj.type, adj)}>
+                                                        <Edit className="w-3.5 h-3.5" />
+                                                    </Button>
+                                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => adj.id && handleDeleteAdjustment(adj.id)}>
+                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                    </Button>
+                                                </div>
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -385,9 +412,10 @@ export default function AdminBalancePage() {
 
             <AdjustmentDialog
                 isOpen={isAdjustModalOpen}
-                onClose={() => setIsAdjustModalOpen(false)}
+                onClose={() => { setIsAdjustModalOpen(false); setAdjustmentToEdit(null); }}
                 type={adjustType}
                 onSuccess={() => loadData()}
+                adjustmentToEdit={adjustmentToEdit}
             />
         </div>
     )

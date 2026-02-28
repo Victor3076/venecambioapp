@@ -57,5 +57,17 @@ export const AdjustmentsService = {
             .eq('id', id)
 
         if (error) throw error
+    },
+
+    async update(id: string, updates: Partial<Omit<CashflowAdjustment, 'id' | 'created_at' | 'created_by'>>) {
+        const { data, error } = await supabase
+            .from('cashflow_adjustments')
+            .update(updates)
+            .eq('id', id)
+            .select()
+            .single()
+
+        if (error) throw error
+        return data as CashflowAdjustment
     }
 }
