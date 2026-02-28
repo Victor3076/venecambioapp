@@ -685,6 +685,22 @@ export default function NewTransactionPage() {
                                 <div className="text-[10px] text-blue-800 text-center mt-2 italic">
                                     Este depósito cubrirá {pendingTransfers.length} transferencia(s).
                                 </div>
+
+                                {sourceCurrency === 'PEN' && (
+                                    <div className="mt-4 bg-amber-100 p-3 rounded-md border border-amber-300 text-amber-900 text-xs text-center shadow-sm">
+                                        <span className="font-bold text-amber-700">⚠️ ADVERTENCIA:</span> Si es depósito por <strong className="font-bold">Agente</strong>, al ticket físico escríbele con lapicero "<strong className="font-black text-amber-950">Venecambio.com</strong>" antes de tomarle la foto.
+                                    </div>
+                                )}
+                                {sourceCurrency === 'CLP' && (
+                                    <div className="mt-4 bg-amber-100 p-3 rounded-md border border-amber-300 text-amber-900 text-xs text-center shadow-sm">
+                                        <span className="font-bold text-amber-700">⚠️ ADVERTENCIA:</span> Si es depósito por <strong className="font-bold">Caja Vecina</strong>, al ticket físico escríbele con lapicero "<strong className="font-black text-amber-950">Venecambio.com</strong>" antes de tomarle la foto.
+                                    </div>
+                                )}
+                                {sourceCurrency === 'COP' && (
+                                    <div className="mt-4 bg-amber-100 p-3 rounded-md border border-amber-300 text-amber-900 text-xs text-center shadow-sm">
+                                        <span className="font-bold text-amber-700">⚠️ ADVERTENCIA:</span> Si es depósito por <strong className="font-bold">Corresponsal</strong>, al ticket físico escríbele con lapicero "<strong className="font-black text-amber-950">Venecambio.com</strong>" antes de tomarle la foto.
+                                    </div>
+                                )}
                             </div>
                         </div>
 
