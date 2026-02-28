@@ -68,9 +68,17 @@ export default function AdminBalancePage() {
                 AdjustmentsService.getByDate(filterDate)
             ])
 
+            // Helper para comparar las fechas UTC usando el huso horario local (e.g., Caracas)
+            const isMatch = (isoDateStr?: string) => {
+                if (!isoDateStr || !filterDate) return true;
+                const d = new Date(isoDateStr);
+                const localStr = new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+                return localStr === filterDate;
+            }
+
             // Filter by date
-            const filteredTxs = (txs as Transaction[]).filter(tx => tx.created_at?.startsWith(filterDate))
-            const filteredDeps = (deps as BankDeposit[]).filter(d => d.created_at?.startsWith(filterDate))
+            const filteredTxs = (txs as Transaction[]).filter(tx => isMatch(tx.created_at))
+            const filteredDeps = (deps as BankDeposit[]).filter(d => isMatch(d.created_at))
 
             setTransactions(filteredTxs)
             setDeposits(filteredDeps)
