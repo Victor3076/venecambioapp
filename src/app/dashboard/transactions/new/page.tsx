@@ -13,7 +13,7 @@ import { calculateRate, formatRate, getRateDecimals, formatCurrency, parseFormat
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Landmark, Upload, Info, ArrowLeft, Check, ChevronRight, AlertCircle, Plus, Clock } from "lucide-react"
+import { Landmark, Upload, Info, ArrowLeft, Check, ChevronRight, AlertCircle, Plus, Clock, ChevronsDown } from "lucide-react"
 import { CURRENCY_LABELS, SUPPORTED_REGIONS, MINIMUM_AMOUNTS } from "@/lib/constants"
 import { BeneficiaryForm, BeneficiaryData } from "@/components/BeneficiaryForm"
 
@@ -702,6 +702,11 @@ export default function NewTransactionPage() {
                                     </div>
                                 )}
                             </div>
+                        </div>
+
+                        <div className="flex flex-col items-center justify-center py-2 text-muted-foreground animate-bounce">
+                            <span className="text-xs font-medium mb-1 uppercase tracking-wider">Desliza para subir</span>
+                            <ChevronsDown className="w-5 h-5" />
                         </div>
 
                         <div className="space-y-2">
