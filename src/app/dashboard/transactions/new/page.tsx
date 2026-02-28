@@ -646,18 +646,18 @@ export default function NewTransactionPage() {
                         <CardTitle>Paso 3: Instrucciones de Pago</CardTitle>
                         <CardDescription>Realiza la transferencia y sube el comprobante.</CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-6">
-                        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 space-y-4">
-                            <h3 className="font-bold flex items-center gap-2 text-blue-800"><Info className="w-4 h-4" /> Datos para transferir</h3>
-                            <div className="text-sm space-y-3 text-blue-900">
+                    <CardContent className="space-y-4 p-4 sm:p-6">
+                        <div className="bg-blue-50 p-3 rounded-lg border border-blue-200 space-y-3">
+                            <h3 className="font-bold flex items-center gap-2 text-blue-800 text-sm"><Info className="w-4 h-4" /> Datos para transferir</h3>
+                            <div className="text-sm space-y-2 text-blue-900">
                                 {companyAccounts.length > 0 ? (
                                     companyAccounts.map((acc, idx) => (
                                         <div key={acc.id} className="p-3 bg-white rounded-md border border-blue-100 shadow-sm relative overflow-hidden">
                                             <div className="absolute top-0 right-0 bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary rounded-bl">
                                                 Opción {idx + 1}
                                             </div>
-                                            <p className="font-bold text-primary mb-1">{acc.bank_name}</p>
-                                            <div className="space-y-0.5">
+                                            <p className="font-bold text-primary text-xs mb-1">{acc.bank_name}</p>
+                                            <div className="space-y-0 text-[11px]">
                                                 <p><strong>Número:</strong> {acc.account_number}</p>
                                                 <p><strong>Titular:</strong> {acc.holder_name}</p>
                                                 {(acc.holder_id || acc.details?.rut || acc.details?.id_number) && (
@@ -673,43 +673,42 @@ export default function NewTransactionPage() {
                                         </div>
                                     ))
                                 ) : (
-                                    <div className="p-3 bg-white rounded-md border border-blue-100 shadow-sm">
+                                    <div className="p-3 bg-white rounded-md border border-blue-100 shadow-sm text-xs">
                                         <p className="font-bold text-primary mb-1">Instrucciones de Pago</p>
                                         <p>Por favor contacta al administrador vía WhatsApp para obtener los datos de transferencia para {CURRENCY_LABELS[sourceCurrency] || sourceCurrency}.</p>
                                     </div>
                                 )}
 
-                                <div className="mt-4 p-3 bg-primary text-white rounded-md font-bold text-center text-xl shadow-md">
+                                <div className="mt-2 p-2 bg-primary text-white rounded-md font-bold text-center text-lg shadow-md">
                                     Total a pagar: {formatCurrency(totalToPay, sourceCurrency)} {CURRENCY_LABELS[sourceCurrency] || sourceCurrency}
                                 </div>
-                                <div className="text-[10px] text-blue-800 text-center mt-2 italic">
+                                <div className="text-[10px] text-blue-800 text-center mt-1 italic">
                                     Este depósito cubrirá {pendingTransfers.length} transferencia(s).
                                 </div>
 
                                 {sourceCurrency === 'PEN' && (
-                                    <div className="mt-4 bg-amber-100 p-3 rounded-md border border-amber-300 text-amber-900 text-xs text-center shadow-sm">
+                                    <div className="mt-2 bg-amber-100 p-2 rounded-md border border-amber-300 text-amber-900 text-[11px] text-center shadow-sm">
                                         <span className="font-bold text-amber-700">⚠️ ADVERTENCIA:</span> Si es depósito por <strong className="font-bold">Agente</strong>, al ticket físico escríbele con lapicero "<strong className="font-black text-amber-950">Venecambio.com</strong>" antes de tomarle la foto.
                                     </div>
                                 )}
                                 {sourceCurrency === 'CLP' && (
-                                    <div className="mt-4 bg-amber-100 p-3 rounded-md border border-amber-300 text-amber-900 text-xs text-center shadow-sm">
+                                    <div className="mt-2 bg-amber-100 p-2 rounded-md border border-amber-300 text-amber-900 text-[11px] text-center shadow-sm">
                                         <span className="font-bold text-amber-700">⚠️ ADVERTENCIA:</span> Si es depósito por <strong className="font-bold">Caja Vecina</strong>, al ticket físico escríbele con lapicero "<strong className="font-black text-amber-950">Venecambio.com</strong>" antes de tomarle la foto.
                                     </div>
                                 )}
                                 {sourceCurrency === 'COP' && (
-                                    <div className="mt-4 bg-amber-100 p-3 rounded-md border border-amber-300 text-amber-900 text-xs text-center shadow-sm">
+                                    <div className="mt-2 bg-amber-100 p-2 rounded-md border border-amber-300 text-amber-900 text-[11px] text-center shadow-sm">
                                         <span className="font-bold text-amber-700">⚠️ ADVERTENCIA:</span> Si es depósito por <strong className="font-bold">Corresponsal</strong>, al ticket físico escríbele con lapicero "<strong className="font-black text-amber-950">Venecambio.com</strong>" antes de tomarle la foto.
                                     </div>
                                 )}
                             </div>
                         </div>
 
-                        <div className="flex flex-col items-center justify-center py-2 text-muted-foreground animate-bounce">
-                            <span className="text-xs font-medium mb-1 uppercase tracking-wider">Desliza para subir</span>
-                            <ChevronsDown className="w-5 h-5" />
+                        <div className="flex flex-col items-center justify-center py-1 text-primary animate-bounce">
+                            <span className="text-[10px] font-black mb-0.5 uppercase tracking-tighter">Deslizar para subir comprobante ↓</span>
                         </div>
 
-                        <div className="space-y-2">
+                        <div className="space-y-1">
                             <label className="text-sm font-medium">Sube tu comprobante (Foto/PDF)</label>
                             <div className="border-2 border-dashed rounded-lg p-8 text-center space-y-3 hover:bg-muted/50 transition-colors">
                                 <input
