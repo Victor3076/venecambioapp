@@ -382,7 +382,13 @@ export default function AdminTransactionsPage() {
                                     })) as any[]).filter((tx: any) => {
                                         const matchesStatus = filterStatus === 'all' || tx.status === filterStatus
                                         const matchesCurrency = filterCurrency === 'all' || tx.currency_sent === filterCurrency
-                                        const matchesDate = !filterDate || (tx.created_at && tx.created_at.startsWith(filterDate))
+                                        const txDate = tx.created_at ? new Date(tx.created_at) : null;
+                                        let matchesDate = true;
+                                        if (filterDate && txDate) {
+                                            // Convert UTC to local date string YYYY-MM-DD
+                                            const localDateStr = new Date(txDate.getTime() - (txDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+                                            matchesDate = localDateStr === filterDate;
+                                        }
 
                                         const searchLower = searchTerm.toLowerCase()
                                         const matchesSearch = !searchTerm ||
@@ -468,7 +474,12 @@ export default function AdminTransactionsPage() {
                                                     .filter(tx => {
                                                         const matchesStatus = filterStatus === 'all' || tx.status === filterStatus
                                                         const matchesCurrency = tx.currency_sent === filterCurrency
-                                                        const matchesDate = !filterDate || (tx.created_at && tx.created_at.startsWith(filterDate))
+                                                        const txDate = tx.created_at ? new Date(tx.created_at) : null;
+                                                        let matchesDate = true;
+                                                        if (filterDate && txDate) {
+                                                            const localDateStr = new Date(txDate.getTime() - (txDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+                                                            matchesDate = localDateStr === filterDate;
+                                                        }
 
                                                         const searchLower = searchTerm.toLowerCase()
                                                         const matchesSearch = !searchTerm ||
