@@ -30,7 +30,7 @@ export default function AdminBalancePage() {
     const [deposits, setDeposits] = useState<BankDeposit[]>([])
     const [adjustments, setAdjustments] = useState<CashflowAdjustment[]>([])
     const [loading, setLoading] = useState(true)
-    const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0])
+    const [filterDate, setFilterDate] = useState(new Date().toLocaleDateString('en-CA'))
 
     const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false)
     const [adjustType, setAdjustType] = useState<'withdrawal' | 'initialization'>('withdrawal')
@@ -67,7 +67,7 @@ export default function AdminBalancePage() {
             const [txs, deps, adjs] = await Promise.all([
                 TransactionsService.getAll(),
                 BankDepositsService.getAll(),
-                AdjustmentsService.getByDate(filterDate)
+                AdjustmentsService.getByDate()
             ])
 
             // Helper para comparar las fechas UTC usando el huso horario local (e.g., Caracas)
@@ -81,10 +81,11 @@ export default function AdminBalancePage() {
             // Filter by date
             const filteredTxs = (txs as Transaction[]).filter(tx => isMatch(tx.created_at))
             const filteredDeps = (deps as BankDeposit[]).filter(d => isMatch(d.created_at))
+            const filteredAdjs = (adjs as CashflowAdjustment[]).filter(a => isMatch(a.created_at))
 
             setTransactions(filteredTxs)
             setDeposits(filteredDeps)
-            setAdjustments(adjs)
+            setAdjustments(filteredAdjs)
         } catch (error) {
             console.error("Error loading balance data:", error)
         } finally {

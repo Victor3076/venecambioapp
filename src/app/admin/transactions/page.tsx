@@ -28,7 +28,7 @@ export default function AdminTransactionsPage() {
     const [isReconciliationOpen, setIsReconciliationOpen] = useState(false)
     const [searchTerm, setSearchTerm] = useState("")
     const [matching, setMatching] = useState(false)
-    const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0])
+    const [filterDate, setFilterDate] = useState(new Date().toLocaleDateString('en-CA'))
     const [filterStatus, setFilterStatus] = useState<Transaction['status'] | 'all'>('all')
     const [filterCurrency, setFilterCurrency] = useState<string>('all')
     const [isManualModalOpen, setIsManualModalOpen] = useState(false)

@@ -38,12 +38,11 @@ export const AdjustmentsService = {
         return data as CashflowAdjustment[]
     },
 
-    async getByDate(date: string) {
+    async getByDate() {
+        // Fetching all to handle timezone-aware filtering in the UI
         const { data, error } = await supabase
             .from('cashflow_adjustments')
             .select('*')
-            .gte('created_at', `${date}T00:00:00`)
-            .lte('created_at', `${date}T23:59:59`)
             .order('created_at', { ascending: false })
 
         if (error) throw error
