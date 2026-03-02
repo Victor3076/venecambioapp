@@ -19,7 +19,8 @@ const REGION_TO_ISO: Record<string, string> = {
 export default function AdminProfitsPage() {
     const [transactions, setTransactions] = useState<Transaction[]>([])
     const [loading, setLoading] = useState(true)
-    const [filterDate, setFilterDate] = useState("")
+    const [startDate, setStartDate] = useState("")
+    const [endDate, setEndDate] = useState("")
     const [stats, setStats] = useState<any>({ totalProfit: 0, volumeByCurrency: {}, profitByCurrency: {}, marginSumByCurrency: {} })
 
     useEffect(() => {
@@ -34,10 +35,16 @@ export default function AdminProfitsPage() {
                 RatesService.getLatest()
             ])
 
-            // Filter by date if selected
+            // Filter by date range if selected
             let rawTxs = data as Transaction[]
-            if (filterDate) {
-                rawTxs = rawTxs.filter(tx => tx.created_at?.startsWith(filterDate))
+            if (startDate || endDate) {
+                rawTxs = rawTxs.filter(tx => {
+                    if (!tx.created_at) return false
+                    const txDate = tx.created_at.split('T')[0]
+                    if (startDate && txDate < startDate) return false
+                    if (endDate && txDate > endDate) return false
+                    return true
+                })
             }
 
             // Only consider 'completed' transactions for real profit
@@ -92,15 +99,37 @@ export default function AdminProfitsPage() {
                         <p className="text-muted-foreground">Resumen de volumen y margen generado por moneda.</p>
                     </div>
                 </div>
-                <div className="flex items-center gap-3">
-                    <input
-                        type="date"
-                        className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                        value={filterDate}
-                        onChange={(e) => setFilterDate(e.target.value)}
-                    />
-                    <Button variant="outline" onClick={() => setFilterDate("")} disabled={!filterDate}>Limpiar</Button>
-                    <Button onClick={loadData}>Filtrar / Actualizar</Button>
+                <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-muted-foreground uppercase text-[10px]">Desde:</span>
+                        <input
+                            type="date"
+                            className="h-10 rounded-md border border-input bg-background px-2 py-1 text-xs"
+                            value={startDate}
+                            onChange={(e) => setStartDate(e.target.value)}
+                        />
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-muted-foreground uppercase text-[10px]">Hasta:</span>
+                        <input
+                            type="date"
+                            className="h-10 rounded-md border border-input bg-background px-2 py-1 text-xs"
+                            value={endDate}
+                            onChange={(e) => setEndDate(e.target.value)}
+                        />
+                    </div>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                            setStartDate("")
+                            setEndDate("")
+                        }}
+                        disabled={!startDate && !endDate}
+                    >
+                        Limpiar
+                    </Button>
+                    <Button size="sm" onClick={loadData}>Filtrar</Button>
                 </div>
             </div>
 
