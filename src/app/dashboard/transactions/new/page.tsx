@@ -9,7 +9,7 @@ import { AccountsService, UserAccount } from "@/services/accounts"
 import { PaymentMethodsService, PaymentMethod } from "@/services/payment-methods"
 import { TransactionsService } from "@/services/transactions"
 import { AdminSettingsService, AdminSettings } from "@/services/admin-settings"
-import { calculateRate, formatRate, getRateDecimals, formatCurrency, parseFormattedNumber, isInversePair } from "@/lib/rates-utils"
+import { calculateRate, formatRate, getRateDecimals, formatCurrency, parseFormattedNumber, isInversePair, performCalculation } from "@/lib/rates-utils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -133,7 +133,7 @@ export default function NewTransactionPage() {
         if (direction === 'sent') {
             const numericValue = parseFormattedNumber(value)
             setAmountInput(value)
-            const res = isInverse ? (rate > 0 ? numericValue / rate : 0) : numericValue * rate
+            const res = performCalculation(numericValue, rate, isInverse)
             setAmountReceivedInput(formatCurrency(res, targetCurrency))
             if (targetCurrency === 'VES') {
                 setAmountBcvInput(formatCurrency(res / bcvRate, 'USD'))
@@ -141,7 +141,8 @@ export default function NewTransactionPage() {
         } else if (direction === 'received') {
             const numericValue = parseFormattedNumber(value)
             setAmountReceivedInput(value)
-            const res = isInverse ? numericValue * rate : (rate > 0 ? numericValue / rate : 0)
+            // Reverse direction: if normal, divide. If inverse (source is cheaper), multiply.
+            const res = performCalculation(numericValue, rate, !isInverse)
             setAmountInput(formatCurrency(res, sourceCurrency))
             if (targetCurrency === 'VES') {
                 setAmountBcvInput(formatCurrency(numericValue / bcvRate, 'USD'))
@@ -152,7 +153,7 @@ export default function NewTransactionPage() {
             if (targetCurrency === 'VES') {
                 const amountRec = numericValue * bcvRate
                 setAmountReceivedInput(formatCurrency(amountRec, targetCurrency))
-                const resultSent = isInverse ? amountRec * rate : (rate > 0 ? amountRec / rate : 0)
+                const resultSent = performCalculation(amountRec, rate, !isInverse)
                 setAmountInput(formatCurrency(resultSent, sourceCurrency))
             }
         }
@@ -173,7 +174,8 @@ export default function NewTransactionPage() {
             // IMPORTANT: Round rate to displayed precision for exact calculations
             const r = Number(rr.toFixed(dec))
 
-            const res = amountSent * r
+            const isInv = isInversePair(targetCurrency, sourceCurrency)
+            const res = performCalculation(amountSent, r, isInv)
             setAmountReceivedInput(formatCurrency(res, targetCurrency))
 
             if (targetCurrency === 'VES') {
@@ -206,7 +208,8 @@ export default function NewTransactionPage() {
         const decimals = getRateDecimals(targetCurrency, sourceCurrency)
         // IMPORTANT: Round rate to displayed precision for exact calculations
         const rate = Number(rawRate.toFixed(decimals))
-        return { rate, received: amountSent * rate }
+        const isInv = isInversePair(targetCurrency, sourceCurrency)
+        return { rate, received: performCalculation(amountSent, rate, isInv) }
     }
 
     const { rate, received } = getSnapshot()
@@ -501,7 +504,7 @@ export default function NewTransactionPage() {
                         <div className="p-3 bg-primary/5 rounded-lg border border-primary/20 flex justify-between items-center text-sm">
                             <span className="font-medium">Tasa de cambio:</span>
                             <span className="font-bold">
-                                1 {sourceCurrency} = {formatRate(rate, targetCurrency, sourceCurrency)} {targetCurrency}
+                                1 {isInversePair(targetCurrency, sourceCurrency) ? targetCurrency : sourceCurrency} = {formatRate(rate, targetCurrency, sourceCurrency)} {isInversePair(targetCurrency, sourceCurrency) ? sourceCurrency : targetCurrency}
                             </span>
                         </div>
                     </CardContent>

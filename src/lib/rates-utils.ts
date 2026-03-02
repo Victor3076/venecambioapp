@@ -112,6 +112,11 @@ export const isInversePair = (targetCode: string, sourceCode: string): boolean =
     return !!pairConfig[pairKey]?.isInverse;
 }
 
+export const performCalculation = (amount: number, rate: number, isInverse: boolean): number => {
+    if (rate <= 0) return 0
+    return isInverse ? amount / rate : amount * rate
+}
+
 export const normalizeCurrency = (code: string): string => {
     const mapping: Record<string, string> = {
         'VENEZUELA': 'VES',
@@ -121,5 +126,6 @@ export const normalizeCurrency = (code: string): string => {
         'USA': 'USD',
         'ZELLE': 'USD'
     }
-    return mapping[code.toUpperCase()] || code.toUpperCase()
+    const cleanCode = code.toUpperCase()
+    return mapping[cleanCode] || cleanCode
 }
