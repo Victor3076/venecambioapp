@@ -25,6 +25,7 @@ export default function BankDepositsPage() {
     const [bankName, setBankName] = useState("")
     const [notes, setNotes] = useState("")
     const [editingId, setEditingId] = useState<string | null>(null)
+    const [filterCurrencyList, setFilterCurrencyList] = useState<string>('all')
 
     // Reconciliation State
     const [selectedDeposit, setSelectedDeposit] = useState<BankDeposit | null>(null)
@@ -248,8 +249,27 @@ export default function BankDepositsPage() {
                 {/* List Section */}
                 <Card className="md:col-span-2">
                     <CardHeader>
-                        <CardTitle>Depósitos Recientes</CardTitle>
-                        <CardDescription>Historial de ingresos registrados.</CardDescription>
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <CardTitle>Depósitos Recientes</CardTitle>
+                                <CardDescription>Historial de ingresos registrados.</CardDescription>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">Filtrar por:</span>
+                                <select
+                                    className="h-8 rounded-md border border-input bg-background px-2 py-1 text-xs"
+                                    value={filterCurrencyList}
+                                    onChange={e => setFilterCurrencyList(e.target.value)}
+                                >
+                                    <option value="all">Todas</option>
+                                    <option value="VES">Bolívares (VES)</option>
+                                    <option value="USD">Dólares (USD)</option>
+                                    <option value="PEN">Soles (PEN)</option>
+                                    <option value="COP">Pesos (COP)</option>
+                                    <option value="CLP">Pesos (CLP)</option>
+                                </select>
+                            </div>
+                        </div>
                     </CardHeader>
                     <CardContent>
                         <div className="rounded-md border">
@@ -260,52 +280,58 @@ export default function BankDepositsPage() {
                                 <div>Monto</div>
                                 <div>Estado</div>
                             </div>
-                            {deposits.length === 0 ? (
-                                <div className="p-8 text-center text-muted-foreground">
-                                    No hay depósitos registrados.
-                                </div>
-                            ) : (
-                                <div className="divide-y">
-                                    {deposits.map(deposit => (
-                                        <div key={deposit.id} className="grid grid-cols-5 p-4 text-sm items-center hover:bg-muted/10">
-                                            <div className="text-muted-foreground text-xs">
-                                                {new Date(deposit.created_at || "").toLocaleDateString()}
-                                            </div>
-                                            <div className="font-mono">{deposit.reference_number}</div>
-                                            <div className="truncate pr-2">
-                                                <div className="font-medium">
-                                                    {deposit.bank_name || "-"}
-                                                    {deposit.notes && <span className="ml-2 text-[10px] text-muted-foreground italic">/ {deposit.notes}</span>}
+                            {(() => {
+                                const filtered = deposits.filter(d => filterCurrencyList === 'all' || d.currency === filterCurrencyList);
+                                if (filtered.length === 0) {
+                                    return (
+                                        <div className="p-8 text-center text-muted-foreground">
+                                            No hay depósitos {filterCurrencyList !== 'all' ? `en ${filterCurrencyList}` : ''} registrados.
+                                        </div>
+                                    )
+                                }
+                                return (
+                                    <div className="divide-y">
+                                        {filtered.map(deposit => (
+                                            <div key={deposit.id} className="grid grid-cols-5 p-4 text-sm items-center hover:bg-muted/10">
+                                                <div className="text-muted-foreground text-xs">
+                                                    {new Date(deposit.created_at || "").toLocaleDateString()}
+                                                </div>
+                                                <div className="font-mono">{deposit.reference_number}</div>
+                                                <div className="truncate pr-2">
+                                                    <div className="font-medium">
+                                                        {deposit.bank_name || "-"}
+                                                        {deposit.notes && <span className="ml-2 text-[10px] text-muted-foreground italic">/ {deposit.notes}</span>}
+                                                    </div>
+                                                </div>
+                                                <div className="font-bold">
+                                                    {formatCurrency(deposit.amount, deposit.currency)} {deposit.currency}
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <span className={`px-2 py-1 rounded-full text-xs font-bold ${deposit.status === 'matched'
+                                                        ? 'bg-green-100 text-green-700'
+                                                        : 'bg-blue-100 text-blue-700'
+                                                        }`}>
+                                                        {deposit.status === 'matched' ? 'Conciliado' : 'Disponible'}
+                                                    </span>
+                                                    {deposit.status !== 'matched' && (
+                                                        <div className="flex items-center gap-1">
+                                                            <Button variant="outline" size="sm" className="h-7 text-[10px]" onClick={() => openReconciliation(deposit)}>
+                                                                Conciliar
+                                                            </Button>
+                                                            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => startEdit(deposit)}>
+                                                                <Pencil className="h-3.5 w-3.5" />
+                                                            </Button>
+                                                            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => handleDelete(deposit.id!)}>
+                                                                <Trash2 className="h-3.5 w-3.5" />
+                                                            </Button>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
-                                            <div className="font-bold">
-                                                {formatCurrency(deposit.amount, deposit.currency)} {deposit.currency}
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <span className={`px-2 py-1 rounded-full text-xs font-bold ${deposit.status === 'matched'
-                                                    ? 'bg-green-100 text-green-700'
-                                                    : 'bg-blue-100 text-blue-700'
-                                                    }`}>
-                                                    {deposit.status === 'matched' ? 'Conciliado' : 'Disponible'}
-                                                </span>
-                                                {deposit.status !== 'matched' && (
-                                                    <div className="flex items-center gap-1">
-                                                        <Button variant="outline" size="sm" className="h-7 text-[10px]" onClick={() => openReconciliation(deposit)}>
-                                                            Conciliar
-                                                        </Button>
-                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => startEdit(deposit)}>
-                                                            <Pencil className="h-3.5 w-3.5" />
-                                                        </Button>
-                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => handleDelete(deposit.id!)}>
-                                                            <Trash2 className="h-3.5 w-3.5" />
-                                                        </Button>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
+                                        ))}
+                                    </div>
+                                )
+                            })()}
                         </div>
                     </CardContent>
                 </Card>
