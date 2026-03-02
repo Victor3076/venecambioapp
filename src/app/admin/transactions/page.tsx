@@ -396,8 +396,13 @@ export default function AdminTransactionsPage() {
                                             tx.amount_sent.toString().includes(searchTerm) ||
                                             tx.amount_received.toString().includes(searchTerm) ||
                                             tx.id?.toLowerCase().includes(searchLower) ||
+                                            tx.currency_sent?.toLowerCase().includes(searchLower) ||
+                                            tx.currency_received?.toLowerCase().includes(searchLower) ||
                                             tx.deposit?.bank_name?.toLowerCase().includes(searchLower) ||
-                                            tx.deposit?.reference_number?.toLowerCase().includes(searchLower)
+                                            tx.deposit?.reference_number?.toLowerCase().includes(searchLower) ||
+                                            tx.deposit?.notes?.toLowerCase().includes(searchLower) ||
+                                            `${tx.currency_sent} ${tx.amount_sent}`.toLowerCase().includes(searchLower) ||
+                                            (searchLower === 'sin conciliar' && !tx.deposit)
 
                                         return matchesStatus && matchesDate && matchesSearch && matchesCurrency
                                     });
@@ -485,9 +490,15 @@ export default function AdminTransactionsPage() {
                                                         const matchesSearch = !searchTerm ||
                                                             tx.profiles?.full_name?.toLowerCase().includes(searchLower) ||
                                                             tx.amount_sent.toString().includes(searchTerm) ||
+                                                            tx.amount_received.toString().includes(searchTerm) ||
                                                             tx.id?.toLowerCase().includes(searchLower) ||
+                                                            tx.currency_sent?.toLowerCase().includes(searchLower) ||
+                                                            tx.currency_received?.toLowerCase().includes(searchLower) ||
                                                             tx.deposit?.bank_name?.toLowerCase().includes(searchLower) ||
-                                                            tx.deposit?.reference_number?.toLowerCase().includes(searchLower)
+                                                            tx.deposit?.reference_number?.toLowerCase().includes(searchLower) ||
+                                                            tx.deposit?.notes?.toLowerCase().includes(searchLower) ||
+                                                            `${tx.currency_sent} ${tx.amount_sent}`.toLowerCase().includes(searchLower) ||
+                                                            (searchLower === 'sin conciliar' && !tx.deposit)
 
                                                         return matchesStatus && matchesDate && matchesSearch && matchesCurrency
                                                     })
