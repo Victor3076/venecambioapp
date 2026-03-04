@@ -99,14 +99,16 @@ export const TransactionsService = {
         const fileName = `${transactionId}/${Math.random()}.${fileExt}`
         const filePath = `proofs/${fileName}`
 
+        console.log(`Starting Supabase storage upload to 'payments/proofs/${fileName}'...`)
         const { error: uploadError } = await supabase.storage
             .from('payments')
             .upload(filePath, file)
 
         if (uploadError) {
-            console.error('Upload error:', uploadError)
+            console.error('Database/Storage upload error:', uploadError)
             throw uploadError
         }
+        console.log("Storage upload successful")
 
         const { data } = supabase.storage
             .from('payments')

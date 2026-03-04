@@ -317,44 +317,64 @@ export default function NewTransactionPage() {
         }
 
         setLoading(true)
+        console.log("Starting upload process for file:", file.name, "size:", file.size)
+
+        // Create a timeout promise
+        const uploadTimeout = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("Timeout: La subida está tardando demasiado. Revisa tu internet.")), 45000)
+        )
+
         try {
-            let fileToUpload = file
+            await Promise.race([
+                (async () => {
+                    let fileToUpload = file
 
-            if (file.type.startsWith('image/')) {
-                try {
-                    const imageCompression = (await import('browser-image-compression')).default
-                    const options = {
-                        maxSizeMB: 0.8,
-                        maxWidthOrHeight: 1280,
-                        useWebWorker: true
+                    if (file.type.startsWith('image/')) {
+                        console.log("Compressing image...")
+                        try {
+                            const imageCompression = (await import('browser-image-compression')).default
+                            const options = {
+                                maxSizeMB: 0.8,
+                                maxWidthOrHeight: 1280,
+                                useWebWorker: false // Disable web worker to avoid issues in some mobile browsers
+                            }
+                            const compressedBlob = await imageCompression(file, options)
+                            fileToUpload = new File([compressedBlob], file.name || "receipt.jpg", { type: compressedBlob.type })
+                            console.log("Compression complete. New size:", fileToUpload.size)
+                        } catch (compressError) {
+                            console.error("Compression error:", compressError)
+                            // fallback to original if compression fails
+                        }
+                    } else if (fileToUpload.size > 5 * 1024 * 1024) {
+                        toast.warning("Los documentos PDF deben ser menores a 5MB.")
+                        setLoading(false)
+                        return
                     }
-                    const compressedBlob = await imageCompression(file, options)
-                    fileToUpload = new File([compressedBlob], file.name || "receipt.jpg", { type: compressedBlob.type })
-                } catch (compressError) {
-                    console.error("Compression error:", compressError)
-                    // fallback to original if compression fails
-                }
-            } else if (fileToUpload.size > 5 * 1024 * 1024) {
-                toast.warning("Los documentos PDF deben ser menores a 5MB.")
-                setLoading(false)
-                return
-            }
 
-            // 1. Create the transaction records first in the DB
-            const txId = await handleCreateTransaction()
+                    // 1. Create the transaction records first in the DB
+                    console.log("Creating transaction record in DB...")
+                    const txId = await handleCreateTransaction()
 
-            if (!txId) {
-                toast.error("No se pudo iniciar la transacción")
-                setLoading(false)
-                return
-            }
+                    if (!txId) {
+                        throw new Error("No se pudo iniciar la transacción")
+                    }
+                    console.log("Transaction record created:", txId)
 
-            // 2. Upload the file
-            await TransactionsService.uploadProof(fileToUpload, txId)
-            setStep(4)
+                    // 2. Upload the file
+                    console.log("Uploading proof to storage...")
+                    await TransactionsService.uploadProof(fileToUpload, txId)
+                    console.log("Upload complete!")
+
+                    setStep(4)
+                })(),
+                uploadTimeout
+            ])
         } catch (error: any) {
-            console.error("Full upload error object:", error)
-            toast.error("Error al procesar la operación. Por favor revisa tu conexión e intenta de nuevo.")
+            console.error("Full upload error:", error)
+            const message = error.message?.includes("Timeout")
+                ? error.message
+                : "Error al procesar la operación. Por favor revisa tu conexión e intenta de nuevo."
+            toast.error(message)
         } finally {
             setLoading(false)
         }
