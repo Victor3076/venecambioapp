@@ -34,6 +34,8 @@ export default function AdminTransactionsPage() {
     const [isManualModalOpen, setIsManualModalOpen] = useState(false)
     const [preSelectedDepositId, setPreSelectedDepositId] = useState<string | null>(null)
     const [userRole, setUserRole] = useState<string | null>(null)
+    const [vesCompletionOpen, setVesCompletionOpen] = useState(false)
+    const [vesPaymentMethod, setVesPaymentMethod] = useState<'mismo_banco' | 'otros_bancos' | 'pago_movil'>('mismo_banco')
 
 
     useEffect(() => {
@@ -148,13 +150,19 @@ export default function AdminTransactionsPage() {
         return () => window.removeEventListener('paste', handleGlobalPaste)
     }, [selectedTx])
 
-    const handleStatusUpdate = async (id: string, status: Transaction['status'], completionProofUrl?: string) => {
+    const handleStatusUpdate = async (id: string, status: Transaction['status'], completionProofUrl?: string, forceSkipConfirm?: boolean) => {
         if (status === 'completed' && !completionFile && !selectedTx?.completion_proof_url) {
             toast.warning("Por favor, carga o pega un comprobante para completar la operación.")
             return
         }
 
-        if (!confirm(`¿Cambiar estado a ${status}?`)) return
+        // Intercept completion if it's a VES transaction and prompt for the payment method
+        if (status === 'completed' && selectedTx?.currency_received === 'VES' && !vesCompletionOpen && !forceSkipConfirm) {
+            setVesCompletionOpen(true)
+            return
+        }
+
+        if (!forceSkipConfirm && !confirm(`¿Cambiar estado a ${status}?`)) return
 
         setIsUploading(true)
         try {
@@ -178,7 +186,25 @@ export default function AdminTransactionsPage() {
             }
 
             await TransactionsService.updateStatus(id, status, proofUrl)
+
+            // Post-completion logic for VES 0.3% fee
+            if (status === 'completed' && selectedTx?.currency_received === 'VES' && (vesPaymentMethod === 'otros_bancos' || vesPaymentMethod === 'pago_movil')) {
+                const feePercentage = 0.3;
+                const totalAmount = selectedTx.amount_received;
+                const feeAmount = (totalAmount * feePercentage) / 100;
+
+                const { AdjustmentsService } = await import("@/services/adjustments")
+                await AdjustmentsService.create({
+                    amount: feeAmount,
+                    currency: 'VES',
+                    type: 'withdrawal',
+                    description: `Comisión bancaria (${feePercentage}%) por ${vesPaymentMethod === 'pago_movil' ? 'Pago Móvil' : 'Otros Bancos'} - Transacción #${id.split('-')[0]}`
+                })
+            }
+
             setCompletionFile(null)
+            setVesCompletionOpen(false)
+            setVesPaymentMethod('mismo_banco')
             setSelectedTx(null)
             loadTransactions()
         } catch (error) {
@@ -885,6 +911,87 @@ export default function AdminTransactionsPage() {
                                         onClick={handleVerifyWithoutDeposit}
                                     >
                                         Verificar sin respaldo bancario (Manual)
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+                )
+            }
+
+            {
+                vesCompletionOpen && selectedTx && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+                        <Card className="w-full max-w-md shadow-2xl animate-in fade-in zoom-in duration-200">
+                            <CardHeader className="border-b pb-4">
+                                <div className="flex justify-between items-center mb-1">
+                                    <CardTitle>Método de Pago VES</CardTitle>
+                                    <Button variant="ghost" size="icon" onClick={() => setVesCompletionOpen(false)}>
+                                        <X className="w-4 h-4" />
+                                    </Button>
+                                </div>
+                                <CardDescription>
+                                    Por favor selecciona el método utilizado para liquidar esta transferencia por {formatCurrency(selectedTx.amount_received, 'VES')} VES.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="pt-6 space-y-4">
+                                <div className="space-y-4">
+                                    <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
+                                        <input
+                                            type="radio"
+                                            name="vesPaymentMethod"
+                                            value="mismo_banco"
+                                            checked={vesPaymentMethod === 'mismo_banco'}
+                                            onChange={(e) => setVesPaymentMethod(e.target.value as any)}
+                                            className="w-4 h-4 text-primary"
+                                        />
+                                        <div>
+                                            <div className="font-semibold text-sm">Mismo Banco</div>
+                                            <div className="text-xs text-green-600">Sin comisión operativa</div>
+                                        </div>
+                                    </label>
+
+                                    <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
+                                        <input
+                                            type="radio"
+                                            name="vesPaymentMethod"
+                                            value="otros_bancos"
+                                            checked={vesPaymentMethod === 'otros_bancos'}
+                                            onChange={(e) => setVesPaymentMethod(e.target.value as any)}
+                                            className="w-4 h-4 text-primary"
+                                        />
+                                        <div>
+                                            <div className="font-semibold text-sm">Otros Bancos</div>
+                                            <div className="text-xs text-destructive">Comisión bancaria del 0.3% (-{formatCurrency(selectedTx.amount_received * 0.003, 'VES')} VES)</div>
+                                        </div>
+                                    </label>
+
+                                    <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
+                                        <input
+                                            type="radio"
+                                            name="vesPaymentMethod"
+                                            value="pago_movil"
+                                            checked={vesPaymentMethod === 'pago_movil'}
+                                            onChange={(e) => setVesPaymentMethod(e.target.value as any)}
+                                            className="w-4 h-4 text-primary"
+                                        />
+                                        <div>
+                                            <div className="font-semibold text-sm">Pago Móvil</div>
+                                            <div className="text-xs text-destructive">Comisión bancaria del 0.3% (-{formatCurrency(selectedTx.amount_received * 0.003, 'VES')} VES)</div>
+                                        </div>
+                                    </label>
+                                </div>
+
+                                <div className="pt-4 flex gap-3 w-full">
+                                    <Button variant="outline" className="flex-1" onClick={() => setVesCompletionOpen(false)}>
+                                        Cancelar
+                                    </Button>
+                                    <Button
+                                        className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                                        onClick={() => handleStatusUpdate(selectedTx.id!, 'completed', undefined, true)}
+                                        disabled={isUploading}
+                                    >
+                                        {isUploading ? "Procesando..." : "Confirmar Completado"}
                                     </Button>
                                 </div>
                             </CardContent>
