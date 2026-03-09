@@ -329,23 +329,7 @@ export default function NewTransactionPage() {
                 (async () => {
                     let fileToUpload = file
 
-                    if (file.type.startsWith('image/')) {
-                        console.log("Compressing image...")
-                        try {
-                            const imageCompression = (await import('browser-image-compression')).default
-                            const options = {
-                                maxSizeMB: 0.8,
-                                maxWidthOrHeight: 1280,
-                                useWebWorker: false // Disable web worker to avoid issues in some mobile browsers
-                            }
-                            const compressedBlob = await imageCompression(file, options)
-                            fileToUpload = new File([compressedBlob], file.name || "receipt.jpg", { type: compressedBlob.type })
-                            console.log("Compression complete. New size:", fileToUpload.size)
-                        } catch (compressError) {
-                            console.error("Compression error:", compressError)
-                            // fallback to original if compression fails
-                        }
-                    } else if (fileToUpload.size > 5 * 1024 * 1024) {
+                    if (!file.type.startsWith('image/') && fileToUpload.size > 5 * 1024 * 1024) {
                         toast.warning("Los documentos PDF deben ser menores a 5MB.")
                         setLoading(false)
                         return
