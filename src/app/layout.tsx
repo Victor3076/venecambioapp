@@ -43,17 +43,6 @@ export default function RootLayout({
         {children}
         <Toaster richColors position="top-right" />
         <PwaInstallPrompt />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              if ('serviceWorker' in navigator) {
-                window.addEventListener('load', function() {
-                  navigator.serviceWorker.register('/firebase-messaging-sw.js');
-                });
-              }
-            `,
-          }}
-        />
       </body>
     </html>
   );

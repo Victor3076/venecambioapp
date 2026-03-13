@@ -13,6 +13,7 @@ import { Logo } from "@/components/logo"
 import { AlertCircle, Clock } from "lucide-react"
 
 export default function Home() {
+  const [mounted, setMounted] = useState(false)
   const [rates, setRates] = useState<RatesData | null>(null)
   const [amountInput, setAmountInput] = useState<string>("100")
   const amountSent = parseFormattedNumber(amountInput)
@@ -27,6 +28,7 @@ export default function Home() {
 
   // Load initial data and subscribe to updates
   useEffect(() => {
+    setMounted(true)
     const loadData = async () => {
       const [ratesData, settingsData] = await Promise.all([
         RatesService.getLatest(),
@@ -120,7 +122,14 @@ export default function Home() {
     const rate = calculateRate(targetCurrency, sourceCurrency, targetPrice, sourcePrice, margin)
 
     // Use short codes for the rate display ticker
-    return `1 ${sourceCurrency} = ${formatRate(rate, targetCurrency, sourceCurrency)} ${targetCurrency}`
+  }
+
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center">
+        <Logo className="animate-pulse" />
+      </div>
+    )
   }
 
   return (
@@ -222,7 +231,7 @@ export default function Home() {
                           const newSource = e.target.value
                           setSourceCurrency(newSource)
                           if (newSource === targetCurrency) {
-                            setTargetCurrency(newSource === 'VES' ? 'PERU' : 'VES')
+                            setTargetCurrency(newSource === 'VES' ? 'PEN' : 'VES')
                           }
                         }}
                         className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
