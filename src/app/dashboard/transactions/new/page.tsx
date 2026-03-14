@@ -329,7 +329,56 @@ export default function NewTransactionPage() {
                 (async () => {
                     let fileToUpload = file
 
-                    if (!file.type.startsWith('image/') && fileToUpload.size > 5 * 1024 * 1024) {
+                    if (file.type.startsWith('image/') && file.size > 800 * 1024) {
+                        try {
+                            // Usar un Canvas nativo que maneje imágenes largas con cuidado
+                            const bitmap = await self.createImageBitmap(file);
+                            const maxWidth = 1500;
+                            const maxHeight = 3000; // Límite más alto para comprobantes largos
+
+                            let width = bitmap.width;
+                            let height = bitmap.height;
+                            let shouldCompress = false;
+
+                            // Verificar proporción extrema (Ej. 1:4 o más), común en capturas de pantalla con scroll de algunos bancos.
+                            // Las proporciones muy extremas a veces fallan en Canvas de iOS/Safari, aquí aplicamos reducción proporcional suave.
+                            if (width > maxWidth) {
+                                height = Math.round((height * maxWidth) / width);
+                                width = maxWidth;
+                                shouldCompress = true;
+                            }
+
+                            if (height > maxHeight) {
+                                width = Math.round((width * maxHeight) / height);
+                                height = maxHeight;
+                                shouldCompress = true;
+                            }
+
+                            if (shouldCompress || file.size > 2 * 1024 * 1024) {
+                                const canvas = document.createElement('canvas');
+                                canvas.width = width;
+                                canvas.height = height;
+                                const ctx = canvas.getContext('2d');
+
+                                if (ctx) {
+                                    ctx.drawImage(bitmap, 0, 0, width, height);
+
+                                    const blob = await new Promise<Blob | null>(resolve => {
+                                        canvas.toBlob(resolve, 'image/jpeg', 0.85); // 85% calidad JPEG para reducir peso
+                                    });
+
+                                    if (blob) {
+                                        fileToUpload = new File([blob], file.name.replace(/\.[^/.]+$/, ".jpg"), { type: 'image/jpeg' });
+                                        console.log("Canvas compresión exitosa:", fileToUpload.size, "bytes");
+                                    }
+                                }
+                            }
+                            bitmap.close();
+
+                        } catch (compressError) {
+                            console.error("Error comprimiendo imagen con Canvas, enviando original:", compressError);
+                        }
+                    } else if (!file.type.startsWith('image/') && fileToUpload.size > 5 * 1024 * 1024) {
                         toast.warning("Los documentos PDF deben ser menores a 5MB.")
                         setLoading(false)
                         return
