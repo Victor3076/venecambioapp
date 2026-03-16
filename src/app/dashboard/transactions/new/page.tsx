@@ -240,7 +240,8 @@ export default function NewTransactionPage() {
     }
 
     const handleSaveNewAccount = async (shouldFinish: boolean) => {
-        if (!newAccount.alias || !newAccount.bank_name || !newAccount.account_number) {
+        const isUsd = newAccount.country === 'USD'
+        if (!newAccount.alias || !newAccount.account_number || (!isUsd && !newAccount.bank_name)) {
             toast.warning("Por favor completa los campos obligatorios")
             return
         }

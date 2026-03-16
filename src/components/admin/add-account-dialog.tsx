@@ -87,7 +87,8 @@ export function AddAccountDialog({ userId, userName, isOpen, onClose, onSuccess 
     }
 
     const handleSave = async () => {
-        if (!formData.alias || !formData.country || !formData.bank_name || !formData.account_number) {
+        const isUsd = formData.country === 'USD'
+        if (!formData.alias || !formData.country || !formData.account_number || (!isUsd && !formData.bank_name)) {
             toast.error("Por favor completa los campos obligatorios")
             return
         }
