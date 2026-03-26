@@ -37,6 +37,7 @@ export default function AdminTransactionsPage() {
     const [vesCompletionOpen, setVesCompletionOpen] = useState(false)
     const [vesPaymentMethod, setVesPaymentMethod] = useState<'mismo_banco' | 'otros_bancos' | 'pago_movil'>('mismo_banco')
     const [showWhatsAppPrompt, setShowWhatsAppPrompt] = useState(false)
+    const [pendingProofUrl, setPendingProofUrl] = useState<string | null>(null)
 
 
     useEffect(() => {
@@ -209,6 +210,7 @@ export default function AdminTransactionsPage() {
             loadTransactions()
             // If completed with a proof, show WhatsApp prompt before closing
             if (status === 'completed' && (proofUrl || selectedTx?.completion_proof_url)) {
+                setPendingProofUrl(proofUrl || selectedTx?.completion_proof_url || null)
                 setShowWhatsAppPrompt(true)
             } else {
                 setSelectedTx(null)
@@ -221,11 +223,11 @@ export default function AdminTransactionsPage() {
         }
     }
 
-    const handleShareWhatsApp = () => {
+    const handleShareWhatsApp = (overrideProofUrl?: string) => {
         if (!selectedTx) return
         const appUrl = "https://venecambio.com"
         const beneficiary = selectedTx.beneficiary_data?.alias || selectedTx.beneficiary_data?.account_number || ''
-        const proofUrl = selectedTx.completion_proof_url || ''
+        const proofUrl = overrideProofUrl ?? pendingProofUrl ?? selectedTx.completion_proof_url ?? ''
 
         const message = [
             `✅ *Operación Completada - VeneCambio*`,
