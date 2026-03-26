@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Eye, Check, X, ImageIcon, Upload, ClipboardPaste, ArrowLeft, Copy, User, Landmark, CreditCard, Mail, Phone, Hash, Search, FileUp, Plus, AlertCircle, Trash2 } from "lucide-react"
+import { Eye, Check, X, ImageIcon, Upload, ClipboardPaste, ArrowLeft, Copy, User, Landmark, CreditCard, Mail, Phone, Hash, Search, FileUp, Plus, AlertCircle, Trash2, MessageCircle } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import Link from "next/link"
 import { formatCurrency } from "@/lib/rates-utils"
@@ -213,6 +213,33 @@ export default function AdminTransactionsPage() {
         } finally {
             setIsUploading(false)
         }
+    }
+
+    const handleShareWhatsApp = () => {
+        if (!selectedTx) return
+        const appUrl = "https://venecambioapp.vercel.app"
+        const beneficiary = selectedTx.beneficiary_data?.alias || selectedTx.beneficiary_data?.account_number || ''
+        const proofUrl = selectedTx.completion_proof_url || ''
+
+        const message = [
+            `✅ *Operación Completada - VeneCambio*`,
+            ``,
+            `👤 *Cliente:* ${selectedTx.profiles?.full_name || 'Cliente'}`,
+            `📤 *Enviaste:* ${formatCurrency(selectedTx.amount_sent, selectedTx.currency_sent)} ${selectedTx.currency_sent}`,
+            `📥 *Recibiste:* ${formatCurrency(selectedTx.amount_received, selectedTx.currency_received)} ${selectedTx.currency_received}`,
+            `💱 *Tasa:* ${selectedTx.exchange_rate}`,
+            beneficiary ? `🏦 *Beneficiario:* ${beneficiary}` : '',
+            ``,
+            proofUrl ? `🧾 *Comprobante de pago:*\n${proofUrl}` : '',
+            ``,
+            `📲 *Consulta tu historial de operaciones en nuestra app:*`,
+            `${appUrl}/dashboard/transactions`,
+            ``,
+            `_¡Gracias por confiar en VeneCambio!_ 🙌`,
+        ].filter(line => line !== '').join('\n')
+
+        const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`
+        window.open(whatsappUrl, '_blank')
     }
 
     const handleDelete = async (id: string) => {
@@ -766,6 +793,19 @@ export default function AdminTransactionsPage() {
                                                     </Button>
                                                 )}
                                             </div>
+
+                                            {selectedTx.status === 'completed' && selectedTx.completion_proof_url && (
+                                                <div className="mt-2 pt-3 border-t">
+                                                    <Button
+                                                        variant="outline"
+                                                        className="w-full h-11 bg-green-50 border-green-300 text-green-800 hover:bg-green-100 hover:text-green-900 font-bold"
+                                                        onClick={handleShareWhatsApp}
+                                                    >
+                                                        <MessageCircle className="w-4 h-4 mr-2 fill-green-600 text-green-600" />
+                                                        Compartir Comprobante por WhatsApp
+                                                    </Button>
+                                                </div>
+                                            )}
                                         </div>
 
                                         {selectedTx.group_id && (
