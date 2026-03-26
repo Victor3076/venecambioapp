@@ -807,7 +807,7 @@ export default function AdminTransactionsPage() {
                                                     <Button
                                                         variant="outline"
                                                         className="w-full h-11 bg-green-50 border-green-300 text-green-800 hover:bg-green-100 hover:text-green-900 font-bold"
-                                                        onClick={handleShareWhatsApp}
+                                                        onClick={() => handleShareWhatsApp()}
                                                     >
                                                         <MessageCircle className="w-4 h-4 mr-2 fill-green-600 text-green-600" />
                                                         Compartir Comprobante por WhatsApp
