@@ -52,18 +52,27 @@ export default function AdminUsersPage() {
         e.preventDefault()
         setIsCreating(true)
         try {
+            let result;
             if (editingUser) {
-                await updateUser(editingUser.id, newUser)
-                toast.success("Usuario actualizado con éxito")
+                result = await updateUser(editingUser.id, newUser)
             } else {
-                await createUser(newUser)
-                toast.success("Usuario creado con éxito. Clave inicial: 123456")
+                result = await createUser(newUser)
             }
-            setNewUser({ phone: '', fullName: '', clientCode: '', role: 'user' })
-            setEditingUser(null)
-            loadUsers()
+
+            if (result.success) {
+                if (editingUser) {
+                    toast.success("Usuario actualizado con éxito")
+                } else {
+                    toast.success("Usuario creado con éxito. Clave inicial: 123456")
+                }
+                setNewUser({ phone: '', fullName: '', clientCode: '', role: 'user' })
+                setEditingUser(null)
+                loadUsers()
+            } else {
+                toast.error("Error: " + result.error)
+            }
         } catch (error: any) {
-            toast.error("Error: " + error.message)
+            toast.error("Error inesperado: " + error.message)
         } finally {
             setIsCreating(false)
         }
@@ -73,11 +82,15 @@ export default function AdminUsersPage() {
         if (!confirm(`¿Estás seguro de que deseas reiniciar la contraseña de ${name} a '123456'?`)) return
 
         try {
-            await resetPassword(id)
-            loadUsers()
-            toast.success("Contraseña reiniciada a 123456")
+            const result = await resetPassword(id)
+            if (result.success) {
+                loadUsers()
+                toast.success("Contraseña reiniciada a 123456")
+            } else {
+                toast.error("Error al reiniciar: " + result.error)
+            }
         } catch (error: any) {
-            toast.error("Error al reiniciar: " + error.message)
+            toast.error("Error inesperado: " + error.message)
         }
     }
 
@@ -107,11 +120,15 @@ Pasos para tu primer ingreso:
         if (!confirm("¿Estás seguro de que deseas eliminar este usuario? Esta acción no se puede deshacer.")) return
 
         try {
-            await deleteUser(id)
-            loadUsers()
-            toast.success("Usuario eliminado")
+            const result = await deleteUser(id)
+            if (result.success) {
+                loadUsers()
+                toast.success("Usuario eliminado")
+            } else {
+                toast.error("Error al eliminar: " + result.error)
+            }
         } catch (error: any) {
-            toast.error("Error al eliminar: " + error.message)
+            toast.error("Error inesperado: " + error.message)
         }
     }
 
