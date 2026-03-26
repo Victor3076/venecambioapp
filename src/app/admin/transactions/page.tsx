@@ -217,7 +217,7 @@ export default function AdminTransactionsPage() {
 
     const handleShareWhatsApp = () => {
         if (!selectedTx) return
-        const appUrl = "https://venecambioapp.vercel.app"
+        const appUrl = "https://venecambio.com"
         const beneficiary = selectedTx.beneficiary_data?.alias || selectedTx.beneficiary_data?.account_number || ''
         const proofUrl = selectedTx.completion_proof_url || ''
 
