@@ -565,7 +565,13 @@ export default function AdminTransactionsPage() {
                                 <div className="space-y-8">
                                     <div className="space-y-6">
                                         <div className="space-y-4">
-                                            <h3 className="font-bold text-sm uppercase tracking-wider text-muted-foreground border-b pb-1">Detalles de Operación</h3>
+                                            <div className="flex justify-between items-center border-b pb-1 mb-1">
+                                                <h3 className="font-bold text-sm uppercase tracking-wider text-muted-foreground">Detalles de Operación</h3>
+                                                <div className="flex items-center gap-2 text-sm font-bold text-primary">
+                                                    <User className="w-4 h-4" />
+                                                    {selectedTx.profiles?.full_name || 'Sin nombre'}
+                                                </div>
+                                            </div>
                                             <div className="space-y-3 bg-muted/30 p-4 rounded-lg">
                                                 <div className="flex items-center gap-2">
                                                     <span className="font-medium text-muted-foreground">Ref:</span>
