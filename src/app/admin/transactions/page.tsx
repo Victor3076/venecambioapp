@@ -36,6 +36,7 @@ export default function AdminTransactionsPage() {
     const [userRole, setUserRole] = useState<string | null>(null)
     const [vesCompletionOpen, setVesCompletionOpen] = useState(false)
     const [vesPaymentMethod, setVesPaymentMethod] = useState<'mismo_banco' | 'otros_bancos' | 'pago_movil'>('mismo_banco')
+    const [showWhatsAppPrompt, setShowWhatsAppPrompt] = useState(false)
 
 
     useEffect(() => {
@@ -205,8 +206,13 @@ export default function AdminTransactionsPage() {
             setCompletionFile(null)
             setVesCompletionOpen(false)
             setVesPaymentMethod('mismo_banco')
-            setSelectedTx(null)
             loadTransactions()
+            // If completed with a proof, show WhatsApp prompt before closing
+            if (status === 'completed' && (proofUrl || selectedTx?.completion_proof_url)) {
+                setShowWhatsAppPrompt(true)
+            } else {
+                setSelectedTx(null)
+            }
         } catch (error) {
             console.error(error)
             toast.error("Error al actualizar estado")
@@ -861,8 +867,48 @@ export default function AdminTransactionsPage() {
                     </Card>
                 </div>
             )}
-            {
-                isReconciliationOpen && selectedTx && (
+
+            {/* WhatsApp Share Prompt - appears after completing a transaction */}
+            {showWhatsAppPrompt && selectedTx && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 animate-in zoom-in-95 duration-200 text-center space-y-4">
+                        <div className="mx-auto w-14 h-14 bg-green-100 rounded-full flex items-center justify-center">
+                            <MessageCircle className="w-7 h-7 text-green-600 fill-green-100" />
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-bold text-gray-900">¿Compartir por WhatsApp?</h3>
+                            <p className="text-sm text-muted-foreground mt-1">
+                                Envíale el comprobante y el enlace a la app a <span className="font-semibold text-gray-700">{selectedTx.profiles?.full_name || 'el cliente'}</span>.
+                            </p>
+                        </div>
+                        <div className="flex flex-col gap-2 pt-2">
+                            <Button
+                                className="w-full h-11 bg-green-500 hover:bg-green-600 text-white font-bold text-base"
+                                onClick={() => {
+                                    handleShareWhatsApp()
+                                    setShowWhatsAppPrompt(false)
+                                    setSelectedTx(null)
+                                }}
+                            >
+                                <MessageCircle className="w-4 h-4 mr-2" />
+                                Sí, compartir
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                className="w-full h-10 text-muted-foreground"
+                                onClick={() => {
+                                    setShowWhatsAppPrompt(false)
+                                    setSelectedTx(null)
+                                }}
+                            >
+                                No, cerrar
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {isReconciliationOpen && selectedTx && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
                         <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl animate-in fade-in zoom-in duration-200">
                             <CardHeader className="border-b pb-3 sticky top-0 bg-card z-10 transition-colors">
