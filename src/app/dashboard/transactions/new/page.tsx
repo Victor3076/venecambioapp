@@ -318,6 +318,9 @@ export default function NewTransactionPage() {
         }
 
         setLoading(true)
+        // Yield to the browser so it can paint "Subiendo..." before heavy canvas/network work,
+        // which fixes the INP (Interaction to Next Paint) performance issue.
+        await new Promise(resolve => setTimeout(resolve, 0))
         console.log("Starting upload process for file:", file.name, "size:", file.size)
 
         // Create a timeout promise

@@ -167,6 +167,9 @@ export default function AdminTransactionsPage() {
         if (!forceSkipConfirm && !confirm(`¿Cambiar estado a ${status}?`)) return
 
         setIsUploading(true)
+        // Yield to the browser so it can paint the disabled state before heavy async work,
+        // which fixes the INP (Interaction to Next Paint) performance issue.
+        await new Promise(resolve => setTimeout(resolve, 0))
         try {
             let proofUrl = selectedTx?.completion_proof_url
 
@@ -254,6 +257,8 @@ export default function AdminTransactionsPage() {
         if (!confirm("¿Esta seguro de eliminar esta operacion?")) return
 
         setIsUploading(true)
+        // Yield to the browser so it can paint the disabled state before the network call.
+        await new Promise(resolve => setTimeout(resolve, 0))
         try {
             await TransactionsService.delete(id)
             toast.success("Operación eliminada exitosamente.")
