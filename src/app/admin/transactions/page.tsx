@@ -444,7 +444,10 @@ export default function AdminTransactionsPage() {
                                 ) : (() => {
                                     const filtered = (transactions.map(tx => ({
                                         ...tx,
-                                        deposit: allDeposits.find(d => d.matched_transaction_id === tx.id)
+                                        deposit: allDeposits.find(d =>
+                                            d.matched_transaction_id === tx.id ||
+                                            (tx.group_id && d.matched_transaction_id && transactions.find(t => t.id === d.matched_transaction_id)?.group_id === tx.group_id)
+                                        )
                                     })) as any[]).filter((tx: any) => {
                                         const matchesStatus = filterStatus === 'all' || tx.status === filterStatus
                                         const matchesCurrency = filterCurrency === 'all' || tx.currency_sent === filterCurrency
@@ -540,7 +543,10 @@ export default function AdminTransactionsPage() {
                                                 ? formatCurrency(transactions
                                                     .map(tx => ({
                                                         ...tx,
-                                                        deposit: allDeposits.find(d => d.matched_transaction_id === tx.id)
+                                                        deposit: allDeposits.find(d =>
+                                                            d.matched_transaction_id === tx.id ||
+                                                            (tx.group_id && d.matched_transaction_id && transactions.find(t => t.id === d.matched_transaction_id)?.group_id === tx.group_id)
+                                                        )
                                                     }))
                                                     .filter(tx => {
                                                         const matchesStatus = filterStatus === 'all' || tx.status === filterStatus
