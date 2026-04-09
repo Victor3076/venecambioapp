@@ -17,10 +17,11 @@ const REGION_TO_ISO: Record<string, string> = {
 }
 
 export default function AdminProfitsPage() {
-    const [transactions, setTransactions] = useState<Transaction[]>([])
-    const [loading, setLoading] = useState(true)
-    const [startDate, setStartDate] = useState("")
-    const [endDate, setEndDate] = useState("")
+    const today = new Date().toISOString().split('T')[0];
+    const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [startDate, setStartDate] = useState(today);
+    const [endDate, setEndDate] = useState(today);
     const [stats, setStats] = useState<any>({ totalProfit: 0, volumeByCurrency: {}, profitByCurrency: {}, marginSumByCurrency: {} })
 
     useEffect(() => {
