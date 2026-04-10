@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { toast } from "sonner"
+import { compressImage } from "@/lib/image-utils"
 import { TransactionsService, Transaction } from "@/services/transactions"
 import { BankDepositsService, BankDeposit } from "@/services/bank-deposits"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -174,12 +175,13 @@ export default function AdminTransactionsPage() {
             let proofUrl = selectedTx?.completion_proof_url
 
             if (completionFile) {
-                const fileExt = completionFile.name.split('.').pop() || 'png'
+                const fileToUpload = await compressImage(completionFile)
+                const fileExt = fileToUpload.name.split('.').pop() || 'png'
                 const fileName = `settlements/${id}/${Math.random()}.${fileExt}`
 
                 const { error: uploadError } = await supabase.storage
                     .from('payments')
-                    .upload(fileName, completionFile)
+                    .upload(fileName, fileToUpload)
 
                 if (uploadError) throw uploadError
 
