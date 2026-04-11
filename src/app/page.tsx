@@ -119,9 +119,13 @@ export default function Home() {
 
     const marginKey = `${sourceCurrency}_${targetCurrency}`
     const margin = rates.margins[marginKey] || rates.margins["GENERIC"] || 0
-    const rate = calculateRate(targetCurrency, sourceCurrency, targetPrice, sourcePrice, margin)
+    const rawRate = calculateRate(targetCurrency, sourceCurrency, targetPrice, sourcePrice, margin)
+    const formattedRate = formatRate(rawRate, targetCurrency, sourceCurrency)
 
-    // Use short codes for the rate display ticker
+    if (isInversePair(targetCurrency, sourceCurrency)) {
+      return `1 ${targetCurrency} = ${formattedRate} ${sourceCurrency}`
+    }
+    return `1 ${sourceCurrency} = ${formattedRate} ${targetCurrency}`
   }
 
   if (!mounted) {
@@ -215,7 +219,7 @@ export default function Home() {
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Envías</label>
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2">
                       <Input
                         type="text"
                         placeholder="1.000,00"
@@ -223,7 +227,7 @@ export default function Home() {
                         onBlur={() => setAmountInput(formatCurrency(parseFormattedNumber(amountInput), sourceCurrency))}
                         onChange={(e) => updateCalculation(e.target.value, 'sent')}
                         onClick={(e) => (e.target as HTMLInputElement).select()}
-                        className={isBelowMin ? "border-red-500" : ""}
+                        className={`font-bold text-lg ${isBelowMin ? "border-red-500" : ""}`}
                       />
                       <select
                         value={sourceCurrency}
@@ -234,7 +238,7 @@ export default function Home() {
                             setTargetCurrency(newSource === 'VES' ? 'PEN' : 'VES')
                           }
                         }}
-                        className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        className="h-10 w-full sm:w-[160px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                       >
                         {SUPPORTED_REGIONS.filter(r => r !== 'VES').map(region => (
                           <option key={region} value={region}>
@@ -253,7 +257,7 @@ export default function Home() {
 
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Reciben</label>
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2">
                       <Input
                         type="text"
                         value={amountReceived}
@@ -264,7 +268,7 @@ export default function Home() {
                       <select
                         value={targetCurrency}
                         onChange={(e) => setTargetCurrency(e.target.value)}
-                        className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        className="h-10 w-full sm:w-[160px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                       >
                         {SUPPORTED_REGIONS.filter(region => region !== sourceCurrency).map(region => (
                           <option key={region} value={region}>
