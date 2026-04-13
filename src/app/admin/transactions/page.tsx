@@ -9,11 +9,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Eye, Check, X, ImageIcon, Upload, ClipboardPaste, ArrowLeft, Copy, User, Landmark, CreditCard, Mail, Phone, Hash, Search, FileUp, Plus, AlertCircle, Trash2, MessageCircle } from "lucide-react"
+import { Eye, Check, X, ImageIcon, Upload, ClipboardPaste, ArrowLeft, Copy, User, Landmark, CreditCard, Mail, Phone, Hash, Search, FileUp, Plus, AlertCircle, Trash2, MessageCircle, TrendingDown } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import Link from "next/link"
 import { formatCurrency } from "@/lib/rates-utils"
 import { ManualTransactionDialog } from "@/components/admin/manual-transaction-dialog"
+import { ManualDiscountDialog } from "@/components/admin/manual-discount-dialog"
+import { AdjustmentsService, CashflowAdjustment } from "@/services/adjustments"
 import { CURRENCY_LABELS } from "@/lib/constants"
 
 type AdminTx = Transaction & { profiles: { email: string, full_name: string } }
@@ -33,6 +35,8 @@ export default function AdminTransactionsPage() {
     const [filterStatus, setFilterStatus] = useState<Transaction['status'] | 'all'>('all')
     const [filterCurrency, setFilterCurrency] = useState<string>('all')
     const [isManualModalOpen, setIsManualModalOpen] = useState(false)
+    const [isDiscountModalOpen, setIsDiscountModalOpen] = useState(false)
+    const [adjustments, setAdjustments] = useState<CashflowAdjustment[]>([])
     const [preSelectedDepositId, setPreSelectedDepositId] = useState<string | null>(null)
     const [userRole, setUserRole] = useState<string | null>(null)
     const [vesCompletionOpen, setVesCompletionOpen] = useState(false)
@@ -118,12 +122,14 @@ export default function AdminTransactionsPage() {
     const loadTransactions = async (silent = false) => {
         if (!silent) setLoading(true)
         try {
-            const [txData, depData] = await Promise.all([
+            const [txData, depData, adjData] = await Promise.all([
                 TransactionsService.getAll(),
-                BankDepositsService.getAll()
+                BankDepositsService.getAll(),
+                AdjustmentsService.getAll()
             ])
             setTransactions(txData as AdminTx[])
             setAllDeposits(depData)
+            setAdjustments(adjData)
         } catch (error) {
             console.error("Error loading data:", error)
         } finally {
@@ -311,13 +317,10 @@ export default function AdminTransactionsPage() {
                     </div>
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="outline" asChild>
-                        <Link href="/admin/payment-methods">Gestionar Cuentas</Link>
-                    </Button>
-                    <Button variant="outline" asChild>
-                        <Link href="/admin/users">Gestionar Usuarios</Link>
-                    </Button>
                     <Button variant="outline" onClick={() => loadTransactions()}>Actualizar Lista</Button>
+                    <Button variant="outline" className="text-destructive border-destructive/20 hover:bg-destructive/5" onClick={() => setIsDiscountModalOpen(true)}>
+                        <TrendingDown className="w-4 h-4 mr-2" /> Descuento Manual
+                    </Button>
                     <Button className="bg-primary hover:bg-primary/90" onClick={() => setIsManualModalOpen(true)}>
                         <Plus className="w-4 h-4 mr-2" /> Nueva Operación (WhatsApp)
                     </Button>
@@ -442,47 +445,107 @@ export default function AdminTransactionsPage() {
                             </thead>
                             <tbody className="divide-y bg-background">
                                 {loading ? (
-                                    <tr><td colSpan={6} className="p-8 text-center text-muted-foreground">Cargando transacciones...</td></tr>
+                                    <tr><td colSpan={6} className="p-8 text-center text-muted-foreground">Cargando datos...</td></tr>
                                 ) : (() => {
-                                    const filtered = (transactions.map(tx => ({
+                                    const filteredTransactions = (transactions.map(tx => ({
                                         ...tx,
+                                        display_type: 'transaction' as const,
                                         deposit: allDeposits.find(d =>
                                             d.matched_transaction_id === tx.id ||
                                             (tx.group_id && d.matched_transaction_id && transactions.find(t => t.id === d.matched_transaction_id)?.group_id === tx.group_id)
                                         )
-                                    })) as any[]).filter((tx: any) => {
-                                        const matchesStatus = filterStatus === 'all' || tx.status === filterStatus
-                                        const matchesCurrency = filterCurrency === 'all' || tx.currency_sent === filterCurrency
-                                        const txDate = tx.created_at ? new Date(tx.created_at) : null;
+                                    })) as any[])
+
+                                    const filteredAdjustments = adjustments
+                                        .filter(adj => adj.type === 'withdrawal')
+                                        .map(adj => ({
+                                            ...adj,
+                                            display_type: 'adjustment' as const,
+                                            amount_sent: adj.amount,
+                                            currency_sent: adj.currency,
+                                            profiles: { full_name: 'DESCUENTO MANUAL' },
+                                            status: 'completed'
+                                        }))
+
+                                    const combined = [...filteredTransactions, ...filteredAdjustments].filter((item: any) => {
+                                        const matchesStatus = item.display_type === 'adjustment' ? (filterStatus === 'all' || filterStatus === 'completed') : (filterStatus === 'all' || item.status === filterStatus)
+                                        const matchesCurrency = filterCurrency === 'all' || item.currency_sent === filterCurrency
+                                        const itemDate = item.created_at ? new Date(item.created_at) : null;
                                         let matchesDate = true;
-                                        if (filterDate && txDate) {
-                                            // Convert UTC to local date string YYYY-MM-DD
-                                            const localDateStr = new Date(txDate.getTime() - (txDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+                                        if (filterDate && itemDate) {
+                                            const localDateStr = new Date(itemDate.getTime() - (itemDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
                                             matchesDate = localDateStr === filterDate;
                                         }
 
                                         const searchLower = searchTerm.toLowerCase()
                                         const matchesSearch = !searchTerm ||
-                                            tx.profiles?.full_name?.toLowerCase().includes(searchLower) ||
-                                            tx.amount_sent.toString().includes(searchTerm) ||
-                                            tx.amount_received.toString().includes(searchTerm) ||
-                                            tx.id?.toLowerCase().includes(searchLower) ||
-                                            tx.currency_sent?.toLowerCase().includes(searchLower) ||
-                                            tx.currency_received?.toLowerCase().includes(searchLower) ||
-                                            tx.deposit?.bank_name?.toLowerCase().includes(searchLower) ||
-                                            tx.deposit?.reference_number?.toLowerCase().includes(searchLower) ||
-                                            tx.deposit?.notes?.toLowerCase().includes(searchLower) ||
-                                            `${tx.currency_sent} ${tx.amount_sent}`.toLowerCase().includes(searchLower) ||
-                                            (searchLower === 'sin conciliar' && !tx.deposit)
+                                            item.profiles?.full_name?.toLowerCase().includes(searchLower) ||
+                                            item.amount_sent?.toString().includes(searchTerm) ||
+                                            item.id?.toLowerCase().includes(searchLower) ||
+                                            item.description?.toLowerCase().includes(searchLower) ||
+                                            (item.display_type === 'transaction' && (
+                                                item.amount_received?.toString().includes(searchTerm) ||
+                                                item.currency_received?.toLowerCase().includes(searchLower) ||
+                                                item.deposit?.bank_name?.toLowerCase().includes(searchLower) ||
+                                                item.deposit?.reference_number?.toLowerCase().includes(searchLower) ||
+                                                item.deposit?.notes?.toLowerCase().includes(searchLower) ||
+                                                `${item.currency_sent} ${item.amount_sent}`.toLowerCase().includes(searchLower)
+                                            ))
 
                                         return matchesStatus && matchesDate && matchesSearch && matchesCurrency
-                                    });
+                                    }).sort((a, b) => new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime());
 
-                                    if (filtered.length === 0) {
+                                    if (combined.length === 0) {
                                         return <tr><td colSpan={6} className="p-8 text-center text-muted-foreground">No hay operaciones que coincidan con los filtros.</td></tr>
                                     }
 
-                                    return filtered.map(tx => {
+                                    return combined.map(item => {
+                                        if (item.display_type === 'adjustment') {
+                                            return (
+                                                <tr key={item.id} className="hover:bg-red-50/40 transition-colors animate-in fade-in duration-300">
+                                                    <td className="p-4 whitespace-nowrap">
+                                                        {item.created_at ? new Date(item.created_at).toLocaleDateString() : ''}
+                                                        <div className="text-[10px] text-muted-foreground">{item.created_at ? new Date(item.created_at).toLocaleTimeString() : ''}</div>
+                                                    </td>
+                                                    <td className="p-4">
+                                                        <div className="font-black text-red-600 flex items-center gap-1.5 text-xs uppercase tracking-tight">
+                                                            <TrendingDown className="w-3.5 h-3.5" /> {item.profiles?.full_name}
+                                                        </div>
+                                                        <div className="text-[10px] text-muted-foreground truncate max-w-[150px] italic">{item.description}</div>
+                                                    </td>
+                                                    <td className="p-4">
+                                                        <div className="font-black text-red-500 text-base">
+                                                            - {formatCurrency(item.amount_sent, item.currency_sent)} {item.currency_sent}
+                                                        </div>
+                                                        <div className="text-[10px] text-muted-foreground font-medium uppercase">Retiro / Ajuste</div>
+                                                    </td>
+                                                    <td className="p-4">
+                                                        <div className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                                            <AlertCircle className="w-3 h-3" /> Control Interno
+                                                        </div>
+                                                    </td>
+                                                    <td className="p-4">
+                                                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-800 uppercase">
+                                                            Debitado
+                                                        </span>
+                                                    </td>
+                                                    <td className="p-4 text-right">
+                                                        <Button variant="ghost" size="icon" onClick={() => {
+                                                            if (confirm("¿Estás seguro de eliminar este descuento manual?")) {
+                                                                AdjustmentsService.delete(item.id!).then(() => {
+                                                                    toast.success("Descuento eliminado exitosamente");
+                                                                    loadTransactions();
+                                                                })
+                                                            }
+                                                        }} className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-red-50">
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </Button>
+                                                    </td>
+                                                </tr>
+                                            )
+                                        }
+
+                                        const tx = item
                                         const deposit = tx.deposit
                                         return (
                                             <tr key={tx.id} className="hover:bg-muted/30 transition-colors">
@@ -542,41 +605,30 @@ export default function AdminTransactionsPage() {
                                     <td className="p-4">
                                         <div className="font-black text-lg text-primary">
                                             {filterCurrency !== 'all'
-                                                ? formatCurrency(transactions
-                                                    .map(tx => ({
-                                                        ...tx,
-                                                        deposit: allDeposits.find(d =>
-                                                            d.matched_transaction_id === tx.id ||
-                                                            (tx.group_id && d.matched_transaction_id && transactions.find(t => t.id === d.matched_transaction_id)?.group_id === tx.group_id)
-                                                        )
-                                                    }))
-                                                    .filter(tx => {
-                                                        const matchesStatus = filterStatus === 'all' || tx.status === filterStatus
-                                                        const matchesCurrency = tx.currency_sent === filterCurrency
-                                                        const txDate = tx.created_at ? new Date(tx.created_at) : null;
+                                                ? formatCurrency([...(transactions.map(tx => ({ ...tx, display_type: 'transaction' }))), ...(adjustments.filter(a => a.type === 'withdrawal').map(a => ({ ...a, display_type: 'adjustment' }))) as any]
+                                                    .filter(item => {
+                                                        const matchesStatus = item.display_type === 'adjustment' ? (filterStatus === 'all' || filterStatus === 'completed') : (filterStatus === 'all' || item.status === filterStatus)
+                                                        const matchesCurrency = (item.display_type === 'adjustment' ? item.currency : item.currency_sent) === filterCurrency
+                                                        const itemDate = item.created_at ? new Date(item.created_at) : null;
                                                         let matchesDate = true;
-                                                        if (filterDate && txDate) {
-                                                            const localDateStr = new Date(txDate.getTime() - (txDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+                                                        if (filterDate && itemDate) {
+                                                            const localDateStr = new Date(itemDate.getTime() - (itemDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
                                                             matchesDate = localDateStr === filterDate;
                                                         }
 
                                                         const searchLower = searchTerm.toLowerCase()
                                                         const matchesSearch = !searchTerm ||
-                                                            tx.profiles?.full_name?.toLowerCase().includes(searchLower) ||
-                                                            tx.amount_sent.toString().includes(searchTerm) ||
-                                                            tx.amount_received.toString().includes(searchTerm) ||
-                                                            tx.id?.toLowerCase().includes(searchLower) ||
-                                                            tx.currency_sent?.toLowerCase().includes(searchLower) ||
-                                                            tx.currency_received?.toLowerCase().includes(searchLower) ||
-                                                            tx.deposit?.bank_name?.toLowerCase().includes(searchLower) ||
-                                                            tx.deposit?.reference_number?.toLowerCase().includes(searchLower) ||
-                                                            tx.deposit?.notes?.toLowerCase().includes(searchLower) ||
-                                                            `${tx.currency_sent} ${tx.amount_sent}`.toLowerCase().includes(searchLower) ||
-                                                            (searchLower === 'sin conciliar' && !tx.deposit)
+                                                            (item.display_type === 'adjustment' ? 'DESCUENTO MANUAL'.toLowerCase().includes(searchLower) || item.description?.toLowerCase().includes(searchLower) : item.profiles?.full_name?.toLowerCase().includes(searchLower)) ||
+                                                            (item.display_type === 'adjustment' ? item.amount.toString().includes(searchTerm) : item.amount_sent.toString().includes(searchTerm))
 
                                                         return matchesStatus && matchesDate && matchesSearch && matchesCurrency
                                                     })
-                                                    .reduce((sum, tx) => sum + Number(tx.amount_sent), 0),
+                                                    .reduce((sum, item) => {
+                                                        if (item.display_type === 'adjustment') {
+                                                            return sum - Number(item.amount)
+                                                        }
+                                                        return sum + Number(item.amount_sent)
+                                                    }, 0),
                                                     filterCurrency
                                                 ) + " " + filterCurrency
                                                 : "---"
@@ -1107,19 +1159,18 @@ export default function AdminTransactionsPage() {
                 )
             }
 
+            <ManualDiscountDialog
+                isOpen={isDiscountModalOpen}
+                onClose={() => setIsDiscountModalOpen(false)}
+                onSuccess={() => loadTransactions()}
+            />
+
             <ManualTransactionDialog
                 isOpen={isManualModalOpen}
+                onClose={() => { setIsManualModalOpen(false); setPreSelectedDepositId(null); }}
+                onSuccess={() => loadTransactions()}
                 initialDepositId={preSelectedDepositId}
-                onClose={() => {
-                    setIsManualModalOpen(false)
-                    setPreSelectedDepositId(null)
-                }}
-                onSuccess={() => {
-                    loadTransactions()
-                    setIsManualModalOpen(false)
-                    setPreSelectedDepositId(null)
-                }}
             />
-        </div >
+        </div>
     )
 }
