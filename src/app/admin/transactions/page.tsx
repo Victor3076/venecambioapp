@@ -457,14 +457,15 @@ export default function AdminTransactionsPage() {
                                     })) as any[])
 
                                     const filteredAdjustments = adjustments
-                                        .filter(adj => adj.type === 'withdrawal')
+                                        .filter(adj => adj.type === 'withdrawal' && adj.description?.includes('[MOD_PANEL]'))
                                         .map(adj => ({
                                             ...adj,
                                             display_type: 'adjustment' as const,
                                             amount_sent: adj.amount,
                                             currency_sent: adj.currency,
                                             profiles: { full_name: 'DESCUENTO MANUAL' },
-                                            status: 'completed'
+                                            status: 'completed',
+                                            description: adj.description?.replace('[MOD_PANEL]', '').trim()
                                         }))
 
                                     const combined = [...filteredTransactions, ...filteredAdjustments].filter((item: any) => {

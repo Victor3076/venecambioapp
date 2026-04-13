@@ -36,7 +36,7 @@ export function ManualDiscountDialog({ isOpen, onClose, onSuccess }: ManualDisco
                 amount: numAmount,
                 currency: 'VES',
                 type: 'withdrawal',
-                description: description || "Descuento Manual (VES)"
+                description: (description || "Descuento Manual (VES)") + " [MOD_PANEL]"
             })
             
             toast.success("Descuento registrado con éxito")
