@@ -302,6 +302,55 @@ export default function AdminTransactionsPage() {
         )
     }
 
+    const filteredTransactionsData = (transactions.map(tx => ({
+        ...tx,
+        display_type: 'transaction' as const,
+        deposit: allDeposits.find(d =>
+            d.matched_transaction_id === tx.id ||
+            (tx.group_id && d.matched_transaction_id && transactions.find(t => t.id === d.matched_transaction_id)?.group_id === tx.group_id)
+        )
+    })) as any[])
+
+    const filteredAdjustmentsData = adjustments
+        .filter(adj => adj.type === 'withdrawal' && adj.description?.includes('[MOD_PANEL]'))
+        .map(adj => ({
+            ...adj,
+            display_type: 'adjustment' as const,
+            amount_sent: adj.amount,
+            currency_sent: adj.currency,
+            profiles: { full_name: 'DESCUENTO MANUAL' },
+            status: 'completed',
+            description: adj.description?.replace('[MOD_PANEL]', '').trim()
+        }))
+
+    const combinedItems = [...filteredTransactionsData, ...filteredAdjustmentsData].filter((item: any) => {
+        const matchesStatus = item.display_type === 'adjustment' ? (filterStatus === 'all' || filterStatus === 'completed') : (filterStatus === 'all' || item.status === filterStatus)
+        const matchesCurrency = filterCurrency === 'all' || item.currency_sent === filterCurrency
+        const itemDate = item.created_at ? new Date(item.created_at) : null;
+        let matchesDate = true;
+        if (filterDate && itemDate) {
+            const localDateStr = new Date(itemDate.getTime() - (itemDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+            matchesDate = localDateStr === filterDate;
+        }
+
+        const searchLower = searchTerm.toLowerCase()
+        const matchesSearch = !searchTerm ||
+            item.profiles?.full_name?.toLowerCase().includes(searchLower) ||
+            item.amount_sent?.toString().includes(searchTerm) ||
+            item.id?.toLowerCase().includes(searchLower) ||
+            item.description?.toLowerCase().includes(searchLower) ||
+            (item.display_type === 'transaction' && (
+                item.amount_received?.toString().includes(searchTerm) ||
+                item.currency_received?.toLowerCase().includes(searchLower) ||
+                item.deposit?.bank_name?.toLowerCase().includes(searchLower) ||
+                item.deposit?.reference_number?.toLowerCase().includes(searchLower) ||
+                item.deposit?.notes?.toLowerCase().includes(searchLower) ||
+                `${item.currency_sent} ${item.amount_sent}`.toLowerCase().includes(searchLower)
+            ))
+
+        return matchesStatus && matchesDate && matchesSearch && matchesCurrency
+    }).sort((a, b) => new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime());
+
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -446,62 +495,10 @@ export default function AdminTransactionsPage() {
                             <tbody className="divide-y bg-background">
                                 {loading ? (
                                     <tr><td colSpan={6} className="p-8 text-center text-muted-foreground">Cargando datos...</td></tr>
-                                ) : (() => {
-                                    const filteredTransactions = (transactions.map(tx => ({
-                                        ...tx,
-                                        display_type: 'transaction' as const,
-                                        deposit: allDeposits.find(d =>
-                                            d.matched_transaction_id === tx.id ||
-                                            (tx.group_id && d.matched_transaction_id && transactions.find(t => t.id === d.matched_transaction_id)?.group_id === tx.group_id)
-                                        )
-                                    })) as any[])
-
-                                    const filteredAdjustments = adjustments
-                                        .filter(adj => adj.type === 'withdrawal' && adj.description?.includes('[MOD_PANEL]'))
-                                        .map(adj => ({
-                                            ...adj,
-                                            display_type: 'adjustment' as const,
-                                            amount_sent: adj.amount,
-                                            currency_sent: adj.currency,
-                                            profiles: { full_name: 'DESCUENTO MANUAL' },
-                                            status: 'completed',
-                                            description: adj.description?.replace('[MOD_PANEL]', '').trim()
-                                        }))
-
-                                    const combined = [...filteredTransactions, ...filteredAdjustments].filter((item: any) => {
-                                        const matchesStatus = item.display_type === 'adjustment' ? (filterStatus === 'all' || filterStatus === 'completed') : (filterStatus === 'all' || item.status === filterStatus)
-                                        const matchesCurrency = filterCurrency === 'all' || item.currency_sent === filterCurrency
-                                        const itemDate = item.created_at ? new Date(item.created_at) : null;
-                                        let matchesDate = true;
-                                        if (filterDate && itemDate) {
-                                            const localDateStr = new Date(itemDate.getTime() - (itemDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
-                                            matchesDate = localDateStr === filterDate;
-                                        }
-
-                                        const searchLower = searchTerm.toLowerCase()
-                                        const matchesSearch = !searchTerm ||
-                                            item.profiles?.full_name?.toLowerCase().includes(searchLower) ||
-                                            item.amount_sent?.toString().includes(searchTerm) ||
-                                            item.id?.toLowerCase().includes(searchLower) ||
-                                            item.description?.toLowerCase().includes(searchLower) ||
-                                            (item.display_type === 'transaction' && (
-                                                item.amount_received?.toString().includes(searchTerm) ||
-                                                item.currency_received?.toLowerCase().includes(searchLower) ||
-                                                item.deposit?.bank_name?.toLowerCase().includes(searchLower) ||
-                                                item.deposit?.reference_number?.toLowerCase().includes(searchLower) ||
-                                                item.deposit?.notes?.toLowerCase().includes(searchLower) ||
-                                                `${item.currency_sent} ${item.amount_sent}`.toLowerCase().includes(searchLower)
-                                            ))
-
-                                        return matchesStatus && matchesDate && matchesSearch && matchesCurrency
-                                    }).sort((a, b) => new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime());
-
-                                    if (combined.length === 0) {
-                                        return <tr><td colSpan={6} className="p-8 text-center text-muted-foreground">No hay operaciones que coincidan con los filtros.</td></tr>
-                                    }
-
-                                    return combined.map(item => {
-                                        if (item.display_type === 'adjustment') {
+                                ) : combinedItems.length === 0 ? (
+                                    <tr><td colSpan={6} className="p-8 text-center text-muted-foreground">No hay operaciones que coincidan con los filtros.</td></tr>
+                                ) : combinedItems.map(item => {
+                                    if (item.display_type === 'adjustment') {
                                             return (
                                                 <tr key={item.id} className="hover:bg-red-50/40 transition-colors animate-in fade-in duration-300">
                                                     <td className="p-4 whitespace-nowrap">
@@ -596,7 +593,6 @@ export default function AdminTransactionsPage() {
                                             </tr>
                                         )
                                     })
-                                })()}
                             </tbody>
                             <tfoot className="bg-muted/20 border-t">
                                 <tr>
@@ -606,27 +602,10 @@ export default function AdminTransactionsPage() {
                                     <td className="p-4">
                                         <div className="font-black text-lg text-primary">
                                             {filterCurrency !== 'all'
-                                                ? formatCurrency([...(transactions.map(tx => ({ ...tx, display_type: 'transaction' }))), ...(adjustments.filter(a => a.type === 'withdrawal').map(a => ({ ...a, display_type: 'adjustment' }))) as any]
-                                                    .filter(item => {
-                                                        const matchesStatus = item.display_type === 'adjustment' ? (filterStatus === 'all' || filterStatus === 'completed') : (filterStatus === 'all' || item.status === filterStatus)
-                                                        const matchesCurrency = (item.display_type === 'adjustment' ? item.currency : item.currency_sent) === filterCurrency
-                                                        const itemDate = item.created_at ? new Date(item.created_at) : null;
-                                                        let matchesDate = true;
-                                                        if (filterDate && itemDate) {
-                                                            const localDateStr = new Date(itemDate.getTime() - (itemDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
-                                                            matchesDate = localDateStr === filterDate;
-                                                        }
-
-                                                        const searchLower = searchTerm.toLowerCase()
-                                                        const matchesSearch = !searchTerm ||
-                                                            (item.display_type === 'adjustment' ? 'DESCUENTO MANUAL'.toLowerCase().includes(searchLower) || item.description?.toLowerCase().includes(searchLower) : item.profiles?.full_name?.toLowerCase().includes(searchLower)) ||
-                                                            (item.display_type === 'adjustment' ? item.amount.toString().includes(searchTerm) : item.amount_sent.toString().includes(searchTerm))
-
-                                                        return matchesStatus && matchesDate && matchesSearch && matchesCurrency
-                                                    })
+                                                ? formatCurrency(combinedItems
                                                     .reduce((sum, item) => {
                                                         if (item.display_type === 'adjustment') {
-                                                            return sum - Number(item.amount)
+                                                            return sum - Number(item.amount_sent)
                                                         }
                                                         return sum + Number(item.amount_sent)
                                                     }, 0),
