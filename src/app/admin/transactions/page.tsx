@@ -593,6 +593,7 @@ export default function AdminTransactionsPage() {
                                             </tr>
                                         )
                                     })
+                                }
                             </tbody>
                             <tfoot className="bg-muted/20 border-t">
                                 <tr>
