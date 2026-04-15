@@ -291,7 +291,7 @@ export const TransactionsService = {
         return data as Transaction
     },
 
-    subscribe(callback: () => void) {
+    subscribe(callback: (payload: any) => void) {
         const uniqueId = Math.random().toString(36).substring(2, 9)
         const channel = supabase
             .channel(`admin-txs-${uniqueId}`)
@@ -300,7 +300,7 @@ export const TransactionsService = {
                 { event: '*', schema: 'public', table: 'transactions' },
                 (payload) => {
                     console.log('TX Change detected:', payload.eventType)
-                    callback()
+                    callback(payload)
                 }
             )
             .subscribe((status) => {

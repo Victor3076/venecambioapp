@@ -104,8 +104,27 @@ export default function AdminTransactionsPage() {
             }
         })
 
+        const playAlertSound = () => {
+            try {
+                const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3')
+                audio.volume = 0.5
+                audio.play().catch(e => console.warn("Auto-play blocked or sound failed:", e))
+            } catch (e) {
+                console.error("Error playing sound:", e)
+            }
+        }
+
         // Real-time subscriptions - with silent refreshes to avoid UI flicker
-        const unsubTransactions = TransactionsService.subscribe(() => {
+        const unsubTransactions = TransactionsService.subscribe((payload) => {
+            if (payload.eventType === 'INSERT') {
+                playAlertSound()
+                const newTx = payload.new
+                toast.info(`🔔 NUEVA OPERACIÓN: ${newTx.amount_sent} ${newTx.currency_sent}`, {
+                    description: "Se ha cargado una nueva operación para revisar.",
+                    duration: 10000,
+                    position: 'top-right'
+                })
+            }
             loadTransactions(true)
         })
 
