@@ -9,7 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Eye, Check, X, ImageIcon, Upload, ClipboardPaste, ArrowLeft, Copy, User, Landmark, CreditCard, Mail, Phone, Hash, Search, FileUp, Plus, AlertCircle, Trash2, MessageCircle, TrendingDown } from "lucide-react"
+import { Eye, Check, X, ImageIcon, Upload, ClipboardPaste, ArrowLeft, Copy, User, Landmark, CreditCard, Mail, Phone, Hash, Search, FileUp, Plus, AlertCircle, Trash2, MessageCircle, TrendingDown, Volume2 } from "lucide-react"
+import { useRef } from "react"
 import { supabase } from "@/lib/supabase"
 import Link from "next/link"
 import { formatCurrency } from "@/lib/rates-utils"
@@ -43,6 +44,14 @@ export default function AdminTransactionsPage() {
     const [vesPaymentMethod, setVesPaymentMethod] = useState<'mismo_banco' | 'otros_bancos' | 'pago_movil'>('mismo_banco')
     const [showWhatsAppPrompt, setShowWhatsAppPrompt] = useState(false)
     const [pendingProofUrl, setPendingProofUrl] = useState<string | null>(null)
+    const audioRef = useRef<HTMLAudioElement | null>(null)
+
+    useEffect(() => {
+        // Pre-load audio for better responsiveness and to bypass some browser restrictions
+        audioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3')
+        audioRef.current.volume = 0.5
+        audioRef.current.load()
+    }, [])
 
 
     useEffect(() => {
@@ -105,20 +114,25 @@ export default function AdminTransactionsPage() {
         })
 
         const playAlertSound = () => {
+            if (!audioRef.current) return
             try {
-                // Use a standard notification sound
-                const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3')
-                audio.volume = 0.5
-                const playPromise = audio.play();
+                // Rewind to start if already playing
+                audioRef.current.currentTime = 0
+                const playPromise = audioRef.current.play()
                 
                 if (playPromise !== undefined) {
                     playPromise.catch(error => {
-                        console.warn("Audio playback was prevented by the browser. Interaction required.", error);
-                    });
+                        console.warn("Audio playback was prevented by the browser. Interaction required.", error)
+                    })
                 }
             } catch (e) {
                 console.error("Error playing sound:", e)
             }
+        }
+
+        const handleManualSoundTest = () => {
+            playAlertSound()
+            toast.success("Prueba de sonido enviada. Si no escuchaste nada, revisa el volumen o los permisos del navegador.")
         }
 
         // Real-time subscriptions - with silent refreshes to avoid UI flicker
@@ -397,7 +411,17 @@ export default function AdminTransactionsPage() {
                     </Link>
                     <div>
                         <h1 className="text-3xl font-bold">Panel de Operaciones</h1>
-                        <p className="text-muted-foreground">Gestiona las remesas entrantes y aprueba pagos.</p>
+                        <div className="flex items-center gap-2">
+                            <p className="text-muted-foreground">Gestiona las remesas entrantes y aprueba pagos.</p>
+                            <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-6 px-2 text-[10px] text-primary hover:bg-primary/10 flex items-center gap-1 opacity-60 hover:opacity-100"
+                                onClick={handleManualSoundTest}
+                            >
+                                <Volume2 className="w-3 h-3" /> Probar Sonido
+                            </Button>
+                        </div>
                     </div>
                 </div>
                 <div className="flex gap-2">
