@@ -265,7 +265,7 @@ export default function NewTransactionPage() {
 
     const totalToPay = pendingTransfers.reduce((sum, t) => sum + t.amountSent, 0)
 
-    const handleCreateTransaction = async (transfersOverride?: any[]) => {
+    const handleCreateTransaction = async (transfersOverride?: any[], proofUrl?: string) => {
         const transfersToProcess = transfersOverride || pendingTransfers
         if (transfersToProcess.length === 0 || !rates) return
 
@@ -286,6 +286,7 @@ export default function NewTransactionPage() {
                 exchange_rate: t.rate,
                 profit_percentage,
                 profit_amount: ((t.amountSent * profit_percentage) / 100) / sourceUsdtPrice,
+                payment_proof_url: proofUrl,
                 beneficiary_data: {
                     alias: t.account.alias,
                     country: t.account.country,
@@ -340,19 +341,19 @@ export default function NewTransactionPage() {
                         return
                     }
 
-                    // 1. Create the transaction records first in the DB
-                    console.log("Creating transaction record in DB...")
-                    const txId = await handleCreateTransaction()
+                    // 1. Upload the file first
+                    console.log("Uploading proof to storage...")
+                    const proofUrl = await TransactionsService.uploadProofBeforeCreation(fileToUpload)
+                    console.log("Upload successful, URL:", proofUrl)
+
+                    // 2. Create the transaction records with the URL
+                    console.log("Creating transaction records in DB...")
+                    const txId = await handleCreateTransaction(undefined, proofUrl)
 
                     if (!txId) {
                         throw new Error("No se pudo iniciar la transacción")
                     }
-                    console.log("Transaction record created:", txId)
-
-                    // 2. Upload the file
-                    console.log("Uploading proof to storage...")
-                    await TransactionsService.uploadProof(fileToUpload, txId)
-                    console.log("Upload complete!")
+                    console.log("Transaction created successfully:", txId)
 
                     setStep(4)
                 })(),

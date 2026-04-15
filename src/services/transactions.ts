@@ -132,6 +132,28 @@ export const TransactionsService = {
         return publicUrl
     },
 
+    async uploadProofBeforeCreation(file: File) {
+        const fileExt = file.name.split('.').pop()
+        const uuid = typeof crypto !== 'undefined' && crypto.randomUUID
+            ? crypto.randomUUID()
+            : Math.random().toString(36).substring(2) + Date.now().toString(36)
+
+        const fileName = `${uuid}.${fileExt}`
+        const filePath = `proofs/pre-upload/${fileName}`
+
+        const { error: uploadError } = await supabase.storage
+            .from('payments')
+            .upload(filePath, file)
+
+        if (uploadError) throw uploadError
+
+        const { data } = supabase.storage
+            .from('payments')
+            .getPublicUrl(filePath)
+
+        return data.publicUrl
+    },
+
     async getAll() {
         const { data, error } = await supabase
             .from('transactions')
