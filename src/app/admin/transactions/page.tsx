@@ -53,6 +53,23 @@ export default function AdminTransactionsPage() {
         audioRef.current.load()
     }, [])
 
+    const playAlertSound = () => {
+        if (!audioRef.current) return
+        try {
+            // Rewind to start if already playing
+            audioRef.current.currentTime = 0
+            const playPromise = audioRef.current.play()
+            
+            if (playPromise !== undefined) {
+                playPromise.catch(error => {
+                    console.warn("Audio playback was prevented by the browser. Interaction required.", error)
+                })
+            }
+        } catch (e) {
+            console.error("Error playing sound:", e)
+        }
+    }
+
 
     useEffect(() => {
         if (selectedTx && selectedTx.status === 'verifying') {
@@ -102,6 +119,11 @@ export default function AdminTransactionsPage() {
         setIsReconciliationOpen(false)
     }
 
+    const handleManualSoundTest = () => {
+        playAlertSound()
+        toast.success("Prueba de sonido enviada. Si no escuchaste nada, revisa el volumen o los permisos del navegador.")
+    }
+
     useEffect(() => {
         loadTransactions()
 
@@ -112,28 +134,6 @@ export default function AdminTransactionsPage() {
                     .then(({ data }) => setUserRole(data?.role || null))
             }
         })
-
-        const playAlertSound = () => {
-            if (!audioRef.current) return
-            try {
-                // Rewind to start if already playing
-                audioRef.current.currentTime = 0
-                const playPromise = audioRef.current.play()
-                
-                if (playPromise !== undefined) {
-                    playPromise.catch(error => {
-                        console.warn("Audio playback was prevented by the browser. Interaction required.", error)
-                    })
-                }
-            } catch (e) {
-                console.error("Error playing sound:", e)
-            }
-        }
-
-        const handleManualSoundTest = () => {
-            playAlertSound()
-            toast.success("Prueba de sonido enviada. Si no escuchaste nada, revisa el volumen o los permisos del navegador.")
-        }
 
         // Real-time subscriptions - with silent refreshes to avoid UI flicker
         const unsubTransactions = TransactionsService.subscribe((payload) => {
