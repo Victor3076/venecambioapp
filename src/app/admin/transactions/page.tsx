@@ -106,9 +106,16 @@ export default function AdminTransactionsPage() {
 
         const playAlertSound = () => {
             try {
+                // Use a standard notification sound
                 const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3')
                 audio.volume = 0.5
-                audio.play().catch(e => console.warn("Auto-play blocked or sound failed:", e))
+                const playPromise = audio.play();
+                
+                if (playPromise !== undefined) {
+                    playPromise.catch(error => {
+                        console.warn("Audio playback was prevented by the browser. Interaction required.", error);
+                    });
+                }
             } catch (e) {
                 console.error("Error playing sound:", e)
             }
@@ -116,14 +123,23 @@ export default function AdminTransactionsPage() {
 
         // Real-time subscriptions - with silent refreshes to avoid UI flicker
         const unsubTransactions = TransactionsService.subscribe((payload) => {
-            if (payload.eventType === 'INSERT') {
-                playAlertSound()
-                const newTx = payload.new
+            console.log('Real-time Payload Received:', payload);
+            
+            // Check for INSERT event (handle potential case differences)
+            const isInsert = payload.eventType?.toUpperCase() === 'INSERT' || payload.event?.toUpperCase() === 'INSERT';
+            
+            if (isInsert) {
+                console.log('New transaction detected, triggering alert...');
+                playAlertSound();
+                
+                const newTx = payload.new;
+                const clientName = newTx.profiles?.full_name || 'Nuevo Cliente';
+                
                 toast.info(`🔔 NUEVA OPERACIÓN: ${newTx.amount_sent} ${newTx.currency_sent}`, {
-                    description: "Se ha cargado una nueva operación para revisar.",
-                    duration: 10000,
-                    position: 'top-right'
-                })
+                    description: `De ${clientName}. Se ha cargado una nueva operación para revisar.`,
+                    duration: 15000,
+                    position: 'top-right',
+                });
             }
             loadTransactions(true)
         })
