@@ -35,6 +35,7 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDep
     const [sourceCurrency, setSourceCurrency] = useState("CLP")
     const [targetCurrency, setTargetCurrency] = useState("VES")
     const [amountSent, setAmountSent] = useState("100.000")
+    const [amountSentRaw, setAmountSentRaw] = useState<string | null>(null) // null means not editing
     const [amountReceived, setAmountReceived] = useState("0")
     const [exchangeRate, setExchangeRate] = useState(0)
     const [reconcileNow, setReconcileNow] = useState(false)
@@ -55,6 +56,7 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDep
             setSelectedAccount(null)
             setUserSearch("")
             setAmountSent("") // Reset amountSent
+            setAmountSentRaw(null)
             setReconcileNow(!!initialDepositId) // Set reconcileNow based on initialDepositId
             setSelectedDepositId(initialDepositId || null)
             setShowRegisterForm(false)
@@ -79,6 +81,7 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDep
             setSelectedUser(null)
             setSelectedAccount(null)
             setUserSearch("")
+            setAmountSentRaw(null)
             setSelectedDepositId(null)
             setReconcileNow(true)
             setShowRegisterForm(false)
@@ -437,14 +440,26 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDep
                                         Envía ({sourceCurrency === 'PEN' ? 'Soles' : (sourceCurrency === 'CLP' ? 'Pesos' : (sourceCurrency === 'COP' ? 'Pesos' : sourceCurrency))})
                                     </label>
                                     <Input
-                                        value={amountSent}
+                                        value={amountSentRaw !== null ? amountSentRaw : amountSent}
                                         onChange={(e) => {
-                                            const rawValue = e.target.value;
-                                            // Allow only numbers and punctuation for formatting
-                                            const cleanValue = rawValue.replace(/[^0-9.,]/g, '');
-                                            const numericValue = parseFormattedNumber(cleanValue);
-                                            setAmountSent(formatCurrency(numericValue, sourceCurrency));
+                                            // Only allow digits, dots, and commas while typing
+                                            const cleaned = e.target.value.replace(/[^0-9.,]/g, '')
+                                            setAmountSentRaw(cleaned)
                                         }}
+                                        onFocus={() => {
+                                            // Show raw numeric value (no formatting) when field is focused
+                                            const numeric = parseFormattedNumber(amountSent)
+                                            setAmountSentRaw(numeric > 0 ? String(numeric) : '')
+                                        }}
+                                        onBlur={() => {
+                                            // Format and commit when leaving the field
+                                            if (amountSentRaw !== null) {
+                                                const numericValue = parseFormattedNumber(amountSentRaw)
+                                                setAmountSent(formatCurrency(numericValue, sourceCurrency))
+                                                setAmountSentRaw(null)
+                                            }
+                                        }}
+                                        inputMode="decimal"
                                         className="text-lg font-bold border-2 focus:border-primary"
                                     />
                                 </div>
