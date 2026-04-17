@@ -394,7 +394,8 @@ export default function AdminTransactionsPage() {
                 item.deposit?.bank_name?.toLowerCase().includes(searchLower) ||
                 item.deposit?.reference_number?.toLowerCase().includes(searchLower) ||
                 item.deposit?.notes?.toLowerCase().includes(searchLower) ||
-                `${item.currency_sent} ${item.amount_sent}`.toLowerCase().includes(searchLower)
+                `${item.currency_sent} ${item.amount_sent}`.toLowerCase().includes(searchLower) ||
+                (!item.deposit && 'sin conciliar'.includes(searchLower))
             ))
 
         return matchesStatus && matchesDate && matchesSearch && matchesCurrency
