@@ -12,6 +12,7 @@ import { Plus, Search, RefreshCw, ArrowLeft, Check, X, Pencil, Trash2 } from "lu
 import Link from "next/link"
 import { CURRENCY_LABELS, SUPPORTED_REGIONS } from "@/lib/constants"
 import { formatCurrency } from "@/lib/rates-utils"
+import { ManualTransactionDialog } from "@/components/admin/manual-transaction-dialog"
 
 export default function BankDepositsPage() {
     const [deposits, setDeposits] = useState<BankDeposit[]>([])
@@ -32,6 +33,7 @@ export default function BankDepositsPage() {
     const [pendingTransactions, setPendingTransactions] = useState<(Transaction & { profiles: { email: string, full_name: string } })[]>([])
     const [matching, setMatching] = useState(false)
     const [txSearchTerm, setTxSearchTerm] = useState("")
+    const [isManualDialogOpen, setIsManualDialogOpen] = useState(false)
 
     const loadDeposits = async () => {
         setLoading(true)
@@ -344,12 +346,26 @@ export default function BankDepositsPage() {
                     transactions={pendingTransactions}
                     onClose={() => setSelectedDeposit(null)}
                     onMatch={handleMatch}
+                    onCreateManual={() => setIsManualDialogOpen(true)}
                     matching={matching}
                     searchTerm={txSearchTerm}
                     setSearchTerm={setTxSearchTerm}
                 />
             )
             }
+
+            {selectedDeposit && (
+                <ManualTransactionDialog
+                    isOpen={isManualDialogOpen}
+                    onClose={() => setIsManualDialogOpen(false)}
+                    initialDepositId={selectedDeposit.id}
+                    onSuccess={() => {
+                        setSelectedDeposit(null)
+                        setIsManualDialogOpen(false)
+                        loadDeposits()
+                    }}
+                />
+            )}
         </div >
     )
 }
@@ -361,12 +377,14 @@ function ReconciliationModal({
     onMatch,
     matching,
     searchTerm,
-    setSearchTerm
+    setSearchTerm,
+    onCreateManual
 }: {
     deposit: BankDeposit,
     transactions: (Transaction & { profiles: { email: string, full_name: string } })[],
     onClose: () => void,
     onMatch: (txId: string) => void,
+    onCreateManual: () => void,
     matching: boolean,
     searchTerm: string,
     setSearchTerm: (s: string) => void
@@ -428,7 +446,17 @@ function ReconciliationModal({
                     </div>
 
                     <div className="space-y-2">
-                        <h4 className="text-sm font-medium text-muted-foreground">Operaciones Pendientes ({filteredTxs.length})</h4>
+                        <div className="flex justify-between items-center">
+                            <h4 className="text-sm font-medium text-muted-foreground">Operaciones Pendientes ({filteredTxs.length})</h4>
+                            <Button
+                                variant="destructive"
+                                size="sm"
+                                className="h-8 text-[10px] font-bold bg-red-600 hover:bg-red-700 animate-pulse"
+                                onClick={onCreateManual}
+                            >
+                                <Plus className="w-3 h-3 mr-1" /> Crear operación nueva (WhatsApp)
+                            </Button>
+                        </div>
                         {filteredTxs.length === 0 ? (
                             <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
                                 {transactions.length === 0 ? "No hay operaciones pendientes para revisar." : "No se encontraron operaciones coincidentes."}
