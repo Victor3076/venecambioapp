@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Logo } from "@/components/logo"
-import { CheckCircle2, ShieldCheck, Zap, Download, Phone, Globe, Smartphone, MousePointer2 } from "lucide-react"
+import { CheckCircle2, ShieldCheck, Zap, Download, Phone, Globe, Smartphone, MousePointer2, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export default function AdminMarketingPage() {
