@@ -2,7 +2,7 @@
 // v1.1 - Added Manual Cuadre (CL)
 
 import Link from "next/link"
-import { BarChart3, List, Settings, LogOut, LayoutDashboard, Wallet, TrendingUp, Bell, Menu, X, Scale } from "lucide-react"
+import { BarChart3, List, Settings, LogOut, LayoutDashboard, Wallet, TrendingUp, Bell, Menu, X, Scale, Megaphone } from "lucide-react"
 import { NotificationBell } from "@/components/NotificationBell"
 import { Button } from "@/components/ui/button"
 import { supabase } from "@/lib/supabase"
@@ -83,6 +83,7 @@ export default function AdminLayout({
         { href: "/admin/manual-cuadre", icon: CLIcon, label: "Cierre CL", adminOnly: true },
         { href: "/admin/notifications", icon: Bell, label: "Notificaciones" },
         { href: "/admin/profits", icon: TrendingUp, label: "Ganancias", adminOnly: true },
+        { href: "/admin/marketing", icon: Megaphone, label: "Marketing" },
     ].filter(item => !item.adminOnly || role === 'admin')
 
     return (
