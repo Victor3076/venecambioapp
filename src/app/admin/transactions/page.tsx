@@ -310,6 +310,60 @@ export default function AdminTransactionsPage() {
         window.open(whatsappUrl, '_blank')
     }
 
+    const handleShareNative = async (overrideProofUrl?: string) => {
+        if (!selectedTx) return
+        const proofUrl = overrideProofUrl ?? pendingProofUrl ?? selectedTx.completion_proof_url
+        const beneficiary = selectedTx.beneficiary_data?.alias || selectedTx.beneficiary_data?.account_number || ''
+        const appUrl = "https://venecambio.com"
+
+        const messageText = [
+            `✅ *Operación Completada - VeneCambio*`,
+            ``,
+            `👤 *Cliente:* ${selectedTx.profiles?.full_name || 'Cliente'}`,
+            `📤 *Enviaste:* ${formatCurrency(selectedTx.amount_sent, selectedTx.currency_sent)} ${selectedTx.currency_sent}`,
+            `📥 *Recibiste:* ${formatCurrency(selectedTx.amount_received, selectedTx.currency_received)} ${selectedTx.currency_received}`,
+            `💱 *Tasa:* ${selectedTx.exchange_rate}`,
+            beneficiary ? `🏦 *Beneficiario:* ${beneficiary}` : '',
+            ``,
+            `📲 *Consulta tu historial en:* ${appUrl}/dashboard/transactions`,
+            ``,
+            `_¡Gracias por confiar en VeneCambio!_`,
+        ].filter(line => line !== '').join('\n')
+
+        // Fallback if no image or no navigator.share
+        if (!proofUrl || !navigator.share) {
+            handleShareWhatsApp(overrideProofUrl)
+            return
+        }
+
+        try {
+            toast.promise(async () => {
+                const response = await fetch(proofUrl)
+                const blob = await response.blob()
+                const file = new File([blob], `comprobante-${selectedTx.id?.split('-')[0]}.jpg`, { type: blob.type })
+
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({
+                        files: [file],
+                        title: 'Comprobante VeneCambio',
+                        text: messageText,
+                    })
+                } else {
+                    throw new Error("Su navegador no permite compartir archivos")
+                }
+            }, {
+                loading: 'Preparando imagen para compartir...',
+                success: 'Menú de compartir abierto',
+                error: (err) => {
+                    handleShareWhatsApp(overrideProofUrl)
+                    return `Error: ${err.message || 'No se pudo compartir la imagen'}. Usando link de texto.`
+                }
+            })
+        } catch (error) {
+            handleShareWhatsApp(overrideProofUrl)
+        }
+    }
+
     const handleDelete = async (id: string) => {
         if (!confirm("¿Esta seguro de eliminar esta operacion?")) return
 
@@ -909,14 +963,31 @@ export default function AdminTransactionsPage() {
                                             </div>
 
                                             {selectedTx.status === 'completed' && selectedTx.completion_proof_url && (
-                                                <div className="mt-2 pt-3 border-t">
+                                                <div className="flex flex-col gap-3">
+                                                    <div className="flex gap-2">
+                                                        <Button
+                                                            className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold"
+                                                            onClick={() => handleShareNative()}
+                                                        >
+                                                            <MessageCircle className="w-4 h-4 mr-2" />
+                                                            Compartir Imagen (WhatsApp)
+                                                        </Button>
+                                                        <Button
+                                                            variant="outline"
+                                                            className="text-green-700 border-green-200"
+                                                            onClick={() => handleShareWhatsApp()}
+                                                            title="Compartir solo link"
+                                                        >
+                                                            <Copy className="w-4 h-4" />
+                                                        </Button>
+                                                    </div>
                                                     <Button
                                                         variant="outline"
-                                                        className="w-full h-11 bg-green-50 border-green-300 text-green-800 hover:bg-green-100 hover:text-green-900 font-bold"
-                                                        onClick={() => handleShareWhatsApp()}
+                                                        className="w-full text-red-600 border-red-100 hover:bg-red-50"
+                                                        onClick={() => handleDelete(selectedTx.id!)}
+                                                        disabled={isUploading}
                                                     >
-                                                        <MessageCircle className="w-4 h-4 mr-2 fill-green-600 text-green-600" />
-                                                        Compartir Comprobante por WhatsApp
+                                                        <Trash2 className="w-4 h-4 mr-2" /> Eliminar Operación
                                                     </Button>
                                                 </div>
                                             )}
@@ -979,40 +1050,58 @@ export default function AdminTransactionsPage() {
             {/* WhatsApp Share Prompt - appears after completing a transaction */}
             {showWhatsAppPrompt && selectedTx && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 animate-in zoom-in-95 duration-200 text-center space-y-4">
-                        <div className="mx-auto w-14 h-14 bg-green-100 rounded-full flex items-center justify-center">
-                            <MessageCircle className="w-7 h-7 text-green-600 fill-green-100" />
-                        </div>
-                        <div>
-                            <h3 className="text-lg font-bold text-gray-900">¿Compartir por WhatsApp?</h3>
-                            <p className="text-sm text-muted-foreground mt-1">
-                                Envíale el comprobante y el enlace a la app a <span className="font-semibold text-gray-700">{selectedTx.profiles?.full_name || 'el cliente'}</span>.
-                            </p>
-                        </div>
-                        <div className="flex flex-col gap-2 pt-2">
-                            <Button
-                                className="w-full h-11 bg-green-500 hover:bg-green-600 text-white font-bold text-base"
-                                onClick={() => {
-                                    handleShareWhatsApp()
-                                    setShowWhatsAppPrompt(false)
-                                    setSelectedTx(null)
-                                }}
-                            >
-                                <MessageCircle className="w-4 h-4 mr-2" />
-                                Sí, compartir
-                            </Button>
-                            <Button
-                                variant="ghost"
-                                className="w-full h-10 text-muted-foreground"
-                                onClick={() => {
-                                    setShowWhatsAppPrompt(false)
-                                    setSelectedTx(null)
-                                }}
-                            >
-                                No, cerrar
-                            </Button>
-                        </div>
-                    </div>
+                    <Card className="w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200">
+                        <CardContent className="p-6 space-y-6">
+                            <div className="flex flex-col items-center text-center space-y-2">
+                                <div className="bg-green-100 p-3 rounded-full text-green-600">
+                                    <Check className="w-8 h-8" />
+                                </div>
+                                <h3 className="text-xl font-bold">¡Operación Completada!</h3>
+                                <p className="text-sm text-muted-foreground">La operación ha sido procesada exitosamente. ¿Deseas compartir el comprobante con el cliente ahora?</p>
+                            </div>
+
+                            <div className="space-y-3">
+                                <Button
+                                    className="w-full bg-green-600 hover:bg-green-700 text-white h-12 text-base font-bold shadow-lg shadow-green-200"
+                                    onClick={() => {
+                                        handleShareNative(pendingProofUrl!)
+                                        setShowWhatsAppPrompt(false)
+                                        setSelectedTx(null)
+                                        setPendingProofUrl(null)
+                                    }}
+                                >
+                                    <ImageIcon className="w-5 h-5 mr-2" />
+                                    COMPARTIR COMPROBANTE (Imagen)
+                                </Button>
+
+                                <Button
+                                    variant="outline"
+                                    className="w-full h-11 text-green-700 border-green-200 hover:bg-green-50"
+                                    onClick={() => {
+                                        handleShareWhatsApp(pendingProofUrl!)
+                                        setShowWhatsAppPrompt(false)
+                                        setSelectedTx(null)
+                                        setPendingProofUrl(null)
+                                    }}
+                                >
+                                    <MessageCircle className="w-4 h-4 mr-2" />
+                                    Enviar solo link de texto
+                                </Button>
+
+                                <Button
+                                    variant="ghost"
+                                    className="w-full h-10 text-muted-foreground"
+                                    onClick={() => {
+                                        setShowWhatsAppPrompt(false)
+                                        setSelectedTx(null)
+                                        setPendingProofUrl(null)
+                                    }}
+                                >
+                                    Cerrar sin compartir
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
                 </div>
             )}
 
