@@ -415,16 +415,26 @@ export default function AdminTransactionsPage() {
     })) as any[])
 
     const filteredAdjustmentsData = adjustments
-        .filter(adj => adj.type === 'withdrawal' && (adj.description?.includes('[MOD_PANEL]') || adj.description?.includes('Comisión bancaria')))
+        .filter(adj => adj.type === 'withdrawal' && adj.description?.includes('[MOD_PANEL]'))
         .map(adj => ({
             ...adj,
             display_type: 'adjustment' as const,
             amount_sent: adj.amount,
             currency_sent: adj.currency,
-            profiles: { full_name: 'DESCUENTO / COMISIÓN' },
+            profiles: { full_name: 'DESCUENTO MANUAL' },
             status: 'completed',
             description: adj.description?.replace('[MOD_PANEL]', '').trim()
         }))
+
+    // Calculate hidden automated fees for the total
+    const hiddenAutomatedFeesSum = adjustments
+        .filter(adj => 
+            adj.type === 'withdrawal' && 
+            adj.description?.includes('Comisión bancaria') &&
+            (!dateFilter || (adj.created_at && new Date(adj.created_at).toLocaleDateString('en-CA') === dateFilter)) &&
+            (filterCurrency === 'all' || adj.currency === filterCurrency)
+        )
+        .reduce((sum, adj) => sum + Number(adj.amount), 0)
 
     const combinedItems = [...filteredTransactionsData, ...filteredAdjustmentsData].filter((item: any) => {
         const matchesStatus = item.display_type === 'adjustment' ? (filterStatus === 'all' || filterStatus === 'completed') : (filterStatus === 'all' || item.status === filterStatus)
@@ -723,12 +733,17 @@ export default function AdminTransactionsPage() {
                                                             return sum - Number(item.amount_sent)
                                                         }
                                                         return sum + Number(item.amount_sent)
-                                                    }, 0),
+                                                    }, 0) - hiddenAutomatedFeesSum,
                                                     filterCurrency
                                                 ) + " " + filterCurrency
                                                 : "---"
                                             }
                                         </div>
+                                        {filterCurrency !== 'all' && hiddenAutomatedFeesSum > 0 && (
+                                            <div className="text-[10px] text-muted-foreground font-normal mt-1 italic">
+                                                (Incluye -{formatCurrency(hiddenAutomatedFeesSum, filterCurrency)} en comisiones bancarias ocultas)
+                                            </div>
+                                        )}
                                     </td>
                                     <td colSpan={3}>
                                         {filterCurrency === 'all' && <span className="text-[10px] text-muted-foreground italic">Filtra por moneda para ver el total</span>}
