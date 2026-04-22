@@ -431,7 +431,7 @@ export default function AdminTransactionsPage() {
         .filter(adj => 
             adj.type === 'withdrawal' && 
             adj.description?.includes('Comisión bancaria') &&
-            (!dateFilter || (adj.created_at && new Date(adj.created_at).toLocaleDateString('en-CA') === dateFilter)) &&
+            (!filterDate || (adj.created_at && new Date(adj.created_at).toLocaleDateString('en-CA') === filterDate)) &&
             (filterCurrency === 'all' || adj.currency === filterCurrency)
         )
         .reduce((sum, adj) => sum + Number(adj.amount), 0)
