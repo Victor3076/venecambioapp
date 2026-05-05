@@ -32,7 +32,7 @@ export default function AdminTransactionsPage() {
     const [isReconciliationOpen, setIsReconciliationOpen] = useState(false)
     const [searchTerm, setSearchTerm] = useState("")
     const [matching, setMatching] = useState(false)
-    const [filterDate, setFilterDate] = useState(new Date().toLocaleDateString('en-CA'))
+    const [filterDate, setFilterDate] = useState('')
     const [filterStatus, setFilterStatus] = useState<Transaction['status'] | 'all'>('all')
     const [filterCurrency, setFilterCurrency] = useState<string>('all')
     const [isManualModalOpen, setIsManualModalOpen] = useState(false)
@@ -596,7 +596,7 @@ export default function AdminTransactionsPage() {
                     </div>
                 </div>
                 <div className="flex justify-end mt-4">
-                    <Button variant="ghost" size="sm" onClick={() => { setFilterDate(new Date().toISOString().split('T')[0]); setFilterStatus("all"); setFilterCurrency("all"); setSearchTerm("") }}>
+                    <Button variant="ghost" size="sm" onClick={() => { setFilterDate(''); setFilterStatus("all"); setFilterCurrency("all"); setSearchTerm("") }}>
                         Limpiar Filtros
                     </Button>
                 </div>
