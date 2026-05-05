@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { toast } from "sonner"
 import { compressImage } from "@/lib/image-utils"
 import { TransactionsService, Transaction } from "@/services/transactions"
@@ -407,65 +407,92 @@ export default function AdminTransactionsPage() {
         )
     }
 
-    const filteredTransactionsData = (transactions.map(tx => ({
-        ...tx,
-        display_type: 'transaction' as const,
-        deposit: allDeposits.find(d =>
-            d.matched_transaction_id === tx.id ||
-            (tx.group_id && d.matched_transaction_id && transactions.find(t => t.id === d.matched_transaction_id)?.group_id === tx.group_id)
-        )
-    })) as any[])
+    // Optimization: Pre-calculate lookup maps for O(1) deposit matching
+    const depositLookups = useMemo(() => {
+        const byTxId = new Map<string, BankDeposit>()
+        const byGroupId = new Map<string, BankDeposit>()
+        
+        // Map to quickly find group_id by tx_id
+        const txToGroupMap = new Map<string, string>()
+        transactions.forEach(t => {
+            if (t.id && t.group_id) txToGroupMap.set(t.id, t.group_id)
+        })
 
-    const filteredAdjustmentsData = adjustments
-        .filter(adj => adj.type === 'withdrawal' && adj.description?.includes('[MOD_PANEL]'))
-        .map(adj => ({
-            ...adj,
-            display_type: 'adjustment' as const,
-            amount_sent: adj.amount,
-            currency_sent: adj.currency,
-            profiles: { full_name: 'DESCUENTO MANUAL' },
-            status: 'completed',
-            description: adj.description?.replace('[MOD_PANEL]', '').trim()
+        allDeposits.forEach(d => {
+            if (d.matched_transaction_id) {
+                byTxId.set(d.matched_transaction_id, d)
+                const groupId = txToGroupMap.get(d.matched_transaction_id)
+                if (groupId) byGroupId.set(groupId, d)
+            }
+        })
+        
+        return { byTxId, byGroupId }
+    }, [allDeposits, transactions])
+
+    const filteredTransactionsData = useMemo(() => {
+        return transactions.map(tx => ({
+            ...tx,
+            display_type: 'transaction' as const,
+            deposit: depositLookups.byTxId.get(tx.id!) || (tx.group_id ? depositLookups.byGroupId.get(tx.group_id) : undefined)
         }))
+    }, [transactions, depositLookups])
+
+    const filteredAdjustmentsData = useMemo(() => {
+        return adjustments
+            .filter(adj => adj.type === 'withdrawal' && adj.description?.includes('[MOD_PANEL]'))
+            .map(adj => ({
+                ...adj,
+                display_type: 'adjustment' as const,
+                amount_sent: adj.amount,
+                currency_sent: adj.currency,
+                profiles: { full_name: 'DESCUENTO MANUAL' },
+                status: 'completed',
+                description: adj.description?.replace('[MOD_PANEL]', '').trim()
+            }))
+    }, [adjustments])
 
     // Calculate hidden automated fees for the total
-    const hiddenAutomatedFeesSum = adjustments
-        .filter(adj => 
-            adj.type === 'withdrawal' && 
-            adj.description?.includes('Comisión bancaria') &&
-            (!filterDate || (adj.created_at && new Date(adj.created_at).toLocaleDateString('en-CA') === filterDate)) &&
-            (filterCurrency === 'all' || adj.currency === filterCurrency)
-        )
-        .reduce((sum, adj) => sum + Number(adj.amount), 0)
+    const hiddenAutomatedFeesSum = useMemo(() => {
+        return adjustments
+            .filter(adj => 
+                adj.type === 'withdrawal' && 
+                adj.description?.includes('Comisión bancaria') &&
+                (!filterDate || (adj.created_at && new Date(adj.created_at).toLocaleDateString('en-CA') === filterDate)) &&
+                (filterCurrency === 'all' || adj.currency === filterCurrency)
+            )
+            .reduce((sum, adj) => sum + Number(adj.amount), 0)
+    }, [adjustments, filterDate, filterCurrency])
 
-    const combinedItems = [...filteredTransactionsData, ...filteredAdjustmentsData].filter((item: any) => {
-        const matchesStatus = item.display_type === 'adjustment' ? (filterStatus === 'all' || filterStatus === 'completed') : (filterStatus === 'all' || item.status === filterStatus)
-        const matchesCurrency = filterCurrency === 'all' || item.currency_sent === filterCurrency
-        const itemDate = item.created_at ? new Date(item.created_at) : null;
-        let matchesDate = true;
-        if (filterDate && itemDate) {
-            const localDateStr = new Date(itemDate.getTime() - (itemDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
-            matchesDate = localDateStr === filterDate;
-        }
+    const combinedItems = useMemo(() => {
+        return [...filteredTransactionsData, ...filteredAdjustmentsData].filter((item: any) => {
+            const matchesStatus = item.display_type === 'adjustment' ? (filterStatus === 'all' || filterStatus === 'completed') : (filterStatus === 'all' || item.status === filterStatus)
+            const matchesCurrency = filterCurrency === 'all' || item.currency_sent === filterCurrency
+            const itemDate = item.created_at ? new Date(item.created_at) : null;
+            let matchesDate = true;
+            if (filterDate && itemDate) {
+                const localDateStr = new Date(itemDate.getTime() - (itemDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+                matchesDate = localDateStr === filterDate;
+            }
 
-        const searchLower = searchTerm.toLowerCase()
-        const matchesSearch = !searchTerm ||
-            item.profiles?.full_name?.toLowerCase().includes(searchLower) ||
-            item.amount_sent?.toString().includes(searchTerm) ||
-            item.id?.toLowerCase().includes(searchLower) ||
-            item.description?.toLowerCase().includes(searchLower) ||
-            (item.display_type === 'transaction' && (
-                item.amount_received?.toString().includes(searchTerm) ||
-                item.currency_received?.toLowerCase().includes(searchLower) ||
-                item.deposit?.bank_name?.toLowerCase().includes(searchLower) ||
-                item.deposit?.reference_number?.toLowerCase().includes(searchLower) ||
-                item.deposit?.notes?.toLowerCase().includes(searchLower) ||
-                `${item.currency_sent} ${item.amount_sent}`.toLowerCase().includes(searchLower) ||
-                (!item.deposit && 'sin conciliar'.includes(searchLower))
-            ))
+            const searchLower = searchTerm.toLowerCase()
+            const matchesSearch = !searchTerm ||
+                item.profiles?.full_name?.toLowerCase().includes(searchLower) ||
+                item.amount_sent?.toString().includes(searchTerm) ||
+                item.id?.toLowerCase().includes(searchLower) ||
+                item.description?.toLowerCase().includes(searchLower) ||
+                (item.display_type === 'transaction' && (
+                    item.amount_received?.toString().includes(searchTerm) ||
+                    item.currency_received?.toLowerCase().includes(searchLower) ||
+                    item.deposit?.bank_name?.toLowerCase().includes(searchLower) ||
+                    item.deposit?.reference_number?.toLowerCase().includes(searchLower) ||
+                    item.deposit?.notes?.toLowerCase().includes(searchLower) ||
+                    `${item.currency_sent} ${item.amount_sent}`.toLowerCase().includes(searchLower) ||
+                    (!item.deposit && 'sin conciliar'.includes(searchLower))
+                ))
 
-        return matchesStatus && matchesDate && matchesSearch && matchesCurrency
-    }).sort((a, b) => new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime());
+            return matchesStatus && matchesDate && matchesSearch && matchesCurrency
+        }).sort((a, b) => new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime());
+    }, [filteredTransactionsData, filteredAdjustmentsData, filterStatus, filterCurrency, filterDate, searchTerm])
 
     return (
         <div className="space-y-6">
@@ -1066,8 +1093,15 @@ export default function AdminTransactionsPage() {
 
             {/* WhatsApp Share Prompt - appears after completing a transaction */}
             {showWhatsAppPrompt && selectedTx && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
-                    <Card className="w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200">
+                <div 
+                    className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200"
+                    onClick={() => {
+                        setShowWhatsAppPrompt(false)
+                        setSelectedTx(null)
+                        setPendingProofUrl(null)
+                    }}
+                >
+                    <Card className="w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
                         <CardContent className="p-6 space-y-6">
                             <div className="flex flex-col items-center text-center space-y-2">
                                 <div className="bg-green-100 p-3 rounded-full text-green-600">
