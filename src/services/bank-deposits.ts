@@ -68,14 +68,37 @@ export const BankDepositsService = {
         return data as BankDeposit[]
     },
 
-    async getAll() {
-        const { data, error } = await supabase
-            .from('bank_deposits')
-            .select('*')
-            .order('created_at', { ascending: false })
+    async getAll(filters?: { startDate?: string, endDate?: string }) {
+        let allData: BankDeposit[] = []
+        let from = 0
+        const step = 1000
 
-        if (error) throw error
-        return data as BankDeposit[]
+        while (true) {
+            let query = supabase
+                .from('bank_deposits')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .range(from, from + step - 1)
+
+            if (filters?.startDate) {
+                query = query.gte('created_at', `${filters.startDate}T00:00:00`)
+            }
+            if (filters?.endDate) {
+                query = query.lte('created_at', `${filters.endDate}T23:59:59.999`)
+            }
+
+            const { data, error } = await query
+
+            if (error) throw error
+            if (!data || data.length === 0) break
+
+            allData = [...allData, ...(data as BankDeposit[])]
+            if (data.length < step) break
+            from += step
+            if (from >= 5000) break
+        }
+
+        return allData
     },
 
     async match(depositId: string, transactionId: string) {

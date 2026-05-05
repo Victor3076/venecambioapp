@@ -175,7 +175,7 @@ export default function AdminTransactionsPage() {
         try {
             const [txData, depData, adjData] = await Promise.all([
                 TransactionsService.getAll(filters),
-                BankDepositsService.getAll(),
+                BankDepositsService.getAll(filters),
                 AdjustmentsService.getAll(filters)
             ])
             setTransactions(txData as AdminTx[])
