@@ -154,27 +154,44 @@ export const TransactionsService = {
         return data.publicUrl
     },
 
-    async getAll() {
+    async getAll(filters?: { startDate?: string, endDate?: string }) {
         let allData: any[] = []
         let from = 0
         const step = 1000
 
         while (true) {
-            const { data, error } = await supabase
+            let query = supabase
                 .from('transactions')
                 .select('*, profiles(email, full_name)')
                 .order('created_at', { ascending: false })
                 .range(from, from + step - 1)
 
+            if (filters?.startDate) {
+                query = query.gte('created_at', `${filters.startDate}T00:00:00`)
+            }
+            if (filters?.endDate) {
+                query = query.lte('created_at', `${filters.endDate}T23:59:59.999`)
+            }
+
+            const { data, error } = await query
+
             if (error) {
                 console.error('Error de Supabase (con join):', JSON.stringify(error, null, 2))
 
-                // Reintento sin el JOIN para ver si al menos cargan los datos básicos
-                const { data: fallbackData, error: fallbackError } = await supabase
+                let fallbackQuery = supabase
                     .from('transactions')
                     .select('*')
                     .order('created_at', { ascending: false })
                     .range(from, from + step - 1)
+
+                if (filters?.startDate) {
+                    fallbackQuery = fallbackQuery.gte('created_at', `${filters.startDate}T00:00:00`)
+                }
+                if (filters?.endDate) {
+                    fallbackQuery = fallbackQuery.lte('created_at', `${filters.endDate}T23:59:59.999`)
+                }
+
+                const { data: fallbackData, error: fallbackError } = await fallbackQuery
 
                 if (fallbackError) {
                     console.error('Error fatal (sin join):', fallbackError)
@@ -190,6 +207,10 @@ export const TransactionsService = {
 
             from += step
             if (from >= 5000) break // Safety limit
+            if (filters?.startDate || filters?.endDate) {
+                 // If filtering by date, we still might have many records for a range,
+                 // but we'll stop after 5000 for safety.
+            }
         }
 
         return allData

@@ -32,11 +32,11 @@ export default function AdminProfitsPage() {
         setLoading(true)
         try {
             const [data, latestRates] = await Promise.all([
-                TransactionsService.getAll(),
+                TransactionsService.getAll({ startDate, endDate }),
                 RatesService.getLatest()
             ])
 
-            // Filter by date range if selected
+            // Filter by date range if selected (additional client-side safety)
             let rawTxs = data as Transaction[]
             if (startDate || endDate) {
                 rawTxs = rawTxs.filter(tx => {
