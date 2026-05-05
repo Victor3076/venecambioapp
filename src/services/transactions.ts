@@ -159,6 +159,7 @@ export const TransactionsService = {
             .from('transactions')
             .select('*, profiles(email, full_name)')
             .order('created_at', { ascending: false })
+            .range(0, 5000)
 
         if (error) {
             console.error('Error de Supabase (con join):', JSON.stringify(error, null, 2))
