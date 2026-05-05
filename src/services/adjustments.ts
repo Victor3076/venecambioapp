@@ -29,13 +29,27 @@ export const AdjustmentsService = {
     },
 
     async getAll() {
-        const { data, error } = await supabase
-            .from('cashflow_adjustments')
-            .select('*')
-            .order('created_at', { ascending: false })
+        let allData: CashflowAdjustment[] = []
+        let from = 0
+        const step = 1000
 
-        if (error) throw error
-        return data as CashflowAdjustment[]
+        while (true) {
+            const { data, error } = await supabase
+                .from('cashflow_adjustments')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .range(from, from + step - 1)
+
+            if (error) throw error
+            if (!data || data.length === 0) break
+
+            allData = [...allData, ...(data as CashflowAdjustment[])]
+            if (data.length < step) break
+            from += step
+            if (from >= 5000) break
+        }
+
+        return allData
     },
 
     async getByDate() {

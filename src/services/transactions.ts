@@ -155,29 +155,44 @@ export const TransactionsService = {
     },
 
     async getAll() {
-        const { data, error } = await supabase
-            .from('transactions')
-            .select('*, profiles(email, full_name)')
-            .order('created_at', { ascending: false })
-            .range(0, 5000)
+        let allData: any[] = []
+        let from = 0
+        const step = 1000
 
-        if (error) {
-            console.error('Error de Supabase (con join):', JSON.stringify(error, null, 2))
-
-            // Reintento sin el JOIN para ver si al menos cargan los datos básicos
-            const { data: fallbackData, error: fallbackError } = await supabase
+        while (true) {
+            const { data, error } = await supabase
                 .from('transactions')
-                .select('*')
+                .select('*, profiles(email, full_name)')
                 .order('created_at', { ascending: false })
+                .range(from, from + step - 1)
 
-            if (fallbackError) {
-                console.error('Error fatal (sin join):', fallbackError)
-                return []
+            if (error) {
+                console.error('Error de Supabase (con join):', JSON.stringify(error, null, 2))
+
+                // Reintento sin el JOIN para ver si al menos cargan los datos básicos
+                const { data: fallbackData, error: fallbackError } = await supabase
+                    .from('transactions')
+                    .select('*')
+                    .order('created_at', { ascending: false })
+                    .range(from, from + step - 1)
+
+                if (fallbackError) {
+                    console.error('Error fatal (sin join):', fallbackError)
+                    break
+                }
+                
+                allData = [...allData, ...(fallbackData || [])]
+                if (!fallbackData || fallbackData.length < step) break
+            } else {
+                allData = [...allData, ...(data || [])]
+                if (!data || data.length < step) break
             }
-            return fallbackData as any
+
+            from += step
+            if (from >= 5000) break // Safety limit
         }
 
-        return data as (Transaction & { profiles: { email: string, full_name: string } })[]
+        return allData
     },
 
     async getVerifying() {
