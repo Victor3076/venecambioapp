@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Eye, Check, X, ImageIcon, Upload, ClipboardPaste, ArrowLeft, Copy, User, Landmark, CreditCard, Mail, Phone, Hash, Search, FileUp, Plus, AlertCircle, Trash2, MessageCircle, TrendingDown, Volume2, Calculator } from "lucide-react"
+import { Eye, Check, X, ImageIcon, Upload, ClipboardPaste, ArrowLeft, Copy, User, Landmark, CreditCard, Mail, Phone, Hash, Search, FileUp, Plus, AlertCircle, Trash2, MessageCircle, TrendingDown, Volume2, Calculator, FileText } from "lucide-react"
 import { useRef } from "react"
 import { supabase } from "@/lib/supabase"
 import Link from "next/link"
@@ -1077,7 +1077,20 @@ export default function AdminTransactionsPage() {
                                         <h3 className="font-bold text-sm uppercase tracking-wider text-muted-foreground border-b pb-1">Comprobante Origen</h3>
                                         <div className="border rounded-xl aspect-[3/4] bg-black flex items-center justify-center overflow-hidden">
                                             {selectedTx.payment_proof_url ? (
-                                                <img src={selectedTx.payment_proof_url} alt="Comprobante" className="max-h-full max-w-full object-contain cursor-pointer" onClick={() => window.open(selectedTx.payment_proof_url, '_blank')} />
+                                                selectedTx.payment_proof_url.toLowerCase().endsWith('.pdf') ? (
+                                                    <div className="flex flex-col items-center justify-center gap-4 h-full w-full bg-muted/10 p-6 text-center">
+                                                        <FileText className="w-16 h-16 text-primary/30" />
+                                                        <div className="space-y-1">
+                                                            <p className="text-sm font-bold text-foreground">Comprobante PDF</p>
+                                                            <p className="text-[10px] text-muted-foreground">Los archivos PDF no se pueden previsualizar directamente aquí.</p>
+                                                        </div>
+                                                        <Button variant="secondary" size="sm" className="h-8 text-[10px] font-bold" onClick={() => window.open(selectedTx.payment_proof_url, '_blank')}>
+                                                            Ver Documento Completo
+                                                        </Button>
+                                                    </div>
+                                                ) : (
+                                                    <img src={selectedTx.payment_proof_url} alt="Comprobante" className="max-h-full max-w-full object-contain cursor-pointer" onClick={() => window.open(selectedTx.payment_proof_url, '_blank')} />
+                                                )
                                             ) : (
                                                 <span className="text-muted-foreground text-xs italic">Sin comprobante</span>
                                             )}
@@ -1088,9 +1101,25 @@ export default function AdminTransactionsPage() {
                                             <h3 className="font-bold text-sm uppercase tracking-wider text-muted-foreground border-b pb-1">Liquidación</h3>
                                             <div className="border-2 border-green-200 rounded-xl aspect-[3/4] bg-white flex items-center justify-center overflow-hidden relative">
                                                 {completionFile ? (
-                                                    <img src={URL.createObjectURL(completionFile)} alt="Preview" className="max-h-full max-w-full object-contain" />
+                                                    completionFile.type === 'application/pdf' ? (
+                                                        <div className="flex flex-col items-center justify-center gap-2 h-full w-full bg-green-50/30 p-4 text-center">
+                                                            <FileText className="w-12 h-12 text-green-600/30" />
+                                                            <p className="text-[10px] font-bold text-green-800">PDF Preparado: {completionFile.name}</p>
+                                                        </div>
+                                                    ) : (
+                                                        <img src={URL.createObjectURL(completionFile)} alt="Preview" className="max-h-full max-w-full object-contain" />
+                                                    )
                                                 ) : (
-                                                    <img src={selectedTx.completion_proof_url} alt="Liquidado" className="max-h-full max-w-full object-contain" />
+                                                    selectedTx.completion_proof_url?.toLowerCase().endsWith('.pdf') ? (
+                                                        <div className="flex flex-col items-center justify-center gap-2 h-full w-full bg-green-50/30 p-4 text-center">
+                                                            <FileText className="w-12 h-12 text-green-600/30" />
+                                                            <Button variant="ghost" size="sm" className="h-8 text-[10px] font-bold text-green-700 hover:text-green-800 hover:bg-green-100" onClick={() => window.open(selectedTx.completion_proof_url, '_blank')}>
+                                                                Ver Liquidación PDF
+                                                            </Button>
+                                                        </div>
+                                                    ) : (
+                                                        <img src={selectedTx.completion_proof_url} alt="Liquidado" className="max-h-full max-w-full object-contain" />
+                                                    )
                                                 )}
                                             </div>
                                         </div>
