@@ -129,7 +129,7 @@ export default function AdminBalancePage() {
 
     // 2. Outflow/Sales from Operations (What we PAY to beneficiaries in target currency)
     const outflowByCurrency = transactions
-        .filter(tx => tx.status === 'verified' || tx.status === 'completed')
+        .filter(tx => (tx.status === 'verified' || tx.status === 'completed') && tx.beneficiary_data?.type !== 'cash')
         .reduce((acc: any, tx) => {
             const curr = REGION_TO_CURRENCY[tx.currency_received] || tx.currency_received
             acc[curr] = (acc[curr] || 0) + Number(tx.amount_received)

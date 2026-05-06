@@ -167,6 +167,15 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDep
 
     const getProfitData = () => {
         if (!rates) return { percentage: 0, amount: 0 }
+        
+        // If it's a cash delivery, the profit is fixed at 6%
+        if (selectedAccount?.type === 'cash') {
+            const percentage = 6
+            const sourceUsdtPrice = rates.usdt_prices[sourceCurrency as keyof typeof rates.usdt_prices] || 1
+            const amount = ((parseFormattedNumber(amountSent) * percentage) / 100) / sourceUsdtPrice
+            return { percentage, amount }
+        }
+
         const marginKey = `${sourceCurrency}_${targetCurrency}`
         const percentage = rates.margins[marginKey] || rates.margins["GENERIC"] || 0
         const sourceUsdtPrice = rates.usdt_prices[sourceCurrency as keyof typeof rates.usdt_prices] || 1
@@ -316,6 +325,35 @@ export function ManualTransactionDialog({ isOpen, onClose, onSuccess, initialDep
                                             <Check className={`w-5 h-5 text-primary ${selectedAccount?.id === acc.id ? 'opacity-100' : 'opacity-0'}`} />
                                         </div>
                                     ))}
+
+                                    {/* Opción de Entrega en Efectivo */}
+                                    <div
+                                        className={`p-4 border border-dashed rounded-xl cursor-pointer transition-all hover:border-primary hover:bg-primary/5 flex items-center justify-between group ${selectedAccount?.type === 'cash' ? 'border-primary bg-primary/5 ring-1 ring-primary' : ''}`}
+                                        onClick={() => {
+                                            setSelectedAccount({
+                                                id: 'cash',
+                                                user_id: selectedUser!.id,
+                                                alias: 'Entrega en Efectivo',
+                                                bank_name: 'Efectivo',
+                                                account_number: 'N/A',
+                                                country: targetCurrency,
+                                                type: 'cash'
+                                            } as any)
+                                            setStep(3)
+                                        }}
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${selectedAccount?.type === 'cash' ? 'bg-primary text-white' : 'bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary'}`}>
+                                                <Calculator className="w-5 h-5" />
+                                            </div>
+                                            <div>
+                                                <div className="font-bold text-lg">Entrega en Efectivo</div>
+                                                <div className="text-xs text-muted-foreground">Esta operación no restará del balance de bancos.</div>
+                                            </div>
+                                        </div>
+                                        <Check className={`w-5 h-5 text-primary ${selectedAccount?.type === 'cash' ? 'opacity-100' : 'opacity-0'}`} />
+                                    </div>
+
                                     {accounts.length === 0 && (
                                         <div className="text-center py-6 border-2 border-dashed rounded-xl">
                                             <p className="text-muted-foreground text-sm">El cliente no tiene beneficiarios registrados.</p>

@@ -715,7 +715,11 @@ export default function AdminTransactionsPage() {
                                                     <div className="text-[10px] text-muted-foreground">Tasa: {tx.exchange_rate}</div>
                                                 </td>
                                                 <td className="p-4">
-                                                    {deposit ? (
+                                                    {tx.beneficiary_data?.type === 'cash' ? (
+                                                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-md border border-amber-100">
+                                                            <Calculator className="w-3 h-3" /> Entrega Efectivo
+                                                        </div>
+                                                    ) : deposit ? (
                                                         <div className="space-y-0.5">
                                                             <div className="font-medium text-xs flex items-center gap-1.5">
                                                                 <Landmark className="w-3 h-3 text-muted-foreground" />
@@ -832,7 +836,14 @@ export default function AdminTransactionsPage() {
                                                     <span className="font-bold text-lg text-primary">{formatCurrency(selectedTx.amount_received, selectedTx.currency_received)} {selectedTx.currency_received}</span>
                                                 </div>
                                                 <div className="pt-2 border-t flex justify-between items-center text-xs">
-                                                    <span className="text-muted-foreground">TASA: {selectedTx.exchange_rate}</span>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-muted-foreground">TASA: {selectedTx.exchange_rate}</span>
+                                                        {selectedTx.beneficiary_data?.type === 'cash' && (
+                                                            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-[10px] h-5">
+                                                                Efectivo
+                                                            </Badge>
+                                                        )}
+                                                    </div>
                                                     <StatusBadge status={selectedTx.status} />
                                                 </div>
                                             </div>
