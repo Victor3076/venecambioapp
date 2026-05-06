@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Eye, Check, X, ImageIcon, Upload, ClipboardPaste, ArrowLeft, Copy, User, Landmark, CreditCard, Mail, Phone, Hash, Search, FileUp, Plus, AlertCircle, Trash2, MessageCircle, TrendingDown, Volume2 } from "lucide-react"
+import { Eye, Check, X, ImageIcon, Upload, ClipboardPaste, ArrowLeft, Copy, User, Landmark, CreditCard, Mail, Phone, Hash, Search, FileUp, Plus, AlertCircle, Trash2, MessageCircle, TrendingDown, Volume2, Calculator } from "lucide-react"
 import { useRef } from "react"
 import { supabase } from "@/lib/supabase"
 import Link from "next/link"
