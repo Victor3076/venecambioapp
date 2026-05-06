@@ -8,6 +8,7 @@ export interface UserAccount {
     bank_name: string
     account_number: string
     details: any
+    type?: string
     created_at?: string
 }
 
