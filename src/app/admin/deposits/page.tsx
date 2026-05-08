@@ -18,6 +18,8 @@ export default function BankDepositsPage() {
     const [deposits, setDeposits] = useState<BankDeposit[]>([])
     const [loading, setLoading] = useState(true)
     const [creating, setCreating] = useState(false)
+    const today = new Date().toLocaleDateString('en-CA')
+    const [filterDate, setFilterDate] = useState(today)
 
     // Form State
     const [amount, setAmount] = useState("")
@@ -38,7 +40,8 @@ export default function BankDepositsPage() {
     const loadDeposits = async () => {
         setLoading(true)
         try {
-            const data = await BankDepositsService.getAll()
+            const filters = filterDate ? { startDate: filterDate, endDate: filterDate } : undefined
+            const data = await BankDepositsService.getAll(filters)
             setDeposits(data || [])
         } catch (error) {
             console.error("Error loading deposits:", error)
@@ -49,7 +52,7 @@ export default function BankDepositsPage() {
 
     useEffect(() => {
         loadDeposits()
-    }, [])
+    }, [filterDate])
 
     const handleCreateOrUpdate = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -256,21 +259,30 @@ export default function BankDepositsPage() {
                                 <CardTitle>Depósitos Recientes</CardTitle>
                                 <CardDescription>Historial de ingresos registrados.</CardDescription>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">Filtrar por:</span>
-                                <select
-                                    className="h-8 rounded-md border border-input bg-background px-2 py-1 text-xs"
-                                    value={filterCurrencyList}
-                                    onChange={e => setFilterCurrencyList(e.target.value)}
-                                >
-                                    <option value="all">Todas</option>
-                                    <option value="VES">Bolívares (VES)</option>
-                                    <option value="USD">Dólares (USD)</option>
-                                    <option value="PEN">Soles (PEN)</option>
-                                    <option value="COP">Pesos (COP)</option>
-                                    <option value="CLP">Pesos (CLP)</option>
-                                </select>
-                            </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">Fecha:</span>
+                                    <input
+                                        type="date"
+                                        className="h-8 rounded-md border border-input bg-background px-2 py-1 text-xs"
+                                        value={filterDate}
+                                        onChange={e => setFilterDate(e.target.value)}
+                                    />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">Moneda:</span>
+                                    <select
+                                        className="h-8 rounded-md border border-input bg-background px-2 py-1 text-xs"
+                                        value={filterCurrencyList}
+                                        onChange={e => setFilterCurrencyList(e.target.value)}
+                                    >
+                                        <option value="all">Todas</option>
+                                        <option value="VES">Bolívares (VES)</option>
+                                        <option value="USD">Dólares (USD)</option>
+                                        <option value="PEN">Soles (PEN)</option>
+                                        <option value="COP">Pesos (COP)</option>
+                                        <option value="CLP">Pesos (CLP)</option>
+                                    </select>
+                                </div>
                         </div>
                     </CardHeader>
                     <CardContent>
