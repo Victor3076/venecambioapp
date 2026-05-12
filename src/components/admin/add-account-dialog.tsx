@@ -77,17 +77,35 @@ function parseVenezuelanAccountText(text: string): Partial<typeof emptyAccount> 
     const cedulaMatch = normalized.match(/\b((?!04\d{2}|01\d{2})\d{6,9})\b/)
     const cedula = cedulaMatch ? cedulaMatch[1] : null
 
-    // --- Detect bank code (4 digits starting with 01) ---
-    const bankCodeMatch = normalized.match(/\b(01\d{2})\b/)
-    const bankCode = bankCodeMatch ? bankCodeMatch[1] : null
-    const bankName = bankCode ? VENEZUELA_BANKS[bankCode] : null
-
     // --- Detect 20-digit account number ---
     const accountMatch = normalized.match(/\b(\d{20})\b/)
     const accountNumber = accountMatch ? accountMatch[1] : null
 
-    // No useful data found
-    if (!phone && !cedula && !bankName && !accountNumber) return null
+    // --- Detect bank: first try explicit 4-digit code (01xx) in text,
+    //     then fall back to the first 4 digits of the account number ---
+    const bankCodeMatch = normalized.match(/\b(01\d{2})\b/)
+    const explicitBankCode = bankCodeMatch ? bankCodeMatch[1] : null
+    const accountBankCode = accountNumber ? accountNumber.substring(0, 4) : null
+    const resolvedBankCode = explicitBankCode || accountBankCode
+    const bankName = resolvedBankCode ? (VENEZUELA_BANKS[resolvedBankCode] || null) : null
+
+    // --- Detect person name (alias) ---
+    // Strategy: remove all digit groups, known keywords and punctuation,
+    // what remains with 2+ words is likely the client's name.
+    const KEYWORDS = /\b(c[eé]dula|tel[eé]fono|banco|cuenta|pago|m[oó]vil|venezuela|ves|c\.i\.?|ci|n[uú]mero|nro|titular|nombre)\b/gi
+    const nameCandidate = normalized
+        .replace(/\b\d+\b/g, "")                      // remove numbers
+        .replace(KEYWORDS, "")                         // remove known keywords
+        .replace(/[^a-záéíóúüñA-ZÁÉÍÓÚÜÑ\s]/g, " ")  // remove punctuation/symbols
+        .replace(/\s+/g, " ")
+        .trim()
+
+    // Accept as alias only if at least 2 words each with 2+ chars
+    const nameParts = nameCandidate.split(" ").filter(w => w.length >= 2)
+    const alias = nameParts.length >= 2 ? nameParts.join(" ") : null
+
+    // No useful data found at all
+    if (!phone && !cedula && !bankName && !accountNumber && !alias) return null
 
     // Determine type: Pago Móvil if phone found, Cuenta if 20-digit account
     const isMobile = !!phone
@@ -105,6 +123,7 @@ function parseVenezuelanAccountText(text: string): Partial<typeof emptyAccount> 
     }
 
     if (bankName) result.bank_name = bankName
+    if (alias) result.alias = alias
     if (isMobile && phone) result.account_number = phone
     if (!isMobile && accountNumber) result.account_number = accountNumber
 
@@ -134,6 +153,7 @@ export function AddAccountDialog({ userId, userName, isOpen, onClose, onSuccess 
             setFormData(prev => ({
                 ...prev,
                 country: "VES",
+                alias: (parsed as any).alias ?? prev.alias,
                 bank_name: parsed.bank_name ?? prev.bank_name,
                 account_number: parsed.account_number ?? prev.account_number,
                 details: {
