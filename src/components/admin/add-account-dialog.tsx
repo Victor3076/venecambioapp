@@ -7,7 +7,7 @@ import { AccountsService, UserAccount } from "@/services/accounts"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { X, Loader2, Plus, Pencil, Trash2, Landmark, CreditCard, ArrowLeft } from "lucide-react"
+import { X, Loader2, Plus, Pencil, Trash2, Landmark, CreditCard, ArrowLeft, ClipboardPaste } from "lucide-react"
 
 interface AddAccountDialogProps {
     userId: string
@@ -27,6 +27,80 @@ const emptyAccount = {
     details: { id_number: "", email: "", account_type: "", rut: "", venezuela_type: "Cuenta", peru_type: "Cuenta" }
 }
 
+const VENEZUELA_BANKS: Record<string, string> = {
+    "0102": "Banco de Venezuela (BDV)",
+    "0104": "Banco Venezolano de Crédito (BVC)",
+    "0105": "Banco Mercantil",
+    "0108": "Banco Provincial (BBVA)",
+    "0114": "Bancaribe",
+    "0115": "Banco Exterior",
+    "0128": "Banco Caroní",
+    "0134": "Banesco Banco Universal",
+    "0137": "Sofitasa",
+    "0138": "Banco Plaza",
+    "0146": "Bangente",
+    "0151": "Banco Fondo Común (BFC)",
+    "0156": "100% Banco",
+    "0157": "Del Sur Banco Universal",
+    "0163": "Banco del Tesoro",
+    "0166": "Banco Agrícola de Venezuela",
+    "0168": "Bancrecer",
+    "0169": "Mi Banco",
+    "0171": "Banco Activo",
+    "0172": "Bancamiga",
+    "0174": "Banplus",
+    "0175": "Banco Bicentenario del Pueblo",
+    "0177": "BANFANB",
+    "0191": "Banco Nacional de Crédito (BNC)",
+}
+
+function parseVenezuelanAccountText(text: string): Partial<typeof emptyAccount> | null {
+    const normalized = text.replace(/\s+/g, " ").trim()
+
+    // --- Detect phone number (Pago Móvil) ---
+    const phoneMatch = normalized.match(/\b(04(?:12|14|16|22|24|26)\d{7})\b/)
+    const phone = phoneMatch ? phoneMatch[1] : null
+
+    // --- Detect cedula (numbers that are NOT phone and NOT bank code) ---
+    // Cedula: 6-9 digit number (not starting with 04, not a bank code 0xxx)
+    const cedulaMatch = normalized.match(/\b((?!04\d{2}|0\d{3})\d{6,9})\b/)
+    const cedula = cedulaMatch ? cedulaMatch[1] : null
+
+    // --- Detect bank code (4 digits starting with 01) ---
+    const bankCodeMatch = normalized.match(/\b(01\d{2})\b/)
+    const bankCode = bankCodeMatch ? bankCodeMatch[1] : null
+    const bankName = bankCode ? VENEZUELA_BANKS[bankCode] : null
+
+    // --- Detect 20-digit account number ---
+    const accountMatch = normalized.match(/\b(\d{20})\b/)
+    const accountNumber = accountMatch ? accountMatch[1] : null
+
+    // No useful data found
+    if (!phone && !cedula && !bankName && !accountNumber) return null
+
+    // Determine type: Pago Móvil if phone found, Cuenta if 20-digit account found
+    const isMobile = !!phone
+    const isAccount = !!accountNumber && !phone
+
+    const result: any = {
+        country: "VES",
+        details: {
+            id_number: cedula || "",
+            email: "",
+            account_type: "",
+            rut: "",
+            venezuela_type: isMobile ? "Pago Móvil" : "Cuenta",
+            peru_type: "Cuenta",
+        },
+    }
+
+    if (bankName) result.bank_name = bankName
+    if (isMobile && phone) result.account_number = phone
+    if (isAccount && accountNumber) result.account_number = accountNumber
+
+    return result
+}
+
 export function AddAccountDialog({ userId, userName, isOpen, onClose, onSuccess }: AddAccountDialogProps) {
     const [view, setView] = useState<View>("list")
     const [accounts, setAccounts] = useState<UserAccount[]>([])
@@ -34,6 +108,34 @@ export function AddAccountDialog({ userId, userName, isOpen, onClose, onSuccess 
     const [saving, setSaving] = useState(false)
     const [editingAccount, setEditingAccount] = useState<UserAccount | null>(null)
     const [formData, setFormData] = useState(emptyAccount)
+
+    const handlePasteData = async () => {
+        try {
+            const text = await navigator.clipboard.readText()
+            if (!text.trim()) {
+                toast.error("El portapapeles está vacío")
+                return
+            }
+            const parsed = parseVenezuelanAccountText(text)
+            if (!parsed) {
+                toast.error("No se pudo reconocer ningún dato de cuenta en el texto pegado")
+                return
+            }
+            setFormData(prev => ({
+                ...prev,
+                country: "VES",
+                bank_name: parsed.bank_name ?? prev.bank_name,
+                account_number: parsed.account_number ?? prev.account_number,
+                details: {
+                    ...prev.details,
+                    ...(parsed.details || {}),
+                },
+            }))
+            toast.success("Datos pegados correctamente")
+        } catch {
+            toast.error("No se pudo acceder al portapapeles. Copia el texto primero.")
+        }
+    }
 
     useEffect(() => {
         if (isOpen) {
@@ -230,6 +332,17 @@ export function AddAccountDialog({ userId, userName, isOpen, onClose, onSuccess 
                             </div>
                         </CardHeader>
                         <CardContent className="space-y-4">
+                            {/* BOTÓN PEGAR DATOS - solo Venezuela */}
+                            {formData.country === 'VES' && (
+                                <button
+                                    type="button"
+                                    onClick={handlePasteData}
+                                    className="w-full flex items-center justify-center gap-2 rounded-lg border-2 border-dashed border-primary/40 bg-primary/5 hover:bg-primary/10 hover:border-primary/70 text-primary text-sm font-medium py-2.5 transition-all duration-200 group"
+                                >
+                                    <ClipboardPaste className="h-4 w-4 group-hover:scale-110 transition-transform" />
+                                    Pegar Datos desde WhatsApp
+                                </button>
+                            )}
                             {/* PAÍS */}
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">País</label>
