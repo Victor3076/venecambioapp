@@ -81,19 +81,62 @@ function parseVenezuelanAccountText(text: string): Partial<typeof emptyAccount> 
     const accountMatch = normalized.match(/\b(\d{20})\b/)
     const accountNumber = accountMatch ? accountMatch[1] : null
 
-    // --- Detect bank: first try explicit 4-digit code (01xx) in text,
-    //     then fall back to the first 4 digits of the account number ---
+    // --- Detect bank ---
+    // Priority 1: explicit 4-digit code (01xx) in text
+    // Priority 2: first 4 digits of the 20-digit account number
+    // Priority 3: bank name written in plain text (e.g. "Banesco", "BDV")
+    const BANK_TEXT_MAP: Array<[RegExp, string]> = [
+        [/\b(bdv|banco\s*de\s*venezuela)\b/i,           "Banco de Venezuela (BDV)"],
+        [/\b(bvc|venezolano\s*de\s*cr[eé]dito)\b/i,    "Banco Venezolano de Crédito (BVC)"],
+        [/\bmercantil\b/i,                              "Banco Mercantil"],
+        [/\b(provincial|bbva)\b/i,                      "Banco Provincial (BBVA)"],
+        [/\bbancaribe\b/i,                              "Bancaribe"],
+        [/\bexterior\b/i,                               "Banco Exterior"],
+        [/\bcaroni\b/i,                                 "Banco Caroní"],
+        [/\bbanesco\b/i,                                "Banesco Banco Universal"],
+        [/\bsofitasa\b/i,                               "Sofitasa"],
+        [/\bplaza\b/i,                                  "Banco Plaza"],
+        [/\bbangente\b/i,                               "Bangente"],
+        [/\b(bfc|fondo\s*com[uú]n)\b/i,                "Banco Fondo Común (BFC)"],
+        [/\b100\s*%?\s*banco\b/i,                       "100% Banco"],
+        [/\bdel\s*sur\b/i,                              "Del Sur Banco Universal"],
+        [/\btesoro\b/i,                                 "Banco del Tesoro"],
+        [/\bagr[ií]cola\b/i,                            "Banco Agrícola de Venezuela"],
+        [/\bbancrecer\b/i,                              "Bancrecer"],
+        [/\bmi\s*banco\b/i,                             "Mi Banco"],
+        [/\bactivo\b/i,                                 "Banco Activo"],
+        [/\bbancamiga\b/i,                              "Bancamiga"],
+        [/\bbanplus\b/i,                                "Banplus"],
+        [/\bbicentenario\b/i,                           "Banco Bicentenario del Pueblo"],
+        [/\bbanfanb\b/i,                                "BANFANB"],
+        [/\b(bnc|nacional\s*de\s*cr[eé]dito)\b/i,      "Banco Nacional de Crédito (BNC)"],
+    ]
+
     const bankCodeMatch = normalized.match(/\b(01\d{2})\b/)
     const explicitBankCode = bankCodeMatch ? bankCodeMatch[1] : null
     const accountBankCode = accountNumber ? accountNumber.substring(0, 4) : null
     const resolvedBankCode = explicitBankCode || accountBankCode
-    const bankName = resolvedBankCode ? (VENEZUELA_BANKS[resolvedBankCode] || null) : null
+    let bankName: string | null = resolvedBankCode ? (VENEZUELA_BANKS[resolvedBankCode] || null) : null
+    let matchedBankText = ""
+
+    if (!bankName) {
+        for (const [pattern, name] of BANK_TEXT_MAP) {
+            const m = normalized.match(pattern)
+            if (m) {
+                bankName = name
+                matchedBankText = m[0]
+                break
+            }
+        }
+    }
+
 
     // --- Detect person name (alias) ---
-    // Strategy: remove all digit groups, known keywords and punctuation,
-    // what remains with 2+ words is likely the client's name.
+    // Strategy: remove numbers, known keywords, matched bank text, then take what's left
     const KEYWORDS = /\b(c[eé]dula|tel[eé]fono|banco|cuenta|pago|m[oó]vil|venezuela|ves|c\.i\.?|ci|n[uú]mero|nro|titular|nombre)\b/gi
-    const nameCandidate = normalized
+    let nameSource = normalized
+    if (matchedBankText) nameSource = nameSource.replace(new RegExp(matchedBankText, "i"), "")
+    const nameCandidate = nameSource
         .replace(/\b\d+\b/g, "")                      // remove numbers
         .replace(KEYWORDS, "")                         // remove known keywords
         .replace(/[^a-záéíóúüñA-ZÁÉÍÓÚÜÑ\s]/g, " ")  // remove punctuation/symbols
