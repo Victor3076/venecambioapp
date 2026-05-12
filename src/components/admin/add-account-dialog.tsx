@@ -55,15 +55,26 @@ const VENEZUELA_BANKS: Record<string, string> = {
 }
 
 function parseVenezuelanAccountText(text: string): Partial<typeof emptyAccount> | null {
-    const normalized = text.replace(/\s+/g, " ").trim()
+    // Step 1: normalize whitespace
+    let normalized = text.replace(/\s+/g, " ").trim()
+
+    // Step 2: strip formatting separators between digits
+    // Handles: 14.109.263 → 14109263  |  0412-4914072 → 04124914072
+    // Also handles mixed formats like 0412.491.4072
+    // We apply this repeatedly until no more separators between digits exist
+    let prev = ""
+    while (prev !== normalized) {
+        prev = normalized
+        normalized = normalized.replace(/(\d)[.\-](\d)/g, "$1$2")
+    }
 
     // --- Detect phone number (Pago Móvil) ---
+    // Venezuelan phone prefixes: 0412, 0414, 0416, 0422, 0424, 0426 + 7 digits
     const phoneMatch = normalized.match(/\b(04(?:12|14|16|22|24|26)\d{7})\b/)
     const phone = phoneMatch ? phoneMatch[1] : null
 
-    // --- Detect cedula (numbers that are NOT phone and NOT bank code) ---
-    // Cedula: 6-9 digit number (not starting with 04, not a bank code 0xxx)
-    const cedulaMatch = normalized.match(/\b((?!04\d{2}|0\d{3})\d{6,9})\b/)
+    // --- Detect cedula: 6-9 digit number NOT starting with 04xx or 01xx (bank codes) ---
+    const cedulaMatch = normalized.match(/\b((?!04\d{2}|01\d{2})\d{6,9})\b/)
     const cedula = cedulaMatch ? cedulaMatch[1] : null
 
     // --- Detect bank code (4 digits starting with 01) ---
@@ -78,9 +89,8 @@ function parseVenezuelanAccountText(text: string): Partial<typeof emptyAccount> 
     // No useful data found
     if (!phone && !cedula && !bankName && !accountNumber) return null
 
-    // Determine type: Pago Móvil if phone found, Cuenta if 20-digit account found
+    // Determine type: Pago Móvil if phone found, Cuenta if 20-digit account
     const isMobile = !!phone
-    const isAccount = !!accountNumber && !phone
 
     const result: any = {
         country: "VES",
@@ -96,7 +106,7 @@ function parseVenezuelanAccountText(text: string): Partial<typeof emptyAccount> 
 
     if (bankName) result.bank_name = bankName
     if (isMobile && phone) result.account_number = phone
-    if (isAccount && accountNumber) result.account_number = accountNumber
+    if (!isMobile && accountNumber) result.account_number = accountNumber
 
     return result
 }
