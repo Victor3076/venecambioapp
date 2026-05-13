@@ -27,151 +27,7 @@ const emptyAccount = {
     details: { id_number: "", email: "", account_type: "", rut: "", venezuela_type: "Cuenta", peru_type: "Cuenta" }
 }
 
-const VENEZUELA_BANKS: Record<string, string> = {
-    "0102": "Banco de Venezuela (BDV)",
-    "0104": "Banco Venezolano de Crédito (BVC)",
-    "0105": "Banco Mercantil",
-    "0108": "Banco Provincial (BBVA)",
-    "0114": "Bancaribe",
-    "0115": "Banco Exterior",
-    "0128": "Banco Caroní",
-    "0134": "Banesco Banco Universal",
-    "0137": "Sofitasa",
-    "0138": "Banco Plaza",
-    "0146": "Bangente",
-    "0151": "Banco Fondo Común (BFC)",
-    "0156": "100% Banco",
-    "0157": "Del Sur Banco Universal",
-    "0163": "Banco del Tesoro",
-    "0166": "Banco Agrícola de Venezuela",
-    "0168": "Bancrecer",
-    "0169": "Mi Banco",
-    "0171": "Banco Activo",
-    "0172": "Bancamiga",
-    "0174": "Banplus",
-    "0175": "Banco Bicentenario del Pueblo",
-    "0177": "BANFANB",
-    "0191": "Banco Nacional de Crédito (BNC)",
-}
-
-function parseVenezuelanAccountText(text: string): Partial<typeof emptyAccount> | null {
-    // Step 1: normalize whitespace
-    let normalized = text.replace(/\s+/g, " ").trim()
-
-    // Step 2: strip formatting separators between digits
-    // Handles: 14.109.263 → 14109263  |  0412-4914072 → 04124914072
-    // Also handles mixed formats like 0412.491.4072
-    // We apply this repeatedly until no more separators between digits exist
-    let prev = ""
-    while (prev !== normalized) {
-        prev = normalized
-        normalized = normalized.replace(/(\d)[.\-](\d)/g, "$1$2")
-    }
-
-    // --- Detect phone number (Pago Móvil) ---
-    // Venezuelan phone prefixes: 0412, 0414, 0416, 0422, 0424, 0426 + 7 digits
-    const phoneMatch = normalized.match(/\b(04(?:12|14|16|22|24|26)\d{7})\b/)
-    const phone = phoneMatch ? phoneMatch[1] : null
-
-    // --- Detect cedula: 6-9 digit number NOT starting with 04xx or 01xx (bank codes) ---
-    const cedulaMatch = normalized.match(/\b((?!04\d{2}|01\d{2})\d{6,9})\b/)
-    const cedula = cedulaMatch ? cedulaMatch[1] : null
-
-    // --- Detect 20-digit account number ---
-    const accountMatch = normalized.match(/\b(\d{20})\b/)
-    const accountNumber = accountMatch ? accountMatch[1] : null
-
-    // --- Detect bank ---
-    // Priority 1: explicit 4-digit code (01xx) in text
-    // Priority 2: first 4 digits of the 20-digit account number
-    // Priority 3: bank name written in plain text (e.g. "Banesco", "BDV")
-    const BANK_TEXT_MAP: Array<[RegExp, string]> = [
-        [/\b(bdv|banco\s*de\s*venezuela)\b/i,           "Banco de Venezuela (BDV)"],
-        [/\b(bvc|venezolano\s*de\s*cr[eé]dito)\b/i,    "Banco Venezolano de Crédito (BVC)"],
-        [/\bmercantil\b/i,                              "Banco Mercantil"],
-        [/\b(provincial|bbva)\b/i,                      "Banco Provincial (BBVA)"],
-        [/\bbancaribe\b/i,                              "Bancaribe"],
-        [/\bexterior\b/i,                               "Banco Exterior"],
-        [/\bcaroni\b/i,                                 "Banco Caroní"],
-        [/\bbanesco\b/i,                                "Banesco Banco Universal"],
-        [/\bsofitasa\b/i,                               "Sofitasa"],
-        [/\bplaza\b/i,                                  "Banco Plaza"],
-        [/\bbangente\b/i,                               "Bangente"],
-        [/\b(bfc|fondo\s*com[uú]n)\b/i,                "Banco Fondo Común (BFC)"],
-        [/\b100\s*%?\s*banco\b/i,                       "100% Banco"],
-        [/\bdel\s*sur\b/i,                              "Del Sur Banco Universal"],
-        [/\btesoro\b/i,                                 "Banco del Tesoro"],
-        [/\bagr[ií]cola\b/i,                            "Banco Agrícola de Venezuela"],
-        [/\bbancrecer\b/i,                              "Bancrecer"],
-        [/\bmi\s*banco\b/i,                             "Mi Banco"],
-        [/\bactivo\b/i,                                 "Banco Activo"],
-        [/\bbancamiga\b/i,                              "Bancamiga"],
-        [/\bbanplus\b/i,                                "Banplus"],
-        [/\bbicentenario\b/i,                           "Banco Bicentenario del Pueblo"],
-        [/\bbanfanb\b/i,                                "BANFANB"],
-        [/\b(bnc|nacional\s*de\s*cr[eé]dito)\b/i,      "Banco Nacional de Crédito (BNC)"],
-    ]
-
-    const bankCodeMatch = normalized.match(/\b(01\d{2})\b/)
-    const explicitBankCode = bankCodeMatch ? bankCodeMatch[1] : null
-    const accountBankCode = accountNumber ? accountNumber.substring(0, 4) : null
-    const resolvedBankCode = explicitBankCode || accountBankCode
-    let bankName: string | null = resolvedBankCode ? (VENEZUELA_BANKS[resolvedBankCode] || null) : null
-    let matchedBankText = ""
-
-    if (!bankName) {
-        for (const [pattern, name] of BANK_TEXT_MAP) {
-            const m = normalized.match(pattern)
-            if (m) {
-                bankName = name
-                matchedBankText = m[0]
-                break
-            }
-        }
-    }
-
-
-    // --- Detect person name (alias) ---
-    // Strategy: remove numbers, known keywords, matched bank text, then take what's left
-    const KEYWORDS = /\b(c[eé]dula|tel[eé]fono|banco|cuenta|pago|m[oó]vil|venezuela|ves|c\.i\.?|ci|n[uú]mero|nro|titular|nombre)\b/gi
-    let nameSource = normalized
-    if (matchedBankText) nameSource = nameSource.replace(new RegExp(matchedBankText, "i"), "")
-    const nameCandidate = nameSource
-        .replace(/\b\d+\b/g, "")                      // remove numbers
-        .replace(KEYWORDS, "")                         // remove known keywords
-        .replace(/[^a-záéíóúüñA-ZÁÉÍÓÚÜÑ\s]/g, " ")  // remove punctuation/symbols
-        .replace(/\s+/g, " ")
-        .trim()
-
-    // Accept as alias only if at least 2 words each with 2+ chars
-    const nameParts = nameCandidate.split(" ").filter(w => w.length >= 2)
-    const alias = nameParts.length >= 2 ? nameParts.join(" ") : null
-
-    // No useful data found at all
-    if (!phone && !cedula && !bankName && !accountNumber && !alias) return null
-
-    // Determine type: Pago Móvil if phone found, Cuenta if 20-digit account
-    const isMobile = !!phone
-
-    const result: any = {
-        country: "VES",
-        details: {
-            id_number: cedula || "",
-            email: "",
-            account_type: "",
-            rut: "",
-            venezuela_type: isMobile ? "Pago Móvil" : "Cuenta",
-            peru_type: "Cuenta",
-        },
-    }
-
-    if (bankName) result.bank_name = bankName
-    if (alias) result.alias = alias
-    if (isMobile && phone) result.account_number = phone
-    if (!isMobile && accountNumber) result.account_number = accountNumber
-
-    return result
-}
+import { parseVenezuelanAccountText } from "@/lib/account-parser"
 
 export function AddAccountDialog({ userId, userName, isOpen, onClose, onSuccess }: AddAccountDialogProps) {
     const [view, setView] = useState<View>("list")
@@ -196,12 +52,12 @@ export function AddAccountDialog({ userId, userName, isOpen, onClose, onSuccess 
             setFormData(prev => ({
                 ...prev,
                 country: "VES",
-                alias: (parsed as any).alias ?? prev.alias,
-                bank_name: parsed.bank_name ?? prev.bank_name,
-                account_number: parsed.account_number ?? prev.account_number,
+                alias: parsed.alias || prev.alias,
+                bank_name: parsed.bank_name || prev.bank_name,
+                account_number: parsed.account_number || prev.account_number,
                 details: {
                     ...prev.details,
-                    ...(parsed.details || {}),
+                    ...parsed.details,
                 },
             }))
             toast.success("Datos pegados correctamente")

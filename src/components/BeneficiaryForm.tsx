@@ -2,6 +2,9 @@
 
 import { Input } from "@/components/ui/input"
 import { SUPPORTED_REGIONS } from "@/lib/constants"
+import { ClipboardPaste } from "lucide-react"
+import { parseVenezuelanAccountText } from "@/lib/account-parser"
+import { toast } from "sonner"
 
 export interface BeneficiaryData {
     alias: string
@@ -38,8 +41,50 @@ export function BeneficiaryForm({ data, onChange, fixedCountry }: BeneficiaryFor
 
     const country = fixedCountry || data.country
 
+    const handlePasteData = async () => {
+        try {
+            const text = await navigator.clipboard.readText()
+            if (!text.trim()) {
+                toast.error("El portapapeles está vacío")
+                return
+            }
+            const parsed = parseVenezuelanAccountText(text)
+            if (!parsed) {
+                toast.error("No se pudo reconocer ningún dato de cuenta en el texto pegado")
+                return
+            }
+            
+            onChange({
+                ...data,
+                country: 'VES',
+                alias: parsed.alias || data.alias,
+                bank_name: parsed.bank_name || data.bank_name,
+                account_number: parsed.account_number || data.account_number,
+                details: {
+                    ...data.details,
+                    ...parsed.details,
+                },
+            })
+            toast.success("Datos pegados correctamente")
+        } catch {
+            toast.error("No se pudo acceder al portapapeles. Copia el texto primero.")
+        }
+    }
+
     return (
         <div className="space-y-4">
+            {/* BOTÓN PEGAR DATOS - solo Venezuela */}
+            {country === 'VES' && (
+                <button
+                    type="button"
+                    onClick={handlePasteData}
+                    className="w-full flex items-center justify-center gap-2 rounded-lg border-2 border-dashed border-primary/40 bg-primary/5 hover:bg-primary/10 hover:border-primary/70 text-primary text-sm font-medium py-2.5 transition-all duration-200 group"
+                >
+                    <ClipboardPaste className="h-4 w-4 group-hover:scale-110 transition-transform" />
+                    Pegar Datos desde WhatsApp
+                </button>
+            )}
+
             {/* 1. Country Select (if not fixed) */}
             {!fixedCountry && (
                 <div className="space-y-2">
