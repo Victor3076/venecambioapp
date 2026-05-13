@@ -81,7 +81,7 @@ export function BeneficiaryForm({ data, onChange, fixedCountry }: BeneficiaryFor
                     className="w-full flex items-center justify-center gap-2 rounded-lg border-2 border-dashed border-primary/40 bg-primary/5 hover:bg-primary/10 hover:border-primary/70 text-primary text-sm font-medium py-2.5 transition-all duration-200 group"
                 >
                     <ClipboardPaste className="h-4 w-4 group-hover:scale-110 transition-transform" />
-                    Pegar Datos desde WhatsApp
+                    Pegar Datos
                 </button>
             )}
 
