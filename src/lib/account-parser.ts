@@ -63,7 +63,7 @@ export function parseVenezuelanAccountText(text: string) {
 
     // --- Detect bank ---
     const BANK_TEXT_MAP: Array<[RegExp, string]> = [
-        [/\b(bdv|banco\s*de\s*venezuela)\b/i,           "Banco de Venezuela (BDV)"],
+        [/\b(bdv|banco\s*de\s*venezuela|venezuela)\b/i,           "Banco de Venezuela (BDV)"],
         [/\b(bvc|venezolano\s*de\s*cr[eé]dito)\b/i,    "Banco Venezolano de Crédito (BVC)"],
         [/\bmercantil\b/i,                              "Banco Mercantil"],
         [/\b(provincial|bbva)\b/i,                      "Banco Provincial (BBVA)"],
