@@ -854,26 +854,37 @@ export default function AdminTransactionsPage() {
                                             <div className="space-y-4">
                                                 <div className="flex justify-between items-center border-b pb-1">
                                                     <h3 className="font-bold text-sm uppercase tracking-wider text-muted-foreground">Datos Beneficiario</h3>
-                                                    {selectedTx.beneficiary_data && (selectedTx.beneficiary_data.details?.venezuela_type === 'Pago Móvil' || (selectedTx.beneficiary_data.country === 'VES' && selectedTx.beneficiary_data.account_number?.length === 11)) && (
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            className="h-7 text-[10px] font-bold text-primary border-primary/20 hover:bg-primary/5"
-                                                            onClick={() => {
-                                                                const bName = selectedTx.beneficiary_data?.bank_name?.toLowerCase() || "";
-                                                                const bankEntry = Object.entries(VENEZUELA_BANKS).find(([_, name]) => {
-                                                                    const n = name.toLowerCase();
-                                                                    return n === bName || n.includes(bName) || bName.includes(n);
-                                                                });
-                                                                const bankCode = bankEntry ? bankEntry[0] : "";
-                                                                const phone = selectedTx.beneficiary_data?.account_number || ""
-                                                                const id = (selectedTx.beneficiary_data?.details?.id_number || "").replace(/[^0-9]/g, "")
-                                                                copyToClipboard(`${bankCode} ${phone} ${id}`)
-                                                            }}
-                                                        >
-                                                            Copiar Pago Móvil
-                                                        </Button>
-                                                    )}
+                                                    {selectedTx.beneficiary_data && (
+                                                        () => {
+                                                            const bData = selectedTx.beneficiary_data;
+                                                            const isVes = bData.country === 'VES' || bData.country === 'VENEZUELA';
+                                                            const cleanAcc = (bData.account_number || "").replace(/\D/g, "");
+                                                            const isPM = bData.details?.venezuela_type === 'Pago Móvil' || (isVes && cleanAcc.length === 11);
+                                                            
+                                                            if (!isPM) return null;
+
+                                                            return (
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    className="h-7 text-[10px] font-bold text-primary border-primary/20 hover:bg-primary/5"
+                                                                    onClick={() => {
+                                                                        const bName = bData.bank_name?.toLowerCase() || "";
+                                                                        const bankEntry = Object.entries(VENEZUELA_BANKS).find(([_, name]) => {
+                                                                            const n = name.toLowerCase();
+                                                                            return n === bName || n.includes(bName) || bName.includes(n);
+                                                                        });
+                                                                        const bankCode = bankEntry ? bankEntry[0] : "";
+                                                                        const phone = bData.account_number || ""
+                                                                        const id = (bData.details?.id_number || "").replace(/[^0-9]/g, "")
+                                                                        copyToClipboard(`${bankCode} ${phone} ${id}`)
+                                                                    }}
+                                                                >
+                                                                    Copiar Pago Móvil
+                                                                </Button>
+                                                            );
+                                                        }
+                                                    )()}
                                                 </div>
                                                 <div className="bg-muted/10 rounded-lg border p-4 space-y-4 shadow-sm">
                                                     <div className="flex items-center gap-2 mb-2 pb-2 border-b">
