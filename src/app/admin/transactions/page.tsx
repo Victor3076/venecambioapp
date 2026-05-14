@@ -854,13 +854,18 @@ export default function AdminTransactionsPage() {
                                             <div className="space-y-4">
                                                 <div className="flex justify-between items-center border-b pb-1">
                                                     <h3 className="font-bold text-sm uppercase tracking-wider text-muted-foreground">Datos Beneficiario</h3>
-                                                    {selectedTx.beneficiary_data?.details?.venezuela_type === 'Pago Móvil' && (
+                                                    {selectedTx.beneficiary_data && (selectedTx.beneficiary_data.details?.venezuela_type === 'Pago Móvil' || (selectedTx.beneficiary_data.country === 'VES' && selectedTx.beneficiary_data.account_number?.length === 11)) && (
                                                         <Button
                                                             variant="outline"
                                                             size="sm"
                                                             className="h-7 text-[10px] font-bold text-primary border-primary/20 hover:bg-primary/5"
                                                             onClick={() => {
-                                                                const bankCode = Object.entries(VENEZUELA_BANKS).find(([_, name]) => name === selectedTx.beneficiary_data?.bank_name)?.[0] || ""
+                                                                const bName = selectedTx.beneficiary_data?.bank_name?.toLowerCase() || "";
+                                                                const bankEntry = Object.entries(VENEZUELA_BANKS).find(([_, name]) => {
+                                                                    const n = name.toLowerCase();
+                                                                    return n === bName || n.includes(bName) || bName.includes(n);
+                                                                });
+                                                                const bankCode = bankEntry ? bankEntry[0] : "";
                                                                 const phone = selectedTx.beneficiary_data?.account_number || ""
                                                                 const id = (selectedTx.beneficiary_data?.details?.id_number || "").replace(/[^0-9]/g, "")
                                                                 copyToClipboard(`${bankCode} ${phone} ${id}`)
