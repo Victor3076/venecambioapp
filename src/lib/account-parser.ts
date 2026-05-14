@@ -30,24 +30,35 @@ export function parseVenezuelanAccountText(text: string) {
     // Step 1: normalize whitespace
     let normalized = text.replace(/\s+/g, " ").trim()
 
-    // Step 2: strip formatting separators between digits
+    // Step 2: strip formatting separators between digits (dots and dashes are safe to join globally)
     let prev = ""
     while (prev !== normalized) {
         prev = normalized
         normalized = normalized.replace(/(\d)[.\-](\d)/g, "$1$2")
     }
 
+    let detectionSource = normalized
+
+    // --- Detect 20-digit account number (allowing internal spaces) ---
+    const accountMatch = detectionSource.match(/\b(\d(?:[ ]*\d){19})\b(?!\s*\d)/)
+    const accountNumber = accountMatch ? accountMatch[1].replace(/\s+/g, "") : null
+    if (accountMatch) {
+        detectionSource = detectionSource.replace(accountMatch[0], " ")
+    }
+
     // --- Detect phone number (Pago Móvil) ---
-    const phoneMatch = normalized.match(/\b(04(?:12|14|16|22|24|26)\d{7})\b/)
-    const phone = phoneMatch ? phoneMatch[1] : null
+    const phoneMatch = detectionSource.match(/\b(04(?:12|14|16|22|24|26)(?:[ ]*\d){7})\b(?!\s*\d)/)
+    const phone = phoneMatch ? phoneMatch[1].replace(/\s+/g, "") : null
+    if (phoneMatch) {
+        detectionSource = detectionSource.replace(phoneMatch[0], " ")
+    }
 
-    // --- Detect cedula: 6-9 digit number NOT starting with 04xx or 01xx (bank codes) ---
-    const cedulaMatch = normalized.match(/\b((?!04\d{2}|01\d{2})\d{6,9})\b/)
-    const cedula = cedulaMatch ? cedulaMatch[1] : null
-
-    // --- Detect 20-digit account number ---
-    const accountMatch = normalized.match(/\b(\d{20})\b/)
-    const accountNumber = accountMatch ? accountMatch[1] : null
+    // --- Detect cedula / RIF ---
+    const cedulaMatch = detectionSource.match(/\b(?:[VEJG][\-\s]*)?((?!04\d{2}|01\d{2})\d(?:[ ]*\d){5,8})\b(?!\s*\d)/i)
+    const cedula = cedulaMatch ? cedulaMatch[1].replace(/\s+/g, "") : null
+    if (cedulaMatch) {
+        detectionSource = detectionSource.replace(cedulaMatch[0], " ")
+    }
 
     // --- Detect bank ---
     const BANK_TEXT_MAP: Array<[RegExp, string]> = [
@@ -96,11 +107,11 @@ export function parseVenezuelanAccountText(text: string) {
     }
 
     // --- Detect person name (alias) ---
-    const KEYWORDS = /\b(c[eé]dula|tel[eé]fono|banco|cuenta|pago|m[oó]vil|venezuela|ves|c\.i\.?|ci|n[uú]mero|nro|titular|nombre)\b/gi
-    let nameSource = normalized
+    const KEYWORDS = /\b(c[eé]dula|tel[eé]fono|banco|cuenta|pago|m[oó]vil|venezuela|ves|c\.i\.?|ci|n[uú]mero|nro|titular|nombre|rif|beneficiario|datos|cliente|alias)\b/gi
+    let nameSource = detectionSource
     if (matchedBankText) nameSource = nameSource.replace(new RegExp(matchedBankText, "i"), "")
     const nameCandidate = nameSource
-        .replace(/\b\d+\b/g, "")
+        .replace(/\b[VEJG]?[\-\s]*\d+\b/gi, "") // Remove any remaining numbers
         .replace(KEYWORDS, "")
         .replace(/[^a-záéíóúüñA-ZÁÉÍÓÚÜÑ\s]/g, " ")
         .replace(/\s+/g, " ")
