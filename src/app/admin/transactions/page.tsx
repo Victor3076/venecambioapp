@@ -18,6 +18,7 @@ import { ManualTransactionDialog } from "@/components/admin/manual-transaction-d
 import { ManualDiscountDialog } from "@/components/admin/manual-discount-dialog"
 import { AdjustmentsService, CashflowAdjustment } from "@/services/adjustments"
 import { CURRENCY_LABELS } from "@/lib/constants"
+import { VENEZUELA_BANKS } from "@/lib/account-parser"
 
 type AdminTx = Transaction & { profiles: { email: string, full_name: string } }
 
@@ -851,7 +852,24 @@ export default function AdminTransactionsPage() {
 
                                         {selectedTx.beneficiary_data && (
                                             <div className="space-y-4">
-                                                <h3 className="font-bold text-sm uppercase tracking-wider text-muted-foreground border-b pb-1">Datos Beneficiario</h3>
+                                                <div className="flex justify-between items-center border-b pb-1">
+                                                    <h3 className="font-bold text-sm uppercase tracking-wider text-muted-foreground">Datos Beneficiario</h3>
+                                                    {selectedTx.beneficiary_data?.details?.venezuela_type === 'Pago Móvil' && (
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="h-7 text-[10px] font-bold text-primary border-primary/20 hover:bg-primary/5"
+                                                            onClick={() => {
+                                                                const bankCode = Object.entries(VENEZUELA_BANKS).find(([_, name]) => name === selectedTx.beneficiary_data?.bank_name)?.[0] || ""
+                                                                const phone = selectedTx.beneficiary_data?.account_number || ""
+                                                                const id = (selectedTx.beneficiary_data?.details?.id_number || "").replace(/[^0-9]/g, "")
+                                                                copyToClipboard(`${bankCode} ${phone} ${id}`)
+                                                            }}
+                                                        >
+                                                            Copiar Pago Móvil
+                                                        </Button>
+                                                    )}
+                                                </div>
                                                 <div className="bg-muted/10 rounded-lg border p-4 space-y-4 shadow-sm">
                                                     <div className="flex items-center gap-2 mb-2 pb-2 border-b">
                                                         <div className="bg-primary/10 p-1.5 rounded-full text-primary">
