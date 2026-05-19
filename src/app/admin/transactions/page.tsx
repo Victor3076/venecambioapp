@@ -127,8 +127,7 @@ export default function AdminTransactionsPage() {
     }
 
     useEffect(() => {
-        const filters = filterDate ? { startDate: filterDate, endDate: filterDate } : undefined
-        loadTransactions(false, filters)
+        loadTransactions(false)
 
         // Get user role for restricted actions
         supabase.auth.getUser().then(({ data: { user } }) => {
@@ -171,13 +170,14 @@ export default function AdminTransactionsPage() {
         }
     }, [filterDate])
 
-    const loadTransactions = async (silent = false, filters?: { startDate?: string, endDate?: string }) => {
+    const loadTransactions = async (silent = false) => {
         if (!silent) setLoading(true)
         try {
+            const currentFilters = filterDate ? { startDate: filterDate, endDate: filterDate } : undefined
             const [txData, depData, adjData] = await Promise.all([
-                TransactionsService.getAll(filters),
-                BankDepositsService.getAll(filters),
-                AdjustmentsService.getAll(filters)
+                TransactionsService.getAll(currentFilters),
+                BankDepositsService.getAll(currentFilters),
+                AdjustmentsService.getAll(currentFilters)
             ])
             setTransactions(txData as AdminTx[])
             setAllDeposits(depData)
