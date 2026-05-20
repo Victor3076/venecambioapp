@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { toast } from "sonner"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -32,29 +32,25 @@ export function AdjustmentDialog({ isOpen, onClose, onSuccess, type, adjustmentT
     const [amount, setAmount] = useState('')
     const [description, setDescription] = useState('')
 
-    // Reset when modal opens or closes
-    useState(() => {
-        if (!isOpen) {
-            setAmount('')
-            setDescription('')
-            setRegion('PERU')
-        }
-    })
-
-    // Populate form if editing
-    import('react').then(react => {
-        react.useEffect(() => {
-            if (isOpen && adjustmentToEdit) {
+    // Populate form if editing or reset when closed/new
+    useEffect(() => {
+        if (isOpen) {
+            if (adjustmentToEdit) {
                 setAmount(adjustmentToEdit.amount.toString())
                 setDescription(adjustmentToEdit.description || '')
                 const currRegion = Object.keys(REGION_TO_CURRENCY).find(k => REGION_TO_CURRENCY[k] === adjustmentToEdit.currency) || 'PERU'
                 setRegion(currRegion)
-            } else if (isOpen && !adjustmentToEdit) {
+            } else {
                 setAmount('')
                 setDescription('')
+                setRegion('PERU')
             }
-        }, [isOpen, adjustmentToEdit])
-    })
+        } else {
+            setAmount('')
+            setDescription('')
+            setRegion('PERU')
+        }
+    }, [isOpen, adjustmentToEdit])
 
     if (!isOpen) return null
 
