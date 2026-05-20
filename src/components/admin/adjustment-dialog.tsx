@@ -10,14 +10,6 @@ import { Loader2, TrendingDown, Landmark, AlertCircle, X } from "lucide-react"
 import { AdjustmentsService, CashflowAdjustment } from "@/services/adjustments"
 import { SUPPORTED_REGIONS, CURRENCY_LABELS } from "@/lib/constants"
 
-const REGION_TO_CURRENCY: Record<string, string> = {
-    'PERU': 'PEN',
-    'CHILE': 'CLP',
-    'COLOMBIA': 'COP',
-    'USA': 'USD',
-    'VENEZUELA': 'VES'
-}
-
 interface AdjustmentDialogProps {
     isOpen: boolean
     onClose: () => void
@@ -28,7 +20,7 @@ interface AdjustmentDialogProps {
 
 export function AdjustmentDialog({ isOpen, onClose, onSuccess, type, adjustmentToEdit }: AdjustmentDialogProps) {
     const [loading, setLoading] = useState(false)
-    const [region, setRegion] = useState('PERU')
+    const [currency, setCurrency] = useState('PEN')
     const [amount, setAmount] = useState('')
     const [description, setDescription] = useState('')
 
@@ -38,17 +30,16 @@ export function AdjustmentDialog({ isOpen, onClose, onSuccess, type, adjustmentT
             if (adjustmentToEdit) {
                 setAmount(adjustmentToEdit.amount.toString())
                 setDescription(adjustmentToEdit.description || '')
-                const currRegion = Object.keys(REGION_TO_CURRENCY).find(k => REGION_TO_CURRENCY[k] === adjustmentToEdit.currency) || 'PERU'
-                setRegion(currRegion)
+                setCurrency(adjustmentToEdit.currency || 'PEN')
             } else {
                 setAmount('')
                 setDescription('')
-                setRegion('PERU')
+                setCurrency('PEN')
             }
         } else {
             setAmount('')
             setDescription('')
-            setRegion('PERU')
+            setCurrency('PEN')
         }
     }, [isOpen, adjustmentToEdit])
 
@@ -66,14 +57,14 @@ export function AdjustmentDialog({ isOpen, onClose, onSuccess, type, adjustmentT
             if (adjustmentToEdit && adjustmentToEdit.id) {
                 await AdjustmentsService.update(adjustmentToEdit.id, {
                     amount: Number(amount),
-                    currency: REGION_TO_CURRENCY[region] || region,
+                    currency: currency,
                     description: description || (type === 'initialization' ? 'Inicialización de saldo' : 'Retiro manual')
                 })
                 toast.success("Registro actualizado exitosamente")
             } else {
                 await AdjustmentsService.create({
                     amount: Number(amount),
-                    currency: REGION_TO_CURRENCY[region] || region,
+                    currency: currency,
                     type,
                     description: description || (type === 'initialization' ? 'Inicialización de saldo' : 'Retiro manual')
                 })
@@ -120,17 +111,17 @@ export function AdjustmentDialog({ isOpen, onClose, onSuccess, type, adjustmentT
                             <label className="text-sm font-medium">País / Moneda</label>
                             <select
                                 className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 outline-none"
-                                value={region}
-                                onChange={(e) => setRegion(e.target.value)}
+                                value={currency}
+                                onChange={(e) => setCurrency(e.target.value)}
                             >
                                 {SUPPORTED_REGIONS.map(r => (
-                                    <option key={r} value={r}>{CURRENCY_LABELS[r as keyof typeof CURRENCY_LABELS] || r} ({REGION_TO_CURRENCY[r] || r})</option>
+                                    <option key={r} value={r}>{CURRENCY_LABELS[r as keyof typeof CURRENCY_LABELS] || r} ({r})</option>
                                 ))}
                             </select>
                         </div>
 
                         <div className="grid gap-2">
-                            <label className="text-sm font-medium">Monto ({REGION_TO_CURRENCY[region] || region})</label>
+                            <label className="text-sm font-medium">Monto ({currency})</label>
                             <Input
                                 type="number"
                                 step="any"
