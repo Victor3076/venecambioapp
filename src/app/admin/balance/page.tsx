@@ -36,6 +36,7 @@ export default function AdminBalancePage() {
     const [adjustType, setAdjustType] = useState<'withdrawal' | 'initialization'>('withdrawal')
     const [adjustmentToEdit, setAdjustmentToEdit] = useState<CashflowAdjustment | null>(null)
 
+    // Verificar rol una sola vez al montar el componente
     useEffect(() => {
         const checkRole = async () => {
             const { data: { user } } = await supabase.auth.getUser()
@@ -58,34 +59,30 @@ export default function AdminBalancePage() {
             loadData()
         }
         checkRole()
+    }, []) // Solo al montar
+
+    // Recargar datos cuando cambia la fecha
+    useEffect(() => {
+        loadData()
     }, [filterDate])
 
     const loadData = async () => {
         setLoading(true)
         try {
-            // In a real app we might want to filter server-side
+            // Filtrado server-side: solo se descargan los registros del día seleccionado
+            const dateFilter = filterDate
+                ? { startDate: filterDate, endDate: filterDate }
+                : undefined
+
             const [txs, deps, adjs] = await Promise.all([
-                TransactionsService.getAll(),
-                BankDepositsService.getAll(),
-                AdjustmentsService.getByDate()
+                TransactionsService.getAll(dateFilter),
+                BankDepositsService.getAll(dateFilter),
+                AdjustmentsService.getByDate(filterDate)
             ])
 
-            // Helper para comparar las fechas UTC usando el huso horario local (e.g., Caracas)
-            const isMatch = (isoDateStr?: string) => {
-                if (!isoDateStr || !filterDate) return true;
-                const d = new Date(isoDateStr);
-                const localStr = new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
-                return localStr === filterDate;
-            }
-
-            // Filter by date
-            const filteredTxs = (txs as Transaction[]).filter(tx => isMatch(tx.created_at))
-            const filteredDeps = (deps as BankDeposit[]).filter(d => isMatch(d.created_at))
-            const filteredAdjs = (adjs as CashflowAdjustment[]).filter(a => isMatch(a.created_at))
-
-            setTransactions(filteredTxs)
-            setDeposits(filteredDeps)
-            setAdjustments(filteredAdjs)
+            setTransactions(txs as Transaction[])
+            setDeposits(deps as BankDeposit[])
+            setAdjustments(adjs as CashflowAdjustment[])
         } catch (error) {
             console.error("Error loading balance data:", error)
         } finally {

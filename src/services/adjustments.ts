@@ -63,13 +63,20 @@ export const AdjustmentsService = {
         return allData
     },
 
-    async getByDate() {
-        // Fetching all to handle timezone-aware filtering in the UI
-        const { data, error } = await supabase
+    async getByDate(date?: string) {
+        // Filter server-side when a date is provided (local timezone → UTC range)
+        let query = supabase
             .from('cashflow_adjustments')
             .select('*')
             .order('created_at', { ascending: false })
 
+        if (date) {
+            const start = new Date(`${date}T00:00:00`).toISOString()
+            const end = new Date(`${date}T23:59:59.999`).toISOString()
+            query = query.gte('created_at', start).lte('created_at', end)
+        }
+
+        const { data, error } = await query
         if (error) throw error
         return data as CashflowAdjustment[]
     },
