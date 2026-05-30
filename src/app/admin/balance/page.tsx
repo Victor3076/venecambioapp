@@ -170,38 +170,43 @@ export default function AdminBalancePage() {
     }
 
     return (
-        <div className="space-y-6 p-2 sm:p-4 max-w-7xl mx-auto">
+        <div className="space-y-4 sm:space-y-6 p-3 sm:p-4 max-w-7xl mx-auto overflow-x-hidden">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                    <Link href="/admin">
-                        <Button variant="ghost" size="icon" className="rounded-full">
-                            <ArrowLeft className="h-5 w-5" />
-                        </Button>
-                    </Link>
-                    <div>
-                        <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
-                            Cuadre de Cuentas
-                        </h1>
-                        <p className="text-muted-foreground text-sm">Resumen de ingresos vs egresos del día.</p>
+                <div className="flex items-start sm:items-center justify-between gap-3 w-full md:w-auto">
+                    <div className="flex items-center gap-3">
+                        <Link href="/admin">
+                            <Button variant="ghost" size="icon" className="rounded-full shrink-0">
+                                <ArrowLeft className="h-5 w-5" />
+                            </Button>
+                        </Link>
+                        <div className="min-w-0">
+                            <h1 className="text-xl sm:text-3xl font-bold flex items-center gap-2 truncate">
+                                Cuadre de Cuentas
+                            </h1>
+                            <p className="text-muted-foreground text-[11px] sm:text-sm leading-tight truncate">Resumen de ingresos vs egresos.</p>
+                        </div>
                     </div>
+                    <Button variant="outline" size="icon" onClick={() => loadData()} disabled={loading} className="rounded-lg h-9 w-9 shrink-0 md:hidden">
+                        <Scale className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                    </Button>
                 </div>
-                <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 self-start md:self-auto w-full md:w-auto mt-2 md:mt-0">
+                <div className="flex items-center gap-2 self-start md:self-auto w-full md:w-auto mt-1 md:mt-0">
                     <Button variant="outline" size="sm" onClick={() => openAdjustment('initialization')} className="hidden sm:flex items-center gap-2 shrink-0">
                         <TrendingUp className="w-4 h-4 text-green-600" /> Inicializar Saldo
                     </Button>
                     <Button variant="outline" size="sm" onClick={() => openAdjustment('withdrawal')} className="hidden sm:flex items-center gap-2 text-destructive border-destructive/20 hover:bg-destructive/10 shrink-0">
                         <TrendingDown className="w-4 h-4" /> Registrar Retiro
                     </Button>
-                    <div className="relative flex-1 min-w-0">
+                    <div className="relative flex-1 w-full">
                         <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                         <input
                             type="date"
-                            className="h-9 w-full pl-9 rounded-lg border border-input bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                            className="h-10 w-full pl-9 rounded-lg border border-input bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
                             value={filterDate}
                             onChange={(e) => setFilterDate(e.target.value)}
                         />
                     </div>
-                    <Button variant="outline" size="icon" onClick={() => loadData()} disabled={loading} className="rounded-lg h-9 w-9 shrink-0">
+                    <Button variant="outline" size="icon" onClick={() => loadData()} disabled={loading} className="hidden md:flex rounded-lg h-10 w-10 shrink-0">
                         <Scale className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                     </Button>
                 </div>
