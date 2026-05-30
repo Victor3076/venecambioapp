@@ -221,7 +221,7 @@ export default function AdminBalancePage() {
                 </Button>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 w-full min-w-0">
                 {Object.keys(CURRENCY_LABELS).filter(k =>
                     incomeByCurrency[k] ||
                     startBalanceByCurrency[k] ||
@@ -229,39 +229,39 @@ export default function AdminBalancePage() {
                     withdrawalsByCurrency[k] ||
                     k === 'USD' || k === 'VES' || k === 'COP' || k === 'CLP' || k === 'PEN'
                 ).map(curr => (
-                    <Card key={curr} className="overflow-hidden border-none shadow-md ring-1 ring-black/5">
+                    <Card key={curr} className="overflow-hidden border-none shadow-md ring-1 ring-black/5 min-w-0">
                         <CardHeader className="pb-2 bg-muted/30">
-                            <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
-                                <span className="flex items-center gap-2">
-                                    <Scale className="w-3 h-3 text-primary" /> Totales {curr}
+                            <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center justify-between min-w-0">
+                                <span className="flex items-center gap-2 truncate">
+                                    <Scale className="w-3 h-3 text-primary shrink-0" /> <span className="truncate">Totales {curr}</span>
                                 </span>
-                                <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">DÍA</span>
+                                <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full shrink-0">DÍA</span>
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="pt-4 space-y-2.5">
-                            <div className="flex items-center justify-between gap-2 text-xs">
+                            <div className="flex items-center justify-between gap-2 text-xs min-w-0 w-full">
                                 <span className="text-muted-foreground shrink-0">Saldo Inicial (+)</span>
-                                <span className="font-medium text-right truncate">{formatCurrency(startBalanceByCurrency[curr] || 0)}</span>
+                                <span className="font-medium text-right truncate min-w-0">{formatCurrency(startBalanceByCurrency[curr] || 0)}</span>
                             </div>
-                            <div className="flex items-center justify-between gap-2 text-xs">
+                            <div className="flex items-center justify-between gap-2 text-xs min-w-0 w-full">
                                 <span className="text-muted-foreground flex items-center gap-1.5 shrink-0"><TrendingUp className="w-3 h-3 text-green-500" /> Ingresos (+)</span>
-                                <span className="font-medium text-green-600 text-right truncate">
+                                <span className="font-medium text-green-600 text-right truncate min-w-0">
                                     {formatCurrency(summaryByCurrency[curr] || 0)}
                                 </span>
                             </div>
-                            <div className="flex items-center justify-between gap-2 text-xs">
+                            <div className="flex items-center justify-between gap-2 text-xs min-w-0 w-full">
                                 <span className="text-muted-foreground flex items-center gap-1.5 shrink-0"><TrendingDown className="w-3 h-3 text-primary" /> Ops / Ventas (-)</span>
-                                <span className="font-medium text-primary text-right truncate">{formatCurrency(outflowByCurrency[curr] || 0)}</span>
+                                <span className="font-medium text-primary text-right truncate min-w-0">{formatCurrency(outflowByCurrency[curr] || 0)}</span>
                             </div>
-                            <div className="flex items-center justify-between gap-2 text-xs">
+                            <div className="flex items-center justify-between gap-2 text-xs min-w-0 w-full">
                                 <span className="text-muted-foreground flex items-center gap-1.5 shrink-0"><TrendingDown className="w-3 h-3 text-destructive" /> Retiros (-)</span>
-                                <span className="font-medium text-destructive text-right truncate">{formatCurrency(withdrawalsByCurrency[curr] || 0)}</span>
+                                <span className="font-medium text-destructive text-right truncate min-w-0">{formatCurrency(withdrawalsByCurrency[curr] || 0)}</span>
                             </div>
 
-                            <div className="pt-3 border-t mt-3">
-                                <div className="flex flex-col">
+                            <div className="pt-3 border-t mt-3 min-w-0">
+                                <div className="flex flex-col min-w-0">
                                     <span className="text-[10px] font-bold uppercase text-muted-foreground">Saldo Final</span>
-                                    <div className="text-2xl font-black font-mono break-words mt-0.5">
+                                    <div className="text-2xl font-black font-mono break-all mt-0.5">
                                         {formatCurrency(
                                             (startBalanceByCurrency[curr] || 0) +
                                             (summaryByCurrency[curr] || 0) -
