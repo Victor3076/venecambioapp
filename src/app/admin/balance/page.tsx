@@ -283,20 +283,20 @@ export default function AdminBalancePage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                 {/* Income by Bank Table */}
-                <Card className="shadow-lg border-none">
+                <Card className="shadow-lg border-none overflow-hidden min-w-0">
                     <CardHeader className="border-b">
                         <CardTitle className="text-lg flex items-center gap-2">
-                            <Wallet className="w-5 h-5 text-green-600" /> Ingresos por Banco (Depósitos)
+                            <Wallet className="w-5 h-5 text-green-600" /> Ingresos por Banco
                         </CardTitle>
                         <CardDescription>Depósitos manuales registrados como recibidos.</CardDescription>
                     </CardHeader>
                     <CardContent className="p-0">
-                        <div className="overflow-x-auto">
+                        <div className="overflow-x-auto max-w-full">
                             <table className="w-full text-sm">
                                 <thead>
                                     <tr className="bg-muted/50 text-muted-foreground font-medium">
-                                        <th className="p-4 text-left">Banco / Cuenta</th>
-                                        <th className="p-4 text-right">Monto Recaudado</th>
+                                        <th className="p-4 text-left whitespace-nowrap">Banco / Cuenta</th>
+                                        <th className="p-4 text-right whitespace-nowrap">Monto Recaudado</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y">
@@ -304,11 +304,11 @@ export default function AdminBalancePage() {
                                         <tr><td colSpan={2} className="p-8 text-center text-muted-foreground italic">Sin depósitos registrados</td></tr>
                                     ) : balances.map((b, i) => (
                                         <tr key={i} className="hover:bg-muted/20">
-                                            <td className="p-4">
+                                            <td className="p-4 whitespace-nowrap">
                                                 <div className="font-bold">{b.bank}</div>
                                                 <div className="text-[10px] text-muted-foreground uppercase">{b.currency}</div>
                                             </td>
-                                            <td className="p-4 text-right font-mono font-bold text-green-600">
+                                            <td className="p-4 text-right font-mono font-bold text-green-600 whitespace-nowrap">
                                                 {formatCurrency(b.income)}
                                             </td>
                                         </tr>
@@ -320,21 +320,21 @@ export default function AdminBalancePage() {
                 </Card>
 
                 {/* Outflow / Ops Summary */}
-                <Card className="shadow-lg border-none">
+                <Card className="shadow-lg border-none overflow-hidden min-w-0">
                     <CardHeader className="border-b">
                         <CardTitle className="text-lg flex items-center gap-2">
-                            <TrendingDown className="w-5 h-5 text-primary" /> Egresos / Operaciones (Venta)
+                            <TrendingDown className="w-5 h-5 text-primary" /> Egresos / Ventas
                         </CardTitle>
                         <CardDescription>Total pagado a beneficiarios (salidas reales).</CardDescription>
                     </CardHeader>
                     <CardContent className="p-0">
-                        <div className="overflow-x-auto">
+                        <div className="overflow-x-auto max-w-full">
                             <table className="w-full text-sm">
                                 <thead>
                                     <tr className="bg-muted/50 text-muted-foreground font-medium">
-                                        <th className="p-4 text-left">Moneda</th>
-                                        <th className="p-4 text-center">Cantidad</th>
-                                        <th className="p-4 text-right">Monto Total</th>
+                                        <th className="p-4 text-left whitespace-nowrap">Moneda</th>
+                                        <th className="p-4 text-center whitespace-nowrap">Cantidad</th>
+                                        <th className="p-4 text-right whitespace-nowrap">Monto Total</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y">
@@ -342,13 +342,13 @@ export default function AdminBalancePage() {
                                         <tr><td colSpan={3} className="p-8 text-center text-muted-foreground italic">Sin operaciones para esta fecha</td></tr>
                                     ) : Object.keys(outflowByCurrency).map(curr => (
                                         <tr key={curr} className="hover:bg-muted/20">
-                                            <td className="p-4">
+                                            <td className="p-4 whitespace-nowrap">
                                                 <div className="font-bold">{CURRENCY_LABELS[curr] || curr}</div>
                                             </td>
-                                            <td className="p-4 text-center text-muted-foreground">
+                                            <td className="p-4 text-center text-muted-foreground whitespace-nowrap">
                                                 {transactions.filter(tx => (REGION_TO_CURRENCY[tx.currency_received] || tx.currency_received) === curr).length} ops
                                             </td>
-                                            <td className="p-4 text-right font-mono font-bold text-primary">
+                                            <td className="p-4 text-right font-mono font-bold text-primary whitespace-nowrap">
                                                 {formatCurrency(outflowByCurrency[curr])}
                                             </td>
                                         </tr>
@@ -365,7 +365,7 @@ export default function AdminBalancePage() {
 
             {/* Recent Adjustments Table */}
             {adjustments.length > 0 && (
-                <Card className="shadow-lg border-none mt-6">
+                <Card className="shadow-lg border-none mt-6 overflow-hidden min-w-0">
                     <CardHeader className="border-b">
                         <CardTitle className="text-lg flex items-center gap-2">
                             Ajustes y Retiros Recientes
@@ -374,31 +374,31 @@ export default function AdminBalancePage() {
                     </CardHeader>
                     <CardContent className="p-0">
                         {/* Desktop table */}
-                        <div className="hidden sm:block overflow-x-auto">
+                        <div className="hidden sm:block overflow-x-auto max-w-full">
                             <table className="w-full text-sm">
                                 <thead>
                                     <tr className="bg-muted/50 text-muted-foreground font-medium">
-                                        <th className="p-4 text-left">Fecha/Hora</th>
-                                        <th className="p-4 text-left">Tipo</th>
-                                        <th className="p-4 text-left">Descripción</th>
-                                        <th className="p-4 text-right">Monto</th>
-                                        <th className="p-4 text-right">Acciones</th>
+                                        <th className="p-4 text-left whitespace-nowrap">Fecha/Hora</th>
+                                        <th className="p-4 text-left whitespace-nowrap">Tipo</th>
+                                        <th className="p-4 text-left whitespace-nowrap">Descripción</th>
+                                        <th className="p-4 text-right whitespace-nowrap">Monto</th>
+                                        <th className="p-4 text-right whitespace-nowrap">Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y text-xs">
                                     {adjustments.map((adj) => (
                                         <tr key={adj.id} className="hover:bg-muted/20">
-                                            <td className="p-4 text-muted-foreground">{new Date(adj.created_at!).toLocaleTimeString()}</td>
-                                            <td className="p-4">
+                                            <td className="p-4 text-muted-foreground whitespace-nowrap">{new Date(adj.created_at!).toLocaleTimeString()}</td>
+                                            <td className="p-4 whitespace-nowrap">
                                                 <span className={`px-2 py-0.5 rounded-full text-[10px] uppercase font-bold ${adj.type === 'initialization' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                                                     {adj.type === 'initialization' ? 'Inicialización' : 'Retiro'}
                                                 </span>
                                             </td>
-                                            <td className="p-4 italic text-muted-foreground">{adj.description || '-'}</td>
-                                            <td className={`p-4 text-right font-bold ${adj.type === 'initialization' ? 'text-green-600' : 'text-destructive'}`}>
+                                            <td className="p-4 italic text-muted-foreground whitespace-nowrap">{adj.description || '-'}</td>
+                                            <td className={`p-4 text-right font-bold whitespace-nowrap ${adj.type === 'initialization' ? 'text-green-600' : 'text-destructive'}`}>
                                                 {adj.type === 'initialization' ? '+' : '-'} {formatCurrency(adj.amount)} {adj.currency}
                                             </td>
-                                            <td className="p-4 text-right">
+                                            <td className="p-4 text-right whitespace-nowrap">
                                                 <div className="flex justify-end gap-1">
                                                     <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => openAdjustment(adj.type, adj)}><Edit className="w-3.5 h-3.5" /></Button>
                                                     <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => adj.id && handleDeleteAdjustment(adj.id)}><Trash2 className="w-3.5 h-3.5" /></Button>
@@ -415,12 +415,12 @@ export default function AdminBalancePage() {
                                 <div key={adj.id} className="p-4 flex items-start justify-between gap-3">
                                     <div className="min-w-0 space-y-1">
                                         <div className="flex items-center gap-2">
-                                            <span className={`px-2 py-0.5 rounded-full text-[10px] uppercase font-bold ${adj.type === 'initialization' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                            <span className={`px-2 py-0.5 rounded-full text-[10px] uppercase font-bold shrink-0 ${adj.type === 'initialization' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                                                 {adj.type === 'initialization' ? 'Inicialización' : 'Retiro'}
                                             </span>
-                                            <span className="text-[10px] text-muted-foreground">{new Date(adj.created_at!).toLocaleTimeString()}</span>
+                                            <span className="text-[10px] text-muted-foreground truncate">{new Date(adj.created_at!).toLocaleTimeString()}</span>
                                         </div>
-                                        <div className={`font-black text-base ${adj.type === 'initialization' ? 'text-green-600' : 'text-destructive'}`}>
+                                        <div className={`font-black text-base truncate ${adj.type === 'initialization' ? 'text-green-600' : 'text-destructive'}`}>
                                             {adj.type === 'initialization' ? '+' : '-'} {formatCurrency(adj.amount)} {adj.currency}
                                         </div>
                                         {adj.description && <div className="text-xs italic text-muted-foreground truncate">{adj.description}</div>}
