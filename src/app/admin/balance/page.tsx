@@ -234,29 +234,29 @@ export default function AdminBalancePage() {
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="pt-4 space-y-2">
-                            <div className="flex items-center justify-between text-xs">
-                                <span className="text-muted-foreground">Saldo Inicial (+)</span>
-                                <span className="font-medium">{formatCurrency(startBalanceByCurrency[curr] || 0)}</span>
+                            <div className="flex items-center justify-between gap-2 text-xs">
+                                <span className="text-muted-foreground shrink-0">Saldo Inicial (+)</span>
+                                <span className="font-medium text-right truncate">{formatCurrency(startBalanceByCurrency[curr] || 0)}</span>
                             </div>
-                            <div className="flex items-center justify-between text-xs">
-                                <span className="text-muted-foreground flex items-center gap-1.5"><TrendingUp className="w-3 h-3 text-green-500" /> Ingresos (+)</span>
-                                <span className="font-medium text-green-600">
+                            <div className="flex items-center justify-between gap-2 text-xs">
+                                <span className="text-muted-foreground flex items-center gap-1.5 shrink-0"><TrendingUp className="w-3 h-3 text-green-500" /> Ingresos (+)</span>
+                                <span className="font-medium text-green-600 text-right truncate">
                                     {formatCurrency(summaryByCurrency[curr] || 0)}
                                 </span>
                             </div>
-                            <div className="flex items-center justify-between text-xs">
-                                <span className="text-muted-foreground flex items-center gap-1.5"><TrendingDown className="w-3 h-3 text-primary" /> Ops / Ventas (-)</span>
-                                <span className="font-medium text-primary">{formatCurrency(outflowByCurrency[curr] || 0)}</span>
+                            <div className="flex items-center justify-between gap-2 text-xs">
+                                <span className="text-muted-foreground flex items-center gap-1.5 shrink-0"><TrendingDown className="w-3 h-3 text-primary" /> Ops / Ventas (-)</span>
+                                <span className="font-medium text-primary text-right truncate">{formatCurrency(outflowByCurrency[curr] || 0)}</span>
                             </div>
-                            <div className="flex items-center justify-between text-xs">
-                                <span className="text-muted-foreground flex items-center gap-1.5"><TrendingDown className="w-3 h-3 text-destructive" /> Retiros (-)</span>
-                                <span className="font-medium text-destructive">{formatCurrency(withdrawalsByCurrency[curr] || 0)}</span>
+                            <div className="flex items-center justify-between gap-2 text-xs">
+                                <span className="text-muted-foreground flex items-center gap-1.5 shrink-0"><TrendingDown className="w-3 h-3 text-destructive" /> Retiros (-)</span>
+                                <span className="font-medium text-destructive text-right truncate">{formatCurrency(withdrawalsByCurrency[curr] || 0)}</span>
                             </div>
 
                             <div className="pt-2 border-t mt-2">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-[10px] font-bold uppercase text-muted-foreground">Saldo Final</span>
-                                    <div className="text-lg font-black font-mono">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2">
+                                    <span className="text-[10px] font-bold uppercase text-muted-foreground shrink-0">Saldo Final</span>
+                                    <div className="text-xl sm:text-lg font-black font-mono text-right break-all sm:break-normal">
                                         {formatCurrency(
                                             (startBalanceByCurrency[curr] || 0) +
                                             (summaryByCurrency[curr] || 0) -
