@@ -170,7 +170,7 @@ export default function AdminBalancePage() {
     }
 
     return (
-        <div className="space-y-4 sm:space-y-6 p-3 sm:p-4 max-w-7xl mx-auto overflow-x-hidden">
+        <div className="w-full min-w-0 space-y-4 sm:space-y-6 p-3 sm:p-4 max-w-7xl mx-auto overflow-x-hidden">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-start sm:items-center justify-between gap-3 w-full md:w-auto">
                     <div className="flex items-center gap-3">
