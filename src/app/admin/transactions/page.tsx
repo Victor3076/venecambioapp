@@ -496,18 +496,18 @@ export default function AdminTransactionsPage() {
     }, [filteredTransactionsData, filteredAdjustmentsData, filterStatus, filterCurrency, filterDate, searchTerm])
 
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
+        <div className="space-y-4 sm:space-y-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-3">
                     <Link href="/admin">
-                        <Button variant="ghost" size="icon">
+                        <Button variant="ghost" size="icon" className="shrink-0">
                             <ArrowLeft className="h-5 w-5" />
                         </Button>
                     </Link>
                     <div>
-                        <h1 className="text-3xl font-bold">Panel de Operaciones</h1>
+                        <h1 className="text-2xl sm:text-3xl font-bold">Panel de Operaciones</h1>
                         <div className="flex items-center gap-2">
-                            <p className="text-muted-foreground">Gestiona las remesas entrantes y aprueba pagos.</p>
+                            <p className="text-muted-foreground text-sm">Gestiona las remesas entrantes y aprueba pagos.</p>
                             <Button 
                                 variant="ghost" 
                                 size="sm" 
@@ -519,13 +519,13 @@ export default function AdminTransactionsPage() {
                         </div>
                     </div>
                 </div>
-                <div className="flex gap-2">
-                    <Button variant="outline" onClick={() => loadTransactions()}>Actualizar Lista</Button>
-                    <Button variant="outline" className="text-destructive border-destructive/20 hover:bg-destructive/5" onClick={() => setIsDiscountModalOpen(true)}>
-                        <TrendingDown className="w-4 h-4 mr-2" /> Descuento Manual
+                <div className="flex flex-wrap gap-2">
+                    <Button variant="outline" size="sm" onClick={() => loadTransactions()} className="text-xs">Actualizar Lista</Button>
+                    <Button variant="outline" size="sm" className="text-xs text-destructive border-destructive/20 hover:bg-destructive/5" onClick={() => setIsDiscountModalOpen(true)}>
+                        <TrendingDown className="w-3.5 h-3.5 mr-1.5" /> Descuento Manual
                     </Button>
-                    <Button className="bg-primary hover:bg-primary/90" onClick={() => setIsManualModalOpen(true)}>
-                        <Plus className="w-4 h-4 mr-2" /> Nueva Operación (WhatsApp)
+                    <Button size="sm" className="text-xs bg-primary hover:bg-primary/90" onClick={() => setIsManualModalOpen(true)}>
+                        <Plus className="w-3.5 h-3.5 mr-1.5" /> Nueva Operación (WhatsApp)
                     </Button>
                 </div>
             </div>
@@ -634,7 +634,8 @@ export default function AdminTransactionsPage() {
 
             <Card>
                 <CardContent className="p-0">
-                    <div className="overflow-x-auto">
+                    {/* ── DESKTOP TABLE ── */}
+                    <div className="hidden sm:block overflow-x-auto">
                         <table className="w-full text-sm text-left">
                             <thead className="bg-muted/50 text-muted-foreground font-medium border-b">
                                 <tr>
@@ -786,17 +787,107 @@ export default function AdminTransactionsPage() {
                             </tfoot>
                         </table>
                     </div>
+
+                    {/* ── MOBILE CARD LIST ── */}
+                    <div className="block sm:hidden">
+                        {loading ? (
+                            <div className="p-8 text-center text-muted-foreground">Cargando datos...</div>
+                        ) : combinedItems.length === 0 ? (
+                            <div className="p-8 text-center text-muted-foreground">No hay operaciones que coincidan con los filtros.</div>
+                        ) : (
+                            <div className="divide-y">
+                                {combinedItems.map(item => {
+                                    if (item.display_type === 'adjustment') {
+                                        return (
+                                            <div key={item.id} className="p-4 bg-red-50/30 flex items-start justify-between gap-3 animate-in fade-in duration-300">
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-1.5 mb-1">
+                                                        <TrendingDown className="w-3.5 h-3.5 text-red-600 shrink-0" />
+                                                        <span className="font-black text-red-600 text-xs uppercase tracking-tight truncate">{item.profiles?.full_name}</span>
+                                                    </div>
+                                                    <div className="font-black text-red-500 text-base">- {formatCurrency(item.amount_sent, item.currency_sent)} {item.currency_sent}</div>
+                                                    <div className="text-[10px] text-muted-foreground italic truncate mt-0.5">{item.description}</div>
+                                                    <div className="text-[10px] text-muted-foreground mt-1">{item.created_at ? new Date(item.created_at).toLocaleString() : ''}</div>
+                                                </div>
+                                                <div className="flex flex-col items-end gap-2 shrink-0">
+                                                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-800 uppercase">Debitado</span>
+                                                    <Button variant="ghost" size="icon" onClick={() => {
+                                                        if (confirm("¿Estás seguro de eliminar este descuento manual?")) {
+                                                            AdjustmentsService.delete(item.id!).then(() => {
+                                                                toast.success("Descuento eliminado exitosamente");
+                                                                loadTransactions();
+                                                            })
+                                                        }
+                                                    }} className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-red-50">
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        )
+                                    }
+
+                                    const tx = item
+                                    const deposit = tx.deposit
+                                    return (
+                                        <div key={tx.id} className="p-4 hover:bg-muted/20 transition-colors">
+                                            <div className="flex items-start justify-between gap-3 mb-2">
+                                                <div className="min-w-0">
+                                                    <div className="font-semibold text-sm truncate">{tx.profiles?.full_name || 'Sin nombre'}</div>
+                                                    <div className="text-[10px] text-muted-foreground truncate">{tx.profiles?.email}</div>
+                                                </div>
+                                                <div className="flex items-center gap-2 shrink-0">
+                                                    <StatusBadge status={tx.status} />
+                                                </div>
+                                            </div>
+                                            <div className="font-bold text-primary text-sm mb-1">
+                                                {formatCurrency(tx.amount_sent, tx.currency_sent)} {tx.currency_sent} → {formatCurrency(tx.amount_received, tx.currency_received)} {tx.currency_received}
+                                            </div>
+                                            <div className="flex items-center justify-between mt-2">
+                                                <div className="text-[10px] text-muted-foreground">
+                                                    {tx.created_at ? new Date(tx.created_at).toLocaleString() : ''}
+                                                    {deposit ? (
+                                                        <span className="ml-2 font-medium text-foreground/70">{deposit.bank_name || 'Desconocido'}</span>
+                                                    ) : tx.beneficiary_data?.type === 'cash' ? (
+                                                        <span className="ml-2 font-bold text-amber-600">Efectivo</span>
+                                                    ) : (
+                                                        <span className="ml-2 italic">Sin conciliar</span>
+                                                    )}
+                                                </div>
+                                                <Button variant="ghost" size="sm" onClick={() => setSelectedTx(tx)} className="h-8 text-xs">
+                                                    <Eye className="w-3.5 h-3.5 mr-1.5" /> Revisar
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        )}
+                        {/* Mobile totals footer */}
+                        {!loading && combinedItems.length > 0 && filterCurrency !== 'all' && (
+                            <div className="border-t bg-muted/20 p-4">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-xs font-bold text-muted-foreground">Total {CURRENCY_LABELS[filterCurrency] || filterCurrency}:</span>
+                                    <div className="font-black text-lg text-primary">
+                                        {formatCurrency(combinedItems.reduce((sum, item) => {
+                                            if (item.display_type === 'adjustment') return sum - Number(item.amount_sent)
+                                            return sum + Number(item.amount_sent)
+                                        }, 0) - hiddenAutomatedFeesSum, filterCurrency)} {filterCurrency}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </CardContent>
             </Card>
 
             {/* Admin Detail Modal Backdrop */}
             {selectedTx && (
-                <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
-                    <Card className="w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
+                <div className="fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center p-0 sm:p-4 z-50 animate-in fade-in duration-200">
+                    <Card className="w-full max-w-4xl max-h-[92vh] sm:max-h-[90vh] overflow-hidden flex flex-col shadow-2xl rounded-t-2xl sm:rounded-2xl">
                         <CardHeader className="border-b bg-background p-4 sm:p-6">
                             <div className="flex justify-between items-start">
                                 <div>
-                                    <CardTitle className="text-xl text-foreground">Operación #{selectedTx.id?.split('-')[0]}</CardTitle>
+                                    <CardTitle className="text-lg sm:text-xl text-foreground">Operación #{selectedTx.id?.split('-')[0]}</CardTitle>
                                     <CardDescription>Revisión detallada y aprobación de fondos.</CardDescription>
                                 </div>
                                 <Button variant="ghost" size="icon" onClick={() => setSelectedTx(null)} className="rounded-full">
@@ -805,7 +896,7 @@ export default function AdminTransactionsPage() {
                             </div>
                         </CardHeader>
                         <CardContent className="p-0 overflow-y-auto">
-                            <div className="p-4 sm:p-6 grid md:grid-cols-2 gap-8">
+                            <div className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
                                 <div className="space-y-8">
                                     <div className="space-y-6">
                                         <div className="space-y-4">
