@@ -261,7 +261,7 @@ export default function AdminBalancePage() {
                             <div className="pt-3 border-t mt-3 min-w-0">
                                 <div className="flex flex-col min-w-0">
                                     <span className="text-[10px] font-bold uppercase text-muted-foreground">Saldo Final</span>
-                                    <div className="text-2xl font-black font-mono break-all mt-0.5">
+                                    <div className="text-xl sm:text-2xl font-black font-mono break-all mt-0.5">
                                         {formatCurrency(
                                             (startBalanceByCurrency[curr] || 0) +
                                             (summaryByCurrency[curr] || 0) -
@@ -291,7 +291,8 @@ export default function AdminBalancePage() {
                         <CardDescription>Depósitos manuales registrados como recibidos.</CardDescription>
                     </CardHeader>
                     <CardContent className="p-0">
-                        <div className="overflow-x-auto max-w-full">
+                        {/* Desktop table */}
+                        <div className="hidden sm:block overflow-x-auto max-w-full">
                             <table className="w-full text-sm">
                                 <thead>
                                     <tr className="bg-muted/50 text-muted-foreground font-medium">
@@ -316,6 +317,22 @@ export default function AdminBalancePage() {
                                 </tbody>
                             </table>
                         </div>
+                        {/* Mobile list */}
+                        <div className="sm:hidden divide-y">
+                            {balances.length === 0 ? (
+                                <div className="p-6 text-center text-muted-foreground text-sm italic">Sin depósitos registrados</div>
+                            ) : balances.map((b, i) => (
+                                <div key={i} className="p-4 flex items-center justify-between gap-3 text-sm">
+                                    <div className="min-w-0">
+                                        <div className="font-bold truncate">{b.bank}</div>
+                                        <div className="text-[10px] text-muted-foreground uppercase">{b.currency}</div>
+                                    </div>
+                                    <div className="font-mono font-bold text-green-600 text-right shrink-0">
+                                        {formatCurrency(b.income)}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </CardContent>
                 </Card>
 
@@ -328,7 +345,8 @@ export default function AdminBalancePage() {
                         <CardDescription>Total pagado a beneficiarios (salidas reales).</CardDescription>
                     </CardHeader>
                     <CardContent className="p-0">
-                        <div className="overflow-x-auto max-w-full">
+                        {/* Desktop table */}
+                        <div className="hidden sm:block overflow-x-auto max-w-full">
                             <table className="w-full text-sm">
                                 <thead>
                                     <tr className="bg-muted/50 text-muted-foreground font-medium">
@@ -355,6 +373,24 @@ export default function AdminBalancePage() {
                                     ))}
                                 </tbody>
                             </table>
+                        </div>
+                        {/* Mobile list */}
+                        <div className="sm:hidden divide-y">
+                            {Object.keys(outflowByCurrency).length === 0 ? (
+                                <div className="p-6 text-center text-muted-foreground text-sm italic">Sin operaciones para esta fecha</div>
+                            ) : Object.keys(outflowByCurrency).map(curr => (
+                                <div key={curr} className="p-4 flex items-center justify-between gap-3 text-sm">
+                                    <div className="min-w-0">
+                                        <div className="font-bold truncate">{CURRENCY_LABELS[curr] || curr}</div>
+                                        <div className="text-[10px] text-muted-foreground">
+                                            {transactions.filter(tx => (REGION_TO_CURRENCY[tx.currency_received] || tx.currency_received) === curr).length} ops
+                                        </div>
+                                    </div>
+                                    <div className="font-mono font-bold text-primary text-right shrink-0">
+                                        {formatCurrency(outflowByCurrency[curr])}
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </CardContent>
                     <div className="p-4 bg-primary/5 text-[11px] text-primary border-t">
