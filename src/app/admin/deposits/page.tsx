@@ -152,25 +152,25 @@ export default function BankDepositsPage() {
     }
 
     return (
-        <div className="space-y-6 container py-10">
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
+        <div className="space-y-4 sm:space-y-6 container py-6 sm:py-10">
+            <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
                     <Link href="/admin">
-                        <Button variant="ghost" size="icon">
+                        <Button variant="ghost" size="icon" className="shrink-0">
                             <ArrowLeft className="h-5 w-5" />
                         </Button>
                     </Link>
                     <div>
-                        <h1 className="text-3xl font-bold">Depósitos Bancarios</h1>
-                        <p className="text-muted-foreground">Registro manual de ingresos para conciliación.</p>
+                        <h1 className="text-2xl sm:text-3xl font-bold">Depósitos Bancarios</h1>
+                        <p className="text-muted-foreground text-sm">Registro manual de ingresos para conciliación.</p>
                     </div>
                 </div>
-                <Button onClick={loadDeposits} variant="outline" size="icon">
+                <Button onClick={loadDeposits} variant="outline" size="icon" className="shrink-0">
                     <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                 </Button>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
                 {/* Form Section */}
                 <Card className="md:col-span-1 h-fit">
                     <CardHeader>
@@ -254,12 +254,13 @@ export default function BankDepositsPage() {
                 {/* List Section */}
                 <Card className="md:col-span-2">
                     <CardHeader>
-                        <div className="flex justify-between items-center">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
                             <div>
                                 <CardTitle>Depósitos Recientes</CardTitle>
                                 <CardDescription>Historial de ingresos registrados.</CardDescription>
                             </div>
-                                <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <div className="flex items-center gap-1.5">
                                     <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">Fecha:</span>
                                     <input
                                         type="date"
@@ -268,7 +269,7 @@ export default function BankDepositsPage() {
                                         onChange={e => setFilterDate(e.target.value)}
                                     />
                                 </div>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1.5">
                                     <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">Moneda:</span>
                                     <select
                                         className="h-8 rounded-md border border-input bg-background px-2 py-1 text-xs"
@@ -283,11 +284,13 @@ export default function BankDepositsPage() {
                                         <option value="CLP">Pesos (CLP)</option>
                                     </select>
                                 </div>
+                            </div>
                         </div>
                     </CardHeader>
                     <CardContent>
                         <div className="rounded-md border">
-                            <div className="grid grid-cols-5 p-4 bg-muted/50 font-medium text-sm">
+                            {/* Desktop header */}
+                            <div className="hidden sm:grid grid-cols-5 p-4 bg-muted/50 font-medium text-sm">
                                 <div>Fecha</div>
                                 <div>Referencia</div>
                                 <div>Banco</div>
@@ -306,38 +309,55 @@ export default function BankDepositsPage() {
                                 return (
                                     <div className="divide-y">
                                         {filtered.map(deposit => (
-                                            <div key={deposit.id} className="grid grid-cols-5 p-4 text-sm items-center hover:bg-muted/10">
-                                                <div className="text-muted-foreground text-xs">
-                                                    {new Date(deposit.created_at || "").toLocaleDateString()}
-                                                </div>
-                                                <div className="font-mono">{deposit.reference_number}</div>
-                                                <div className="truncate pr-2">
-                                                    <div className="font-medium">
-                                                        {deposit.bank_name || "-"}
-                                                        {deposit.notes && <span className="ml-2 text-[10px] text-muted-foreground italic">/ {deposit.notes}</span>}
+                                            <div key={deposit.id}>
+                                                {/* Desktop row */}
+                                                <div className="hidden sm:grid grid-cols-5 p-4 text-sm items-center hover:bg-muted/10">
+                                                    <div className="text-muted-foreground text-xs">
+                                                        {new Date(deposit.created_at || "").toLocaleDateString()}
+                                                    </div>
+                                                    <div className="font-mono">{deposit.reference_number}</div>
+                                                    <div className="truncate pr-2">
+                                                        <div className="font-medium">
+                                                            {deposit.bank_name || "-"}
+                                                            {deposit.notes && <span className="ml-2 text-[10px] text-muted-foreground italic">/ {deposit.notes}</span>}
+                                                        </div>
+                                                    </div>
+                                                    <div className="font-bold">
+                                                        {formatCurrency(deposit.amount, deposit.currency)} {deposit.currency}
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={`px-2 py-1 rounded-full text-xs font-bold ${deposit.status === 'matched' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
+                                                            {deposit.status === 'matched' ? 'Conciliado' : 'Disponible'}
+                                                        </span>
+                                                        {deposit.status !== 'matched' && (
+                                                            <div className="flex items-center gap-1">
+                                                                <Button variant="outline" size="sm" className="h-7 text-[10px]" onClick={() => openReconciliation(deposit)}>Conciliar</Button>
+                                                                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => startEdit(deposit)}><Pencil className="h-3.5 w-3.5" /></Button>
+                                                                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => handleDelete(deposit.id!)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
-                                                <div className="font-bold">
-                                                    {formatCurrency(deposit.amount, deposit.currency)} {deposit.currency}
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <span className={`px-2 py-1 rounded-full text-xs font-bold ${deposit.status === 'matched'
-                                                        ? 'bg-green-100 text-green-700'
-                                                        : 'bg-blue-100 text-blue-700'
-                                                        }`}>
-                                                        {deposit.status === 'matched' ? 'Conciliado' : 'Disponible'}
-                                                    </span>
+                                                {/* Mobile card */}
+                                                <div className="sm:hidden p-4 space-y-2 hover:bg-muted/10">
+                                                    <div className="flex items-start justify-between gap-2">
+                                                        <div className="min-w-0">
+                                                            <div className="font-bold text-sm">{formatCurrency(deposit.amount, deposit.currency)} {deposit.currency}</div>
+                                                            <div className="font-mono text-xs text-muted-foreground">{deposit.reference_number}</div>
+                                                            <div className="text-xs text-muted-foreground">{deposit.bank_name || "-"}{deposit.notes && <span className="italic ml-1">/ {deposit.notes}</span>}</div>
+                                                        </div>
+                                                        <div className="flex flex-col items-end gap-1.5 shrink-0">
+                                                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${deposit.status === 'matched' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
+                                                                {deposit.status === 'matched' ? 'Conciliado' : 'Disponible'}
+                                                            </span>
+                                                            <div className="text-[10px] text-muted-foreground">{new Date(deposit.created_at || "").toLocaleDateString()}</div>
+                                                        </div>
+                                                    </div>
                                                     {deposit.status !== 'matched' && (
-                                                        <div className="flex items-center gap-1">
-                                                            <Button variant="outline" size="sm" className="h-7 text-[10px]" onClick={() => openReconciliation(deposit)}>
-                                                                Conciliar
-                                                            </Button>
-                                                            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => startEdit(deposit)}>
-                                                                <Pencil className="h-3.5 w-3.5" />
-                                                            </Button>
-                                                            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => handleDelete(deposit.id!)}>
-                                                                <Trash2 className="h-3.5 w-3.5" />
-                                                            </Button>
+                                                        <div className="flex items-center gap-1.5 pt-1">
+                                                            <Button variant="outline" size="sm" className="h-7 text-[10px] flex-1" onClick={() => openReconciliation(deposit)}>Conciliar</Button>
+                                                            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => startEdit(deposit)}><Pencil className="h-3.5 w-3.5" /></Button>
+                                                            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => handleDelete(deposit.id!)}><Trash2 className="h-3.5 w-3.5" /></Button>
                                                         </div>
                                                     )}
                                                 </div>
@@ -431,8 +451,8 @@ function ReconciliationModal({
     })
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-            <Card className="w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl animate-in fade-in zoom-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50 backdrop-blur-sm">
+            <Card className="w-full max-w-2xl max-h-[92vh] sm:max-h-[90vh] overflow-hidden flex flex-col shadow-2xl animate-in fade-in zoom-in duration-200 rounded-t-2xl sm:rounded-2xl">
                 <CardHeader className="border-b pb-3 bg-card">
                     <div className="flex justify-between items-center">
                         <div>
@@ -495,7 +515,7 @@ function ReconciliationModal({
                                         </div>
                                         <Button
                                             size="sm"
-                                            className="opacity-0 group-hover:opacity-100 transition-opacity bg-green-600 hover:bg-green-700"
+                                            className="bg-green-600 hover:bg-green-700 shrink-0"
                                             onClick={() => onMatch(tx.id!)}
                                             disabled={matching}
                                         >

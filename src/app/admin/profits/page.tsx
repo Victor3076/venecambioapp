@@ -87,54 +87,53 @@ export default function AdminProfitsPage() {
     }
 
     return (
-        <div className="space-y-6 p-4 sm:p-8 max-w-6xl mx-auto">
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
+        <div className="space-y-4 sm:space-y-6 p-4 sm:p-8 max-w-6xl mx-auto">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-3">
                     <Link href="/admin">
-                        <Button variant="ghost" size="icon">
+                        <Button variant="ghost" size="icon" className="shrink-0">
                             <ArrowLeft className="h-5 w-5" />
                         </Button>
                     </Link>
                     <div>
-                        <h1 className="text-3xl font-bold">Manejo de Ganancias</h1>
-                        <p className="text-muted-foreground">Resumen de volumen y margen generado por moneda.</p>
+                        <h1 className="text-2xl sm:text-3xl font-bold">Manejo de Ganancias</h1>
+                        <p className="text-muted-foreground text-sm">Resumen de volumen y margen generado por moneda.</p>
                     </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-3">
-                    <div className="flex items-center gap-2">
-                        <span className="text-xs font-medium text-muted-foreground uppercase text-[10px]">Desde:</span>
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                    <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-medium text-muted-foreground uppercase">Desde:</span>
                         <input
                             type="date"
-                            className="h-10 rounded-md border border-input bg-background px-2 py-1 text-xs"
+                            className="h-9 rounded-md border border-input bg-background px-2 py-1 text-xs"
                             value={startDate}
                             onChange={(e) => setStartDate(e.target.value)}
                         />
                     </div>
-                    <div className="flex items-center gap-2">
-                        <span className="text-xs font-medium text-muted-foreground uppercase text-[10px]">Hasta:</span>
+                    <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-medium text-muted-foreground uppercase">Hasta:</span>
                         <input
                             type="date"
-                            className="h-10 rounded-md border border-input bg-background px-2 py-1 text-xs"
+                            className="h-9 rounded-md border border-input bg-background px-2 py-1 text-xs"
                             value={endDate}
                             onChange={(e) => setEndDate(e.target.value)}
                         />
                     </div>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                            setStartDate("")
-                            setEndDate("")
-                        }}
-                        disabled={!startDate && !endDate}
-                    >
-                        Limpiar
-                    </Button>
-                    <Button size="sm" onClick={loadData}>Filtrar</Button>
+                    <div className="flex gap-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => { setStartDate(""); setEndDate("") }}
+                            disabled={!startDate && !endDate}
+                        >
+                            Limpiar
+                        </Button>
+                        <Button size="sm" onClick={loadData}>Filtrar</Button>
+                    </div>
                 </div>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
                 <Card className="bg-primary/5 border-primary/20">
                     <CardHeader className="pb-2">
                         <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -184,7 +183,8 @@ export default function AdminProfitsPage() {
                     <CardDescription>Volumen total y ganancia estimada retenida.</CardDescription>
                 </CardHeader>
                 <CardContent className="p-0">
-                    <div className="overflow-x-auto">
+                    {/* Desktop table */}
+                    <div className="hidden sm:block overflow-x-auto">
                         <table className="w-full text-sm text-left">
                             <thead className="bg-muted text-muted-foreground font-medium border-b">
                                 <tr>
@@ -216,6 +216,29 @@ export default function AdminProfitsPage() {
                                 ))}
                             </tbody>
                         </table>
+                    </div>
+                    {/* Mobile cards */}
+                    <div className="sm:hidden">
+                        {loading ? (
+                            <div className="p-8 text-center text-muted-foreground">Calculando estadísticas...</div>
+                        ) : Object.keys(stats.volumeByCurrency).length === 0 ? (
+                            <div className="p-8 text-center text-muted-foreground">No hay datos para mostrar.</div>
+                        ) : (
+                            <div className="divide-y">
+                                {Object.keys(stats.volumeByCurrency).sort().map(curr => (
+                                    <div key={curr} className="p-4 space-y-2">
+                                        <div className="flex items-center justify-between">
+                                            <span className="font-bold text-sm">{CURRENCY_LABELS[curr as keyof typeof CURRENCY_LABELS] || curr}</span>
+                                            <span className="text-green-600 font-black text-base">+{stats.profitByCurrency[curr].toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT</span>
+                                        </div>
+                                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                            <span>Volumen: <span className="font-medium text-foreground">{stats.volumeByCurrency[curr].toLocaleString()} {curr}</span></span>
+                                            <span className="font-medium">{stats.volumeByCurrency[curr] > 0 ? (stats.marginSumByCurrency[curr] / stats.volumeByCurrency[curr]).toFixed(1) + "% margen" : "0%"}</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </CardContent>
             </Card>

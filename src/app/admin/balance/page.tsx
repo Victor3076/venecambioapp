@@ -276,7 +276,7 @@ export default function AdminBalancePage() {
                 )}
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                 {/* Income by Bank Table */}
                 <Card className="shadow-lg border-none">
                     <CardHeader className="border-b">
@@ -286,29 +286,31 @@ export default function AdminBalancePage() {
                         <CardDescription>Depósitos manuales registrados como recibidos.</CardDescription>
                     </CardHeader>
                     <CardContent className="p-0">
-                        <table className="w-full text-sm">
-                            <thead>
-                                <tr className="bg-muted/50 text-muted-foreground font-medium">
-                                    <th className="p-4 text-left">Banco / Cuenta</th>
-                                    <th className="p-4 text-right">Monto Recaudado</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y">
-                                {balances.length === 0 ? (
-                                    <tr><td colSpan={2} className="p-8 text-center text-muted-foreground italic">Sin depósitos registrados</td></tr>
-                                ) : balances.map((b, i) => (
-                                    <tr key={i} className="hover:bg-muted/20 group">
-                                        <td className="p-4">
-                                            <div className="font-bold">{b.bank}</div>
-                                            <div className="text-[10px] text-muted-foreground uppercase">{b.currency}</div>
-                                        </td>
-                                        <td className="p-4 text-right font-mono font-bold text-green-600">
-                                            {formatCurrency(b.income)}
-                                        </td>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr className="bg-muted/50 text-muted-foreground font-medium">
+                                        <th className="p-4 text-left">Banco / Cuenta</th>
+                                        <th className="p-4 text-right">Monto Recaudado</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody className="divide-y">
+                                    {balances.length === 0 ? (
+                                        <tr><td colSpan={2} className="p-8 text-center text-muted-foreground italic">Sin depósitos registrados</td></tr>
+                                    ) : balances.map((b, i) => (
+                                        <tr key={i} className="hover:bg-muted/20">
+                                            <td className="p-4">
+                                                <div className="font-bold">{b.bank}</div>
+                                                <div className="text-[10px] text-muted-foreground uppercase">{b.currency}</div>
+                                            </td>
+                                            <td className="p-4 text-right font-mono font-bold text-green-600">
+                                                {formatCurrency(b.income)}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </CardContent>
                 </Card>
 
@@ -321,32 +323,34 @@ export default function AdminBalancePage() {
                         <CardDescription>Total pagado a beneficiarios (salidas reales).</CardDescription>
                     </CardHeader>
                     <CardContent className="p-0">
-                        <table className="w-full text-sm">
-                            <thead>
-                                <tr className="bg-muted/50 text-muted-foreground font-medium">
-                                    <th className="p-4 text-left">Moneda</th>
-                                    <th className="p-4 text-center">Cantidad</th>
-                                    <th className="p-4 text-right">Monto Total</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y">
-                                {Object.keys(outflowByCurrency).length === 0 ? (
-                                    <tr><td colSpan={3} className="p-8 text-center text-muted-foreground italic">Sin operaciones para esta fecha</td></tr>
-                                ) : Object.keys(outflowByCurrency).map(curr => (
-                                    <tr key={curr} className="hover:bg-muted/20">
-                                        <td className="p-4">
-                                            <div className="font-bold">{CURRENCY_LABELS[curr] || curr}</div>
-                                        </td>
-                                        <td className="p-4 text-center text-muted-foreground">
-                                            {transactions.filter(tx => (REGION_TO_CURRENCY[tx.currency_received] || tx.currency_received) === curr).length} ops
-                                        </td>
-                                        <td className="p-4 text-right font-mono font-bold text-primary">
-                                            {formatCurrency(outflowByCurrency[curr])}
-                                        </td>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr className="bg-muted/50 text-muted-foreground font-medium">
+                                        <th className="p-4 text-left">Moneda</th>
+                                        <th className="p-4 text-center">Cantidad</th>
+                                        <th className="p-4 text-right">Monto Total</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody className="divide-y">
+                                    {Object.keys(outflowByCurrency).length === 0 ? (
+                                        <tr><td colSpan={3} className="p-8 text-center text-muted-foreground italic">Sin operaciones para esta fecha</td></tr>
+                                    ) : Object.keys(outflowByCurrency).map(curr => (
+                                        <tr key={curr} className="hover:bg-muted/20">
+                                            <td className="p-4">
+                                                <div className="font-bold">{CURRENCY_LABELS[curr] || curr}</div>
+                                            </td>
+                                            <td className="p-4 text-center text-muted-foreground">
+                                                {transactions.filter(tx => (REGION_TO_CURRENCY[tx.currency_received] || tx.currency_received) === curr).length} ops
+                                            </td>
+                                            <td className="p-4 text-right font-mono font-bold text-primary">
+                                                {formatCurrency(outflowByCurrency[curr])}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </CardContent>
                     <div className="p-4 bg-primary/5 text-[11px] text-primary border-t">
                         <strong>Nota:</strong> Este cuadro muestra lo que hemos **pagado** a beneficiarios.
@@ -364,7 +368,8 @@ export default function AdminBalancePage() {
                         <CardDescription>Detalle de inicialización de saldos y salidas manuales.</CardDescription>
                     </CardHeader>
                     <CardContent className="p-0">
-                        <div className="overflow-x-auto">
+                        {/* Desktop table */}
+                        <div className="hidden sm:block overflow-x-auto">
                             <table className="w-full text-sm">
                                 <thead>
                                     <tr className="bg-muted/50 text-muted-foreground font-medium">
@@ -378,9 +383,7 @@ export default function AdminBalancePage() {
                                 <tbody className="divide-y text-xs">
                                     {adjustments.map((adj) => (
                                         <tr key={adj.id} className="hover:bg-muted/20">
-                                            <td className="p-4 text-muted-foreground">
-                                                {new Date(adj.created_at!).toLocaleTimeString()}
-                                            </td>
+                                            <td className="p-4 text-muted-foreground">{new Date(adj.created_at!).toLocaleTimeString()}</td>
                                             <td className="p-4">
                                                 <span className={`px-2 py-0.5 rounded-full text-[10px] uppercase font-bold ${adj.type === 'initialization' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                                                     {adj.type === 'initialization' ? 'Inicialización' : 'Retiro'}
@@ -392,18 +395,37 @@ export default function AdminBalancePage() {
                                             </td>
                                             <td className="p-4 text-right">
                                                 <div className="flex justify-end gap-1">
-                                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => openAdjustment(adj.type, adj)}>
-                                                        <Edit className="w-3.5 h-3.5" />
-                                                    </Button>
-                                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => adj.id && handleDeleteAdjustment(adj.id)}>
-                                                        <Trash2 className="w-3.5 h-3.5" />
-                                                    </Button>
+                                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => openAdjustment(adj.type, adj)}><Edit className="w-3.5 h-3.5" /></Button>
+                                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => adj.id && handleDeleteAdjustment(adj.id)}><Trash2 className="w-3.5 h-3.5" /></Button>
                                                 </div>
                                             </td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
+                        </div>
+                        {/* Mobile cards */}
+                        <div className="sm:hidden divide-y">
+                            {adjustments.map((adj) => (
+                                <div key={adj.id} className="p-4 flex items-start justify-between gap-3">
+                                    <div className="min-w-0 space-y-1">
+                                        <div className="flex items-center gap-2">
+                                            <span className={`px-2 py-0.5 rounded-full text-[10px] uppercase font-bold ${adj.type === 'initialization' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                                {adj.type === 'initialization' ? 'Inicialización' : 'Retiro'}
+                                            </span>
+                                            <span className="text-[10px] text-muted-foreground">{new Date(adj.created_at!).toLocaleTimeString()}</span>
+                                        </div>
+                                        <div className={`font-black text-base ${adj.type === 'initialization' ? 'text-green-600' : 'text-destructive'}`}>
+                                            {adj.type === 'initialization' ? '+' : '-'} {formatCurrency(adj.amount)} {adj.currency}
+                                        </div>
+                                        {adj.description && <div className="text-xs italic text-muted-foreground truncate">{adj.description}</div>}
+                                    </div>
+                                    <div className="flex gap-1 shrink-0">
+                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => openAdjustment(adj.type, adj)}><Edit className="w-3.5 h-3.5" /></Button>
+                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => adj.id && handleDeleteAdjustment(adj.id)}><Trash2 className="w-3.5 h-3.5" /></Button>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </CardContent>
                 </Card>
