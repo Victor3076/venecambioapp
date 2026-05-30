@@ -233,7 +233,7 @@ export default function AdminBalancePage() {
                                 <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">DÍA</span>
                             </CardTitle>
                         </CardHeader>
-                        <CardContent className="pt-4 space-y-2">
+                        <CardContent className="pt-4 space-y-2.5">
                             <div className="flex items-center justify-between gap-2 text-xs">
                                 <span className="text-muted-foreground shrink-0">Saldo Inicial (+)</span>
                                 <span className="font-medium text-right truncate">{formatCurrency(startBalanceByCurrency[curr] || 0)}</span>
@@ -253,10 +253,10 @@ export default function AdminBalancePage() {
                                 <span className="font-medium text-destructive text-right truncate">{formatCurrency(withdrawalsByCurrency[curr] || 0)}</span>
                             </div>
 
-                            <div className="pt-2 border-t mt-2">
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2">
-                                    <span className="text-[10px] font-bold uppercase text-muted-foreground shrink-0">Saldo Final</span>
-                                    <div className="text-xl sm:text-lg font-black font-mono text-right break-all sm:break-normal">
+                            <div className="pt-3 border-t mt-3">
+                                <div className="flex flex-col">
+                                    <span className="text-[10px] font-bold uppercase text-muted-foreground">Saldo Final</span>
+                                    <div className="text-2xl font-black font-mono break-words mt-0.5">
                                         {formatCurrency(
                                             (startBalanceByCurrency[curr] || 0) +
                                             (summaryByCurrency[curr] || 0) -
