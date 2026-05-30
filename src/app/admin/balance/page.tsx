@@ -185,34 +185,34 @@ export default function AdminBalancePage() {
                         <p className="text-muted-foreground text-sm">Resumen de ingresos vs egresos del día.</p>
                     </div>
                 </div>
-                <div className="flex items-center gap-2 self-end md:self-auto">
-                    <Button variant="outline" size="sm" onClick={() => openAdjustment('initialization')} className="hidden sm:flex items-center gap-2">
+                <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 self-start md:self-auto w-full md:w-auto mt-2 md:mt-0">
+                    <Button variant="outline" size="sm" onClick={() => openAdjustment('initialization')} className="hidden sm:flex items-center gap-2 shrink-0">
                         <TrendingUp className="w-4 h-4 text-green-600" /> Inicializar Saldo
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => openAdjustment('withdrawal')} className="hidden sm:flex items-center gap-2 text-destructive border-destructive/20 hover:bg-destructive/10">
+                    <Button variant="outline" size="sm" onClick={() => openAdjustment('withdrawal')} className="hidden sm:flex items-center gap-2 text-destructive border-destructive/20 hover:bg-destructive/10 shrink-0">
                         <TrendingDown className="w-4 h-4" /> Registrar Retiro
                     </Button>
-                    <div className="relative">
+                    <div className="relative flex-1 min-w-0">
                         <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                         <input
                             type="date"
-                            className="h-9 pl-9 rounded-lg border border-input bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                            className="h-9 w-full pl-9 rounded-lg border border-input bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
                             value={filterDate}
                             onChange={(e) => setFilterDate(e.target.value)}
                         />
                     </div>
-                    <Button variant="outline" size="icon" onClick={() => loadData()} disabled={loading} className="rounded-lg h-9 w-9">
+                    <Button variant="outline" size="icon" onClick={() => loadData()} disabled={loading} className="rounded-lg h-9 w-9 shrink-0">
                         <Scale className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                     </Button>
                 </div>
             </div>
 
-            <div className="sm:hidden grid grid-cols-2 gap-2">
-                <Button variant="outline" size="sm" onClick={() => openAdjustment('initialization')} className="flex items-center gap-2 text-[10px]">
-                    <TrendingUp className="w-3 h-3 text-green-600" /> Inicializar
+            <div className="sm:hidden flex flex-col gap-2">
+                <Button variant="outline" size="sm" onClick={() => openAdjustment('initialization')} className="flex items-center justify-center gap-2 h-10">
+                    <TrendingUp className="w-4 h-4 text-green-600" /> Inicializar
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => openAdjustment('withdrawal')} className="flex items-center gap-2 text-[10px] text-destructive border-destructive/20">
-                    <TrendingDown className="w-3 h-3" /> Retiro
+                <Button variant="outline" size="sm" onClick={() => openAdjustment('withdrawal')} className="flex items-center justify-center gap-2 h-10 text-destructive border-destructive/20">
+                    <TrendingDown className="w-4 h-4" /> Retiro
                 </Button>
             </div>
 
