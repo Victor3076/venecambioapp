@@ -1,9 +1,9 @@
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET
-const GOOGLE_REFRESH_TOKEN = process.env.GOOGLE_REFRESH_TOKEN
-
 async function getGoogleAccessToken(): Promise<string> {
-    if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !GOOGLE_REFRESH_TOKEN) {
+    const clientId = process.env.GOOGLE_CLIENT_ID
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET
+    const refreshToken = process.env.GOOGLE_REFRESH_TOKEN
+
+    if (!clientId || !clientSecret || !refreshToken) {
         throw new Error('Las credenciales de Google Contacts no están configuradas en las variables de entorno.')
     }
 
@@ -13,9 +13,9 @@ async function getGoogleAccessToken(): Promise<string> {
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-            client_id: GOOGLE_CLIENT_ID,
-            client_secret: GOOGLE_CLIENT_SECRET,
-            refresh_token: GOOGLE_REFRESH_TOKEN,
+            client_id: clientId,
+            client_secret: clientSecret,
+            refresh_token: refreshToken,
             grant_type: 'refresh_token',
         }),
     })
