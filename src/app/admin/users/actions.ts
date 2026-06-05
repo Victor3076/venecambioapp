@@ -2,6 +2,7 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
+import { getNextClientNumber, createGoogleContact } from '@/services/google-contacts'
 
 // NOTE: This app uses localStorage for Supabase sessions, so server-side cookie-based
 // auth validation cannot be used here. Security is enforced by:
@@ -22,7 +23,20 @@ function getAdminClient() {
     })
 }
 
-export async function createUser(formData: { phone: string; fullName: string; clientCode?: string; role: 'user' | 'admin' | 'operator'; password?: string }) {
+export async function getNextContactCodeAction(prefix: string) {
+    try {
+        const nextNumber = await getNextClientNumber(prefix)
+        return { success: true, code: `${prefix.toUpperCase()} ${nextNumber}` }
+    } catch (e: any) {
+        console.error('Error en getNextContactCodeAction:', e)
+        return { success: false, error: e.message }
+    }
+}
+
+export async function createUser(
+    formData: { phone: string; fullName: string; clientCode?: string; role: 'user' | 'admin' | 'operator'; password?: string },
+    addToGoogleContacts?: boolean
+): Promise<{ success: boolean; error?: string; user?: any; warning?: string }> {
     try {
         const technicalEmail = `${formData.phone.replace('+', '')}@venecambio.app`
         const finalPassword = formData.password || '123456'
@@ -41,6 +55,22 @@ export async function createUser(formData: { phone: string; fullName: string; cl
         })
 
         if (error) return { success: false, error: error.message }
+
+        // Si se solicita agregar a Google Contacts y hay credenciales
+        if (addToGoogleContacts && formData.phone) {
+            try {
+                const contactName = formData.clientCode || formData.fullName
+                await createGoogleContact(contactName, formData.phone)
+            } catch (googleError: any) {
+                console.error('Error al guardar en Google Contacts:', googleError)
+                // Retornamos éxito de usuario pero con advertencia
+                return { 
+                    success: true, 
+                    user: data.user, 
+                    warning: `Usuario creado, pero no se pudo guardar en Google Contacts: ${googleError.message}` 
+                }
+            }
+        }
 
         revalidatePath('/admin/users')
         return { success: true, user: data.user }
