@@ -23,7 +23,8 @@ export default function AdminUsersPage() {
     // Google Contacts Integration states
     const [selectedPrefix, setSelectedPrefix] = useState('VC')
     const [isGeneratingCode, setIsGeneratingCode] = useState(false)
-    const [addToGoogle, setAddToGoogle] = useState(true)
+    const [addToGoogle, setAddToGoogle] = useState(false)
+    const [codeGenerated, setCodeGenerated] = useState(false)
 
     // Account Modal State
     const [isAccountModalOpen, setIsAccountModalOpen] = useState(false)
@@ -40,6 +41,8 @@ export default function AdminUsersPage() {
                     // If name is empty or matched a previous user code, we auto-fill with the new code
                     fullName: !prev.fullName || /^(VC|CHI|US|VEN|EUR|COL)\s*\d*$/i.test(prev.fullName) ? res.code! : prev.fullName
                 }))
+                setCodeGenerated(true)
+                setAddToGoogle(true)
                 toast.success(`Siguiente código obtenido: ${res.code}`)
             } else {
                 toast.error(`Error al generar código: ${res.error}`)
@@ -103,6 +106,8 @@ export default function AdminUsersPage() {
                 }
                 setNewUser({ phone: '', fullName: '', clientCode: '', role: 'user' })
                 setEditingUser(null)
+                setCodeGenerated(false)
+                setAddToGoogle(false)
                 loadUsers()
             } else {
                 toast.error("Error: " + result.error)
@@ -317,10 +322,11 @@ Pasos para tu primer ingreso:
                                             type="checkbox"
                                             id="addToGoogle"
                                             checked={addToGoogle}
+                                            disabled={!codeGenerated}
                                             onChange={e => setAddToGoogle(e.target.checked)}
-                                            className="h-4 w-4 rounded border-input text-primary focus:ring-ring bg-background"
+                                            className="h-4 w-4 rounded border-input text-primary focus:ring-ring bg-background disabled:opacity-40 disabled:cursor-not-allowed"
                                         />
-                                        <label htmlFor="addToGoogle" className="text-xs font-medium text-muted-foreground cursor-pointer select-none">
+                                        <label htmlFor="addToGoogle" className={`text-xs font-medium select-none ${codeGenerated ? 'text-muted-foreground cursor-pointer' : 'text-muted-foreground/40 cursor-not-allowed'}`}>
                                             Guardar en Google Contacts al crear
                                         </label>
                                     </div>
