@@ -882,7 +882,7 @@ export default function AdminTransactionsPage() {
 
             {/* Admin Detail Modal Backdrop */}
             {selectedTx && (
-                <div className="fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center p-0 sm:p-4 z-50 animate-in fade-in duration-200">
+                <div className="fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center p-0 sm:p-4 z-50 animate-in fade-in duration-200" onClick={(e) => { if (e.target === e.currentTarget) setSelectedTx(null) }}>
                     <Card className="w-full max-w-4xl max-h-[92vh] sm:max-h-[90vh] overflow-hidden flex flex-col shadow-2xl rounded-t-2xl sm:rounded-2xl">
                         <CardHeader className="border-b bg-background p-4 sm:p-6">
                             <div className="flex justify-between items-start">
@@ -1252,6 +1252,16 @@ export default function AdminTransactionsPage() {
                                 </div>
                             </div>
                         </CardContent>
+                        {/* Mobile sticky close button */}
+                        <div className="sm:hidden sticky bottom-0 bg-background border-t p-3 shrink-0">
+                            <Button
+                                variant="outline"
+                                className="w-full h-11 font-bold text-sm"
+                                onClick={() => setSelectedTx(null)}
+                            >
+                                <X className="w-4 h-4 mr-2" /> Cerrar
+                            </Button>
+                        </div>
                     </Card>
                 </div>
             )}
