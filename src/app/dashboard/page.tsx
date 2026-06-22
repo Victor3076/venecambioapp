@@ -42,7 +42,7 @@ export default function DashboardPage() {
                     .single()
 
                 if (profile?.role === 'operator') {
-                    router.push('/admin')
+                    router.push('/admin/transactions')
                     return
                 }
 
