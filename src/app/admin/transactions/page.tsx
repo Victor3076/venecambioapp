@@ -968,7 +968,8 @@ export default function AdminTransactionsPage() {
                                                                         const bankCode = bankEntry ? bankEntry[0] : "";
                                                                         const phone = bData.account_number || ""
                                                                         const id = (bData.details?.id_number || "").replace(/[^0-9]/g, "")
-                                                                        copyToClipboard(`${bankCode} ${phone} ${id}`)
+                                                                        const amountStr = Number(selectedTx.amount_received).toFixed(2).replace('.', ',');
+                                                                        copyToClipboard(`${bankCode} ${phone} V${id} ${amountStr}`)
                                                                     }}
                                                                 >
                                                                     Copiar Pago Móvil
