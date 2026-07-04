@@ -123,11 +123,16 @@ export function AdjustmentDialog({ isOpen, onClose, onSuccess, type, adjustmentT
                         <div className="grid gap-2">
                             <label className="text-sm font-medium">Monto ({currency})</label>
                             <Input
-                                type="number"
-                                step="any"
+                                type="text"
+                                inputMode="decimal"
                                 placeholder="0.00"
                                 value={amount}
-                                onChange={(e) => setAmount(e.target.value)}
+                                onChange={(e) => {
+                                    const val = e.target.value.replace(/,/g, '.');
+                                    if (/^\d*\.?\d*$/.test(val)) {
+                                        setAmount(val);
+                                    }
+                                }}
                                 required
                                 className="h-10"
                             />
