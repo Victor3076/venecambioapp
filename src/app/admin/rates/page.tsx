@@ -277,7 +277,30 @@ export default function RatesPage() {
 
     const handleGenerateText = () => {
         const dateStr = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
-        const text = `💵TASA DEL DIA💵\n📆 ${dateStr} 🕘 \n\n🇵🇪🇷🇺 🇵🇪 \n${getFormattedRate('PEN')} Bs X Sol\n \n🇨🇭🇮🇱🇪 🇨🇱\n${getFormattedRate('CLP')} Bs X Peso\n\n🇨🇴🇱🇴🇲🇧🇮🇦 🇨🇴\n${getFormattedRate('COP')} Pesos / Bs\n\n🇪🇪.🇺🇺 🇺🇸\n${getFormattedRate('USD')}  Bs X Dolar\n\nEURO 🇪🇺\n0 Bs X Euro\n\nMínimo 30 soles, 5.000 clp o 30.000 COP, Por transferencia\n\n Transferimos a todos los bancos efectivo al instante\n----------------------------------------\n\nREGISTRA TU ENVIO 🧾: https://venecambio.com`
+        const text = `💵TASA DEL DIA💵
+📆 ${dateStr} 🕘 
+
+PERÚ 🇵🇪 
+${getFormattedRate('PEN')} Bs X Sol
+
+CHILE 🇨🇱
+${getFormattedRate('CLP')} Bs X Peso
+
+COLOMBIA 🇨🇴
+${getFormattedRate('COP')} Pesos / Bs
+
+EE.UU 🇺🇸
+${getFormattedRate('USD')} Bs X Dolar
+
+EURO 🇪🇺
+0 Bs X Euro
+
+Mínimo 30 soles, 5.000 clp o 30.000 COP, Por transferencia
+
+Transferimos a todos los bancos efectivo al instante
+----------------------------------------
+
+REGISTRA TU ENVIO 🧾: https://venecambio.com`
 
         navigator.clipboard.writeText(text).then(() => {
             toast.success("Texto copiado al portapapeles")
