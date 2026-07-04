@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
-import { Save, Calculator, RefreshCw, ArrowLeft, Bell, Power, AlertTriangle, MessageSquare, Image as ImageIcon, Download } from "lucide-react"
+import { Save, Calculator, RefreshCw, ArrowLeft, Bell, Power, AlertTriangle, MessageSquare, Image as ImageIcon, Download, FileText } from "lucide-react"
 import { RatesService, RatesData } from "@/services/rates"
 import { NotificationsService } from "@/services/notifications"
 import { AdminSettingsService, AdminSettings } from "@/services/admin-settings"
@@ -275,6 +275,18 @@ export default function RatesPage() {
         }
     }
 
+    const handleGenerateText = () => {
+        const dateStr = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
+        const text = `💵TASA DEL DIA💵\n📆 ${dateStr} 🕘 \n\n🇵🇪🇷🇺 🇵🇪 \n${getFormattedRate('PEN')} Bs X Sol\n \n🇨🇭🇮🇱🇪 🇨🇱\n${getFormattedRate('CLP')} Bs X Peso\n\n🇨🇴🇱🇴🇲🇧🇮🇦 🇨🇴\n${getFormattedRate('COP')} Pesos / Bs\n\n🇪🇪.🇺🇺 🇺🇸\n${getFormattedRate('USD')}  Bs X Dolar\n\nEURO 🇪🇺\n0 Bs X Euro\n\nMínimo 30 soles, 5.000 clp o 30.000 COP, Por transferencia\n\n Transferimos a todos los bancos efectivo al instante\n----------------------------------------\n\nREGISTRA TU ENVIO 🧾: https://venecambio.com`
+
+        navigator.clipboard.writeText(text).then(() => {
+            toast.success("Texto copiado al portapapeles")
+        }).catch(err => {
+            console.error("Error al copiar texto:", err)
+            toast.error("Error al copiar el texto.")
+        })
+    }
+
     const getFormattedRate = (source: string) => {
         const target = 'VES'
         const marginKey = `${source}_${target}`
@@ -371,6 +383,23 @@ export default function RatesPage() {
                                 >
                                     <ImageIcon className="w-4 h-4" />
                                     GENERAR IMAGEN
+                                </Button>
+                            </CardContent>
+                        </Card>
+
+                        <Card className="border-dashed border-2 border-primary/30">
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-sm">Generador de Texto</CardTitle>
+                                <CardDescription className="text-xs">Copia las tasas en formato texto.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <Button
+                                    className="w-full h-12 gap-2 font-bold"
+                                    variant="outline"
+                                    onClick={handleGenerateText}
+                                >
+                                    <FileText className="w-4 h-4" />
+                                    GENERAR TEXTO
                                 </Button>
                             </CardContent>
                         </Card>
