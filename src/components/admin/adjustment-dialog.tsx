@@ -65,31 +65,27 @@ export function AdjustmentDialog({ isOpen, onClose, onSuccess, type, adjustmentT
             let amountFromTotalLine = 0
             
             for (const line of lines) {
-                // Regex para atrapar todo lo que parezca un número con decimales al final
-                // Permite espacios, puntos o comas intermedios.
-                // Ej: "15,796.47", "47.377,20", "15 , 796 . 47", "97,945.50"
-                const amountMatches = line.match(/\d[\d\s.,]*[.,]\s*\d{2}\b/g)
+                // Patrón para extraer grupos de números, permitiendo espacios, comas y puntos intermedios.
+                // Busca al menos un dígito, seguido de caracteres separadores y dígitos, terminando en dígito.
+                // Atrapa: "47.377,20", "47 377 20", "15, 796. 47", "12,407.00"
+                const numberGroups = line.match(/\d[\d\s.,]{1,12}\d/g) || []
                 
-                if (amountMatches) {
-                    for (const matchStr of amountMatches) {
-                        // "toma todo el numero y los ultimos 2 dejalos como los decimales"
-                        const digitsOnly = matchStr.replace(/\D/g, '')
+                for (const group of numberGroups) {
+                    // Tomar todo el número y los últimos 2 dejarlos como decimales
+                    const digitsOnly = group.replace(/\D/g, '')
+                    
+                    // Solo procesar si tiene longitud lógica para un monto (entre 3 y 8 dígitos: de 1.00 a 999,999.99)
+                    if (digitsOnly.length >= 3 && digitsOnly.length <= 8) {
+                        const numValue = parseInt(digitsOnly, 10) / 100
                         
-                        if (digitsOnly.length > 2) {
-                            const numValue = parseInt(digitsOnly, 10) / 100
-                            
-                            // Ignorar números ridículamente grandes que podrían ser RIFs o teléfonos leídos mal
-                            if (numValue < 5000000) {
-                                if (numValue > maxAmount) {
-                                    maxAmount = numValue
-                                }
-                                
-                                // Si la línea dice TOTAL, PAGAR o MONTO, priorizamos este número
-                                if (/(TOTAL|PAGAR|MONTO|Bs)/i.test(line)) {
-                                    if (numValue > amountFromTotalLine) {
-                                        amountFromTotalLine = numValue
-                                    }
-                                }
+                        if (numValue > maxAmount) {
+                            maxAmount = numValue
+                        }
+                        
+                        // Si la línea indica que es un total, tiene prioridad absoluta
+                        if (/(TOTAL|PAGAR|MONTO|BS|IMPORTE)/i.test(line)) {
+                            if (numValue > amountFromTotalLine) {
+                                amountFromTotalLine = numValue
                             }
                         }
                     }
