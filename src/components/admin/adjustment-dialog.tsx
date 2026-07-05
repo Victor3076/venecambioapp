@@ -61,39 +61,38 @@ export function AdjustmentDialog({ isOpen, onClose, onSuccess, type, adjustmentT
             
             const lines = text.split('\n').filter(l => l.trim() !== '')
             
-            // Buscar montos: Ej 15,796.47 o 15.796,47
-            const amountRegex = /(?:TOTAL|Bs|PAGAR).*\s(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2}))/i
+            // Recopilar todos los montos con decimales en la factura
+            const amountMatches = text.match(/\b\d{1,3}(?:[.,]\d{3})*[.,]\d{2}\b/g)
             let foundAmount = ''
             
-            for(const line of lines) {
-                const match = line.match(amountRegex)
-                if(match && match[1]) {
-                    const cleanAmount = match[1]
+            if (amountMatches && amountMatches.length > 0) {
+                // Convertir todos a números y encontrar el mayor (suele ser el total)
+                let maxAmount = 0
+                let bestMatchStr = ''
+                
+                for (const matchStr of amountMatches) {
+                    const cleanAmount = matchStr
                     const lastComma = cleanAmount.lastIndexOf(',')
                     const lastDot = cleanAmount.lastIndexOf('.')
                     const decimalPos = Math.max(lastComma, lastDot)
                     
-                    if(decimalPos !== -1 && decimalPos > cleanAmount.length - 4) {
+                    let numValue = 0
+                    if (decimalPos !== -1 && decimalPos > cleanAmount.length - 4) {
                         const whole = cleanAmount.substring(0, decimalPos).replace(/[.,]/g, '')
                         const dec = cleanAmount.substring(decimalPos + 1)
-                        foundAmount = `${whole}.${dec}`
+                        numValue = parseFloat(`${whole}.${dec}`)
                     } else {
-                        foundAmount = cleanAmount.replace(/[.,]/g, '')
+                        numValue = parseFloat(cleanAmount.replace(/[.,]/g, ''))
                     }
-                    break;
+                    
+                    if (numValue > maxAmount) {
+                        maxAmount = numValue
+                        bestMatchStr = numValue.toFixed(2)
+                    }
                 }
-            }
-            
-            // Fallback si no encuentra patron con TOTAL, busca el ultimo precio
-            if(!foundAmount) {
-                const prices = text.match(/\d+[.,]\d{2}/g)
-                if(prices) {
-                    const cleanAmount = prices[prices.length - 1]
-                    const separator = cleanAmount.match(/[.,]/)?.[0] || '.'
-                    const parts = cleanAmount.split(separator)
-                    if(parts.length === 2) {
-                        foundAmount = `${parts[0]}.${parts[1]}`
-                    }
+                
+                if (maxAmount > 0) {
+                    foundAmount = bestMatchStr
                 }
             }
             
@@ -104,9 +103,17 @@ export function AdjustmentDialog({ isOpen, onClose, onSuccess, type, adjustmentT
                 toast.error("No se pudo detectar el monto con claridad.", { id: "ocr-toast" })
             }
             
-            // Intentar extraer el nombre de la tienda (generalmente la primera o segunda línea)
-            const storeName = lines.length > 0 ? lines[0].trim() : 'FACTURA'
-            setDescription(storeName.length > 3 ? storeName : 'FACTURA')
+            // Intentar extraer el nombre de la tienda (evitando caracteres raros)
+            let storeName = 'FACTURA'
+            for (const line of lines) {
+                // Si la línea tiene al menos 5 caracteres y solo contiene letras y espacios, probablemente sea el nombre
+                if (/^[A-Za-zÑñÁáÉéÍíÓóÚú\s]{5,30}$/.test(line.trim())) {
+                    storeName = line.trim()
+                    break
+                }
+            }
+            
+            setDescription(storeName)
             
         } catch (error) {
             console.error(error)
