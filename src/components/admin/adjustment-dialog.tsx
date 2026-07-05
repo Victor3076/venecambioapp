@@ -53,10 +53,61 @@ export function AdjustmentDialog({ isOpen, onClose, onSuccess, type, adjustmentT
         if (!file) return
 
         setScanning(true)
-        toast.info("Escaneando factura, por favor espera...", { id: "ocr-toast" })
+        toast.info("Procesando imagen para OCR...", { id: "ocr-toast" })
+        
         try {
+            // PREPROCESAMIENTO DE IMAGEN (Escalar, Blanco y Negro, Umbral) para que Tesseract no lea ruido
+            const processedImageBase64 = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const img = new window.Image(); // Use window.Image to avoid conflict
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        // Reducir la resolución a máximo 1200px de ancho para que no consuma tanta RAM ni tarde horas
+                        const MAX_WIDTH = 1200;
+                        let width = img.width;
+                        let height = img.height;
+                        
+                        if (width > MAX_WIDTH) {
+                            height = Math.round((height * MAX_WIDTH) / width);
+                            width = MAX_WIDTH;
+                        }
+                        
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        if (!ctx) return resolve(event.target?.result as string);
+                        
+                        ctx.drawImage(img, 0, 0, width, height);
+                        
+                        const imageData = ctx.getImageData(0, 0, width, height);
+                        const data = imageData.data;
+                        
+                        // Convertir a blanco y negro puro (Binarización)
+                        for (let i = 0; i < data.length; i += 4) {
+                            const r = data[i], g = data[i + 1], b = data[i + 2];
+                            // Escala de grises recomendada para humanos y OCR
+                            const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+                            // Umbral (130 suele ser un buen punto medio para quitar sombras de fondo)
+                            const color = gray > 130 ? 255 : 0;
+                            data[i] = color;
+                            data[i + 1] = color;
+                            data[i + 2] = color;
+                        }
+                        
+                        ctx.putImageData(imageData, 0, 0);
+                        resolve(canvas.toDataURL('image/jpeg', 0.9));
+                    };
+                    img.onerror = reject;
+                    img.src = event.target?.result as string;
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+
+            toast.info("Escaneando factura, por favor espera...", { id: "ocr-toast" })
             const worker = await createWorker('spa')
-            const { data: { text } } = await worker.recognize(file)
+            const { data: { text } } = await worker.recognize(processedImageBase64)
             await worker.terminate()
             
             const lines = text.split('\n').map(l => l.trim()).filter(l => l !== '')
