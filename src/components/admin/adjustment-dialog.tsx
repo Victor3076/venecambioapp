@@ -62,38 +62,44 @@ export function AdjustmentDialog({ isOpen, onClose, onSuccess, type, adjustmentT
             const lines = text.split('\n').filter(l => l.trim() !== '')
             
             // Recopilar todos los montos con decimales en la factura
-            const amountMatches = text.match(/\b\d{1,3}(?:[.,]\d{3})*[.,]\d{2}\b/g)
-            let foundAmount = ''
+            let maxAmount = 0
+            let bestMatchStr = ''
             
-            if (amountMatches && amountMatches.length > 0) {
-                // Convertir todos a números y encontrar el mayor (suele ser el total)
-                let maxAmount = 0
-                let bestMatchStr = ''
+            for (const line of lines) {
+                // Eliminar espacios de la línea para evitar errores de lectura como "15 , 796 . 47"
+                const cleanLine = line.replace(/\s+/g, '')
                 
-                for (const matchStr of amountMatches) {
-                    const cleanAmount = matchStr
-                    const lastComma = cleanAmount.lastIndexOf(',')
-                    const lastDot = cleanAmount.lastIndexOf('.')
-                    const decimalPos = Math.max(lastComma, lastDot)
-                    
-                    let numValue = 0
-                    if (decimalPos !== -1 && decimalPos > cleanAmount.length - 4) {
-                        const whole = cleanAmount.substring(0, decimalPos).replace(/[.,]/g, '')
-                        const dec = cleanAmount.substring(decimalPos + 1)
-                        numValue = parseFloat(`${whole}.${dec}`)
-                    } else {
-                        numValue = parseFloat(cleanAmount.replace(/[.,]/g, ''))
-                    }
-                    
-                    if (numValue > maxAmount) {
-                        maxAmount = numValue
-                        bestMatchStr = numValue.toFixed(2)
+                // Expresión regular mejorada: uno o más dígitos, seguido de opcionales separadores de miles, y terminando en un separador y 2 dígitos.
+                // Ejemplos válidos: 15796.47, 15.796,47, 15,796.47, 47377,20
+                const amountMatches = cleanLine.match(/\d+(?:[.,]\d{3})*[.,]\d{2}/g)
+                
+                if (amountMatches) {
+                    for (const matchStr of amountMatches) {
+                        const lastComma = matchStr.lastIndexOf(',')
+                        const lastDot = matchStr.lastIndexOf('.')
+                        const decimalPos = Math.max(lastComma, lastDot)
+                        
+                        let numValue = 0
+                        if (decimalPos !== -1 && decimalPos > matchStr.length - 4) {
+                            const whole = matchStr.substring(0, decimalPos).replace(/[.,]/g, '')
+                            const dec = matchStr.substring(decimalPos + 1)
+                            numValue = parseFloat(`${whole}.${dec}`)
+                        } else {
+                            numValue = parseFloat(matchStr.replace(/[.,]/g, ''))
+                        }
+                        
+                        // Ignorar montos absurdamente grandes que puedan ser errores de lectura de RIFs u otros códigos
+                        if (numValue > maxAmount && numValue < 1000000) {
+                            maxAmount = numValue
+                            bestMatchStr = numValue.toFixed(2)
+                        }
                     }
                 }
-                
-                if (maxAmount > 0) {
-                    foundAmount = bestMatchStr
-                }
+            }
+            
+            let foundAmount = ''
+            if (maxAmount > 0) {
+                foundAmount = bestMatchStr
             }
             
             if (foundAmount) {
