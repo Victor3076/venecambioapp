@@ -59,22 +59,19 @@ export function AdjustmentDialog({ isOpen, onClose, onSuccess, type, adjustmentT
             const { data: { text } } = await worker.recognize(file)
             await worker.terminate()
             
-            const lines = text.split('\n').filter(l => l.trim() !== '')
+            const lines = text.split('\n').map(l => l.trim()).filter(l => l !== '')
             
             let maxAmount = 0
             let amountFromTotalLine = 0
             
             for (const line of lines) {
-                // Patrón para extraer grupos de números, permitiendo espacios, comas y puntos intermedios.
-                // Busca al menos un dígito, seguido de caracteres separadores y dígitos, terminando en dígito.
-                // Atrapa: "47.377,20", "47 377 20", "15, 796. 47", "12,407.00"
-                const numberGroups = line.match(/\d[\d\s.,]{1,12}\d/g) || []
+                // Relajar al máximo: buscar cualquier bloque que tenga números, puntos, comas y espacios.
+                const numberGroups = line.match(/[\d\s.,]{4,}/g) || []
                 
                 for (const group of numberGroups) {
-                    // Tomar todo el número y los últimos 2 dejarlos como decimales
+                    // Limpiar todo lo que no sea dígito
                     const digitsOnly = group.replace(/\D/g, '')
                     
-                    // Solo procesar si tiene longitud lógica para un monto (entre 3 y 8 dígitos: de 1.00 a 999,999.99)
                     if (digitsOnly.length >= 3 && digitsOnly.length <= 8) {
                         const numValue = parseInt(digitsOnly, 10) / 100
                         
@@ -82,7 +79,6 @@ export function AdjustmentDialog({ isOpen, onClose, onSuccess, type, adjustmentT
                             maxAmount = numValue
                         }
                         
-                        // Si la línea indica que es un total, tiene prioridad absoluta
                         if (/(TOTAL|PAGAR|MONTO|BS|IMPORTE)/i.test(line)) {
                             if (numValue > amountFromTotalLine) {
                                 amountFromTotalLine = numValue
@@ -92,7 +88,6 @@ export function AdjustmentDialog({ isOpen, onClose, onSuccess, type, adjustmentT
                 }
             }
             
-            // Preferir el monto encontrado en una línea clave (TOTAL, MONTO), sino, el monto más alto
             const finalAmount = amountFromTotalLine > 0 ? amountFromTotalLine : maxAmount
             
             let foundAmount = ''
@@ -103,21 +98,12 @@ export function AdjustmentDialog({ isOpen, onClose, onSuccess, type, adjustmentT
             if (foundAmount) {
                 setAmount(foundAmount)
                 toast.success("Monto extraído de la factura", { id: "ocr-toast" })
+                setDescription("FACTURA")
             } else {
                 toast.error("No se pudo detectar el monto con claridad.", { id: "ocr-toast" })
+                // DEBUG: Si falla, poner el texto crudo del OCR en la descripción para ver qué leyó realmente
+                setDescription("OCR RAW: " + text.substring(0, 200).replace(/\n/g, ' '))
             }
-            
-            // Intentar extraer el nombre de la tienda (evitando caracteres raros)
-            let storeName = 'FACTURA'
-            for (const line of lines) {
-                // Si la línea tiene al menos 5 caracteres y solo contiene letras y espacios, probablemente sea el nombre
-                if (/^[A-Za-zÑñÁáÉéÍíÓóÚú\s]{5,30}$/.test(line.trim())) {
-                    storeName = line.trim()
-                    break
-                }
-            }
-            
-            setDescription(storeName)
             
         } catch (error) {
             console.error(error)
