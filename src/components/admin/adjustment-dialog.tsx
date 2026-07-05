@@ -1,12 +1,13 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { toast } from "sonner"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Loader2, TrendingDown, Landmark, AlertCircle, X } from "lucide-react"
+import { Loader2, TrendingDown, Landmark, AlertCircle, X, Scan } from "lucide-react"
+import { createWorker } from "tesseract.js"
 import { AdjustmentsService, CashflowAdjustment } from "@/services/adjustments"
 import { SUPPORTED_REGIONS, CURRENCY_LABELS } from "@/lib/constants"
 
@@ -20,9 +21,11 @@ interface AdjustmentDialogProps {
 
 export function AdjustmentDialog({ isOpen, onClose, onSuccess, type, adjustmentToEdit }: AdjustmentDialogProps) {
     const [loading, setLoading] = useState(false)
+    const [scanning, setScanning] = useState(false)
     const [currency, setCurrency] = useState('PEN')
     const [amount, setAmount] = useState('')
     const [description, setDescription] = useState('')
+    const fileInputRef = useRef<HTMLInputElement>(null)
 
     // Populate form if editing or reset when closed/new
     useEffect(() => {
@@ -44,6 +47,75 @@ export function AdjustmentDialog({ isOpen, onClose, onSuccess, type, adjustmentT
     }, [isOpen, adjustmentToEdit])
 
     if (!isOpen) return null
+
+    const handleScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+
+        setScanning(true)
+        toast.info("Escaneando factura, por favor espera...", { id: "ocr-toast" })
+        try {
+            const worker = await createWorker('spa')
+            const { data: { text } } = await worker.recognize(file)
+            await worker.terminate()
+            
+            const lines = text.split('\n').filter(l => l.trim() !== '')
+            
+            // Buscar montos: Ej 15,796.47 o 15.796,47
+            const amountRegex = /(?:TOTAL|Bs|PAGAR).*\s(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2}))/i
+            let foundAmount = ''
+            
+            for(const line of lines) {
+                const match = line.match(amountRegex)
+                if(match && match[1]) {
+                    const cleanAmount = match[1]
+                    const lastComma = cleanAmount.lastIndexOf(',')
+                    const lastDot = cleanAmount.lastIndexOf('.')
+                    const decimalPos = Math.max(lastComma, lastDot)
+                    
+                    if(decimalPos !== -1 && decimalPos > cleanAmount.length - 4) {
+                        const whole = cleanAmount.substring(0, decimalPos).replace(/[.,]/g, '')
+                        const dec = cleanAmount.substring(decimalPos + 1)
+                        foundAmount = `${whole}.${dec}`
+                    } else {
+                        foundAmount = cleanAmount.replace(/[.,]/g, '')
+                    }
+                    break;
+                }
+            }
+            
+            // Fallback si no encuentra patron con TOTAL, busca el ultimo precio
+            if(!foundAmount) {
+                const prices = text.match(/\d+[.,]\d{2}/g)
+                if(prices) {
+                    const cleanAmount = prices[prices.length - 1]
+                    const separator = cleanAmount.match(/[.,]/)?.[0] || '.'
+                    const parts = cleanAmount.split(separator)
+                    if(parts.length === 2) {
+                        foundAmount = `${parts[0]}.${parts[1]}`
+                    }
+                }
+            }
+            
+            if (foundAmount) {
+                setAmount(foundAmount)
+                toast.success("Monto extraído de la factura", { id: "ocr-toast" })
+            } else {
+                toast.error("No se pudo detectar el monto con claridad.", { id: "ocr-toast" })
+            }
+            
+            // Intentar extraer el nombre de la tienda (generalmente la primera o segunda línea)
+            const storeName = lines.length > 0 ? lines[0].trim() : 'FACTURA'
+            setDescription(storeName.length > 3 ? storeName : 'FACTURA')
+            
+        } catch (error) {
+            console.error(error)
+            toast.error("Error al escanear la imagen", { id: "ocr-toast" })
+        } finally {
+            setScanning(false)
+            if (fileInputRef.current) fileInputRef.current.value = ''
+        }
+    }
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -121,7 +193,32 @@ export function AdjustmentDialog({ isOpen, onClose, onSuccess, type, adjustmentT
                         </div>
 
                         <div className="grid gap-2">
-                            <label className="text-sm font-medium">Monto ({currency})</label>
+                            <div className="flex items-center justify-between">
+                                <label className="text-sm font-medium">Monto ({currency})</label>
+                                {type === 'withdrawal' && currency === 'VES' && (
+                                    <>
+                                        <input 
+                                            type="file" 
+                                            accept="image/*" 
+                                            capture="environment"
+                                            ref={fileInputRef} 
+                                            className="hidden" 
+                                            onChange={handleScan}
+                                        />
+                                        <Button 
+                                            type="button" 
+                                            variant="secondary" 
+                                            size="sm" 
+                                            className="h-7 text-xs px-2"
+                                            onClick={() => fileInputRef.current?.click()}
+                                            disabled={scanning}
+                                        >
+                                            {scanning ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Scan className="w-3 h-3 mr-1" />}
+                                            Escanear
+                                        </Button>
+                                    </>
+                                )}
+                            </div>
                             <Input
                                 type="text"
                                 inputMode="decimal"
