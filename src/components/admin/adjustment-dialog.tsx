@@ -149,10 +149,11 @@ export function AdjustmentDialog({ isOpen, onClose, onSuccess, type, adjustmentT
             if (foundAmount) {
                 setAmount(foundAmount)
                 toast.success("Monto extraído de la factura", { id: "ocr-toast" })
-                setDescription("OCR RAW: " + text.replace(/\n/g, ' | '))
+                setDescription("FACTURA")
             } else {
                 toast.error("No se pudo detectar el monto con claridad.", { id: "ocr-toast" })
-                setDescription("OCR RAW: " + text.replace(/\n/g, ' | '))
+                // En caso de fallo total dejamos la descripción vacía para que el usuario la llene
+                setDescription("")
             }
             
         } catch (error) {
