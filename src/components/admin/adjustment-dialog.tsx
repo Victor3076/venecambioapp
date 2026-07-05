@@ -61,45 +61,47 @@ export function AdjustmentDialog({ isOpen, onClose, onSuccess, type, adjustmentT
             
             const lines = text.split('\n').filter(l => l.trim() !== '')
             
-            // Recopilar todos los montos con decimales en la factura
             let maxAmount = 0
-            let bestMatchStr = ''
+            let amountFromTotalLine = 0
             
             for (const line of lines) {
-                // Eliminar espacios de la línea para evitar errores de lectura como "15 , 796 . 47"
-                const cleanLine = line.replace(/\s+/g, '')
-                
-                // Expresión regular mejorada: uno o más dígitos, seguido de opcionales separadores de miles, y terminando en un separador y 2 dígitos.
-                // Ejemplos válidos: 15796.47, 15.796,47, 15,796.47, 47377,20
-                const amountMatches = cleanLine.match(/\d+(?:[.,]\d{3})*[.,]\d{2}/g)
+                // Regex para atrapar todo lo que parezca un número con decimales al final
+                // Permite espacios, puntos o comas intermedios.
+                // Ej: "15,796.47", "47.377,20", "15 , 796 . 47", "97,945.50"
+                const amountMatches = line.match(/\d[\d\s.,]*[.,]\s*\d{2}\b/g)
                 
                 if (amountMatches) {
                     for (const matchStr of amountMatches) {
-                        const lastComma = matchStr.lastIndexOf(',')
-                        const lastDot = matchStr.lastIndexOf('.')
-                        const decimalPos = Math.max(lastComma, lastDot)
+                        // "toma todo el numero y los ultimos 2 dejalos como los decimales"
+                        const digitsOnly = matchStr.replace(/\D/g, '')
                         
-                        let numValue = 0
-                        if (decimalPos !== -1 && decimalPos > matchStr.length - 4) {
-                            const whole = matchStr.substring(0, decimalPos).replace(/[.,]/g, '')
-                            const dec = matchStr.substring(decimalPos + 1)
-                            numValue = parseFloat(`${whole}.${dec}`)
-                        } else {
-                            numValue = parseFloat(matchStr.replace(/[.,]/g, ''))
-                        }
-                        
-                        // Ignorar montos absurdamente grandes que puedan ser errores de lectura de RIFs u otros códigos
-                        if (numValue > maxAmount && numValue < 1000000) {
-                            maxAmount = numValue
-                            bestMatchStr = numValue.toFixed(2)
+                        if (digitsOnly.length > 2) {
+                            const numValue = parseInt(digitsOnly, 10) / 100
+                            
+                            // Ignorar números ridículamente grandes que podrían ser RIFs o teléfonos leídos mal
+                            if (numValue < 5000000) {
+                                if (numValue > maxAmount) {
+                                    maxAmount = numValue
+                                }
+                                
+                                // Si la línea dice TOTAL, PAGAR o MONTO, priorizamos este número
+                                if (/(TOTAL|PAGAR|MONTO|Bs)/i.test(line)) {
+                                    if (numValue > amountFromTotalLine) {
+                                        amountFromTotalLine = numValue
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             }
             
+            // Preferir el monto encontrado en una línea clave (TOTAL, MONTO), sino, el monto más alto
+            const finalAmount = amountFromTotalLine > 0 ? amountFromTotalLine : maxAmount
+            
             let foundAmount = ''
-            if (maxAmount > 0) {
-                foundAmount = bestMatchStr
+            if (finalAmount > 0) {
+                foundAmount = finalAmount.toFixed(2)
             }
             
             if (foundAmount) {
