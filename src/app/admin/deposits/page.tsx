@@ -213,9 +213,31 @@ export default function BankDepositsPage() {
                                 <Input
                                     placeholder="Ej. 12345678"
                                     value={reference}
-                                    onChange={e => setReference(e.target.value)}
+                                    onChange={e => {
+                                        let val = e.target.value
+                                        if (currency === 'USD') {
+                                            if (val.toLowerCase() === 'z') val = 'Zelle '
+                                        } else if (currency === 'COP') {
+                                            if (val.toLowerCase() === 'a') val = 'Alonso '
+                                            if (val.toLowerCase() === 't') val = 'Transf de '
+                                        }
+                                        setReference(val)
+                                    }}
                                     required
                                 />
+                                {currency === 'CLP' && (
+                                    <div className="flex flex-wrap gap-1.5 pt-1">
+                                        {['cyber transf', 'cyber caja', 'corriente', 'santander', 'chile'].map(word => (
+                                            <span 
+                                                key={word} 
+                                                className="px-2 py-0.5 bg-muted text-muted-foreground text-[10px] rounded-full cursor-pointer hover:bg-primary/10 hover:text-primary transition-colors border"
+                                                onClick={() => setReference(prev => (prev + " " + word).trim() + " ")}
+                                            >
+                                                {word}
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
 
                             <div className="space-y-2">
