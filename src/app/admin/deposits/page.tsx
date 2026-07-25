@@ -220,6 +220,21 @@ export default function BankDepositsPage() {
                                         } else if (currency === 'COP') {
                                             if (val.toLowerCase() === 'a') val = 'Alonso '
                                             if (val.toLowerCase() === 't') val = 'Transf de '
+                                        } else if (currency === 'CLP') {
+                                            const words = val.split(' ')
+                                            const lastWord = words[words.length - 1].toLowerCase()
+                                            let replacement = null
+                                            if (lastWord === 'cy') replacement = 'cyber'
+                                            if (lastWord === 'ca') replacement = 'caja'
+                                            if (lastWord === 'tr') replacement = 'transf'
+                                            if (lastWord === 'co') replacement = 'corriente'
+                                            if (lastWord === 'sa') replacement = 'santander'
+                                            if (lastWord === 'ch') replacement = 'chile'
+                                            
+                                            if (replacement) {
+                                                words[words.length - 1] = replacement
+                                                val = words.join(' ') + ' '
+                                            }
                                         }
                                         setReference(val)
                                     }}
