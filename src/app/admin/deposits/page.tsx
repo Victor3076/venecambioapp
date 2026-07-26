@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { BankDepositsService, BankDeposit } from "@/services/bank-deposits"
 import { toast } from "sonner"
 import { TransactionsService, Transaction } from "@/services/transactions"
@@ -36,6 +36,22 @@ export default function BankDepositsPage() {
     const [matching, setMatching] = useState(false)
     const [txSearchTerm, setTxSearchTerm] = useState("")
     const [isManualDialogOpen, setIsManualDialogOpen] = useState(false)
+
+    const nextEgliNumber = useMemo(() => {
+        let max = 0;
+        deposits.forEach(d => {
+            if (d.currency === 'CLP' && d.reference_number.toLowerCase().includes('egli')) {
+                const match = d.reference_number.toLowerCase().match(/egli\s*(\d+)/);
+                if (match) {
+                    const num = parseInt(match[1]);
+                    if (num > max) max = num;
+                } else if (d.reference_number.toLowerCase().trim() === 'egli') {
+                    if (1 > max) max = 1;
+                }
+            }
+        });
+        return max + 1;
+    }, [deposits]);
 
     const loadDeposits = async () => {
         setLoading(true)
@@ -230,6 +246,7 @@ export default function BankDepositsPage() {
                                             if (lastWord === 'co') replacement = 'corriente'
                                             if (lastWord === 'sa') replacement = 'santander'
                                             if (lastWord === 'ch') replacement = 'chile'
+                                            if (lastWord === 'e') replacement = `egli ${nextEgliNumber}`
                                             
                                             if (replacement) {
                                                 words[words.length - 1] = replacement
@@ -242,7 +259,7 @@ export default function BankDepositsPage() {
                                 />
                                 {currency === 'CLP' && (
                                     <div className="flex flex-wrap gap-1.5 pt-1">
-                                        {['cyber transf', 'cyber caja', 'corriente', 'santander', 'chile'].map(word => (
+                                        {['cyber transf', 'cyber caja', 'corriente', 'santander', 'chile', `egli ${nextEgliNumber}`].map(word => (
                                             <span 
                                                 key={word} 
                                                 className="px-2 py-0.5 bg-muted text-muted-foreground text-[10px] rounded-full cursor-pointer hover:bg-primary/10 hover:text-primary transition-colors border"
