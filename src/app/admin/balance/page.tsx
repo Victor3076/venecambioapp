@@ -6,7 +6,8 @@ import { TransactionsService, Transaction } from "@/services/transactions"
 import { BankDepositsService, BankDeposit } from "@/services/bank-deposits"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Scale, Landmark, TrendingUp, TrendingDown, Wallet, Calendar, Trash2, Edit, X } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { ArrowLeft, Scale, Landmark, TrendingUp, TrendingDown, Wallet, Calendar, Trash2, Edit, X, Search } from "lucide-react"
 import Link from "next/link"
 import { CURRENCY_LABELS } from "@/lib/constants"
 import { formatCurrency } from "@/lib/rates-utils"
@@ -39,6 +40,7 @@ export default function AdminBalancePage() {
 
     const [reconciliationCurrency, setReconciliationCurrency] = useState<string | null>(null)
     const [crossedOutTxs, setCrossedOutTxs] = useState<Set<string>>(new Set())
+    const [reconciliationSearch, setReconciliationSearch] = useState("")
 
     // Verificar rol una sola vez al montar el componente
     useEffect(() => {
@@ -499,15 +501,43 @@ export default function AdminBalancePage() {
                             <CardDescription>
                                 Verifica las transferencias contra tu banco. Marca las que ya has comprobado.
                             </CardDescription>
-                            <Button variant="ghost" size="icon" onClick={() => setReconciliationCurrency(null)} className="absolute right-4 top-4 rounded-full" type="button">
+                            <Button variant="ghost" size="icon" onClick={() => { setReconciliationCurrency(null); setReconciliationSearch(""); }} className="absolute right-4 top-4 rounded-full" type="button">
                                 <X className="h-4 w-4" />
                             </Button>
+                            
+                            <div className="relative mt-4">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                <Input 
+                                    placeholder="Buscar por monto, banco o cuenta..." 
+                                    className="pl-9"
+                                    value={reconciliationSearch}
+                                    onChange={(e) => setReconciliationSearch(e.target.value)}
+                                />
+                            </div>
                         </CardHeader>
 
                         <CardContent className="flex-1 overflow-y-auto p-0">
                             <div className="divide-y">
                                 {transactions
-                                    .filter(tx => (tx.status === 'verified' || tx.status === 'completed') && tx.beneficiary_data?.type !== 'cash' && (REGION_TO_CURRENCY[tx.currency_received] || tx.currency_received) === reconciliationCurrency)
+                                    .filter(tx => {
+                                        if (!(tx.status === 'verified' || tx.status === 'completed')) return false;
+                                        if (tx.beneficiary_data?.type === 'cash') return false;
+                                        if ((REGION_TO_CURRENCY[tx.currency_received] || tx.currency_received) !== reconciliationCurrency) return false;
+                                        
+                                        if (reconciliationSearch) {
+                                            const searchLower = reconciliationSearch.toLowerCase();
+                                            const amountStr = tx.amount_received.toString();
+                                            const formattedAmountStr = formatCurrency(tx.amount_received).toLowerCase();
+                                            const bankStr = (tx.beneficiary_data?.bank_name || '').toLowerCase();
+                                            const accountStr = (tx.beneficiary_data?.account_number || tx.beneficiary_data?.phone_number || '').toLowerCase();
+                                            
+                                            return amountStr.includes(searchLower) || 
+                                                   formattedAmountStr.includes(searchLower) ||
+                                                   bankStr.includes(searchLower) || 
+                                                   accountStr.includes(searchLower);
+                                        }
+                                        return true;
+                                    })
                                     .map(tx => {
                                         const isCrossed = crossedOutTxs.has(tx.id!);
                                         return (
