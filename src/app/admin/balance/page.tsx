@@ -6,10 +6,11 @@ import { TransactionsService, Transaction } from "@/services/transactions"
 import { BankDepositsService, BankDeposit } from "@/services/bank-deposits"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Scale, Landmark, TrendingUp, TrendingDown, Wallet, Calendar, Trash2, Edit } from "lucide-react"
+import { ArrowLeft, Scale, Landmark, TrendingUp, TrendingDown, Wallet, Calendar, Trash2, Edit, X } from "lucide-react"
 import Link from "next/link"
 import { CURRENCY_LABELS } from "@/lib/constants"
 import { formatCurrency } from "@/lib/rates-utils"
+import { Checkbox } from "@/components/ui/checkbox"
 
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
@@ -35,6 +36,9 @@ export default function AdminBalancePage() {
     const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false)
     const [adjustType, setAdjustType] = useState<'withdrawal' | 'initialization'>('withdrawal')
     const [adjustmentToEdit, setAdjustmentToEdit] = useState<CashflowAdjustment | null>(null)
+
+    const [reconciliationCurrency, setReconciliationCurrency] = useState<string | null>(null)
+    const [crossedOutTxs, setCrossedOutTxs] = useState<Set<string>>(new Set())
 
     // Verificar rol una sola vez al montar el componente
     useEffect(() => {
@@ -249,7 +253,10 @@ export default function AdminBalancePage() {
                                     {formatCurrency(summaryByCurrency[curr] || 0)}
                                 </span>
                             </div>
-                            <div className="flex items-center justify-between gap-2 text-xs min-w-0 w-full">
+                            <div 
+                                className="flex items-center justify-between gap-2 text-xs min-w-0 w-full cursor-pointer hover:bg-muted/50 p-1 -mx-1 rounded transition-colors"
+                                onClick={() => setReconciliationCurrency(curr)}
+                            >
                                 <span className="text-muted-foreground flex items-center gap-1.5 shrink-0"><TrendingDown className="w-3 h-3 text-primary" /> Ops / Ventas (-)</span>
                                 <span className="font-medium text-primary text-right truncate min-w-0">{formatCurrency(outflowByCurrency[curr] || 0)}</span>
                             </div>
@@ -359,12 +366,12 @@ export default function AdminBalancePage() {
                                     {Object.keys(outflowByCurrency).length === 0 ? (
                                         <tr><td colSpan={3} className="p-8 text-center text-muted-foreground italic">Sin operaciones para esta fecha</td></tr>
                                     ) : Object.keys(outflowByCurrency).map(curr => (
-                                        <tr key={curr} className="hover:bg-muted/20">
+                                        <tr key={curr} className="hover:bg-muted/20 cursor-pointer" onClick={() => setReconciliationCurrency(curr)}>
                                             <td className="p-4 whitespace-nowrap">
                                                 <div className="font-bold">{CURRENCY_LABELS[curr] || curr}</div>
                                             </td>
                                             <td className="p-4 text-center text-muted-foreground whitespace-nowrap">
-                                                {transactions.filter(tx => (REGION_TO_CURRENCY[tx.currency_received] || tx.currency_received) === curr).length} ops
+                                                {transactions.filter(tx => (REGION_TO_CURRENCY[tx.currency_received] || tx.currency_received) === curr && (tx.status === 'verified' || tx.status === 'completed') && tx.beneficiary_data?.type !== 'cash').length} ops
                                             </td>
                                             <td className="p-4 text-right font-mono font-bold text-primary whitespace-nowrap">
                                                 {formatCurrency(outflowByCurrency[curr])}
@@ -379,11 +386,11 @@ export default function AdminBalancePage() {
                             {Object.keys(outflowByCurrency).length === 0 ? (
                                 <div className="p-6 text-center text-muted-foreground text-sm italic">Sin operaciones para esta fecha</div>
                             ) : Object.keys(outflowByCurrency).map(curr => (
-                                <div key={curr} className="p-4 flex items-center justify-between gap-3 text-sm">
+                                <div key={curr} className="p-4 flex items-center justify-between gap-3 text-sm cursor-pointer hover:bg-muted/20 transition-colors" onClick={() => setReconciliationCurrency(curr)}>
                                     <div className="min-w-0">
                                         <div className="font-bold truncate">{CURRENCY_LABELS[curr] || curr}</div>
                                         <div className="text-[10px] text-muted-foreground">
-                                            {transactions.filter(tx => (REGION_TO_CURRENCY[tx.currency_received] || tx.currency_received) === curr).length} ops
+                                            {transactions.filter(tx => (REGION_TO_CURRENCY[tx.currency_received] || tx.currency_received) === curr && (tx.status === 'verified' || tx.status === 'completed') && tx.beneficiary_data?.type !== 'cash').length} ops
                                         </div>
                                     </div>
                                     <div className="font-mono font-bold text-primary text-right shrink-0">
@@ -479,6 +486,71 @@ export default function AdminBalancePage() {
                 onSuccess={() => loadData()}
                 adjustmentToEdit={adjustmentToEdit}
             />
+
+            {/* Modal de Reconciliación */}
+            {reconciliationCurrency && (
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 backdrop-blur-sm animate-in fade-in duration-200">
+                    <Card className="w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl border-none">
+                        <CardHeader className="border-b relative shrink-0">
+                            <CardTitle className="flex items-center gap-2">
+                                <TrendingDown className="w-5 h-5 text-primary" /> 
+                                Operaciones en {CURRENCY_LABELS[reconciliationCurrency as keyof typeof CURRENCY_LABELS] || reconciliationCurrency}
+                            </CardTitle>
+                            <CardDescription>
+                                Verifica las transferencias contra tu banco. Marca las que ya has comprobado.
+                            </CardDescription>
+                            <Button variant="ghost" size="icon" onClick={() => setReconciliationCurrency(null)} className="absolute right-4 top-4 rounded-full" type="button">
+                                <X className="h-4 w-4" />
+                            </Button>
+                        </CardHeader>
+
+                        <CardContent className="flex-1 overflow-y-auto p-0">
+                            <div className="divide-y">
+                                {transactions
+                                    .filter(tx => (tx.status === 'verified' || tx.status === 'completed') && tx.beneficiary_data?.type !== 'cash' && (REGION_TO_CURRENCY[tx.currency_received] || tx.currency_received) === reconciliationCurrency)
+                                    .map(tx => {
+                                        const isCrossed = crossedOutTxs.has(tx.id!);
+                                        return (
+                                            <div 
+                                                key={tx.id} 
+                                                className={`p-4 flex items-center justify-between gap-3 hover:bg-muted/10 transition-colors ${isCrossed ? 'opacity-50 grayscale' : ''}`}
+                                            >
+                                                <div className="flex items-center gap-3 min-w-0 flex-1">
+                                                    <Checkbox 
+                                                        checked={isCrossed} 
+                                                        onCheckedChange={() => {
+                                                            const newSet = new Set(crossedOutTxs);
+                                                            if (isCrossed) newSet.delete(tx.id!);
+                                                            else newSet.add(tx.id!);
+                                                            setCrossedOutTxs(newSet);
+                                                        }}
+                                                    />
+                                                    <div className={`min-w-0 ${isCrossed ? 'line-through' : ''}`}>
+                                                        <div className="font-bold text-sm truncate">
+                                                            {tx.beneficiary_data?.bank_name || 'Banco'} - {tx.beneficiary_data?.account_number || tx.beneficiary_data?.phone_number || 'N/A'}
+                                                        </div>
+                                                        <div className="text-[10px] text-muted-foreground truncate">
+                                                            {tx.beneficiary_data?.name || tx.beneficiary_data?.full_name} {tx.beneficiary_data?.doc_id ? `(${tx.beneficiary_data.doc_id})` : ''}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className={`font-mono font-bold text-right shrink-0 ${isCrossed ? 'line-through text-muted-foreground' : 'text-primary'}`}>
+                                                    {formatCurrency(tx.amount_received)}
+                                                </div>
+                                            </div>
+                                        );
+                                    })
+                                }
+                                {transactions.filter(tx => (tx.status === 'verified' || tx.status === 'completed') && tx.beneficiary_data?.type !== 'cash' && (REGION_TO_CURRENCY[tx.currency_received] || tx.currency_received) === reconciliationCurrency).length === 0 && (
+                                    <div className="p-8 text-center text-muted-foreground">
+                                        No hay operaciones registradas en esta moneda.
+                                    </div>
+                                )}
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
         </div>
     )
 }
