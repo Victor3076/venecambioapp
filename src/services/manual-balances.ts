@@ -105,7 +105,7 @@ export const ManualBalancesService = {
             if (tx.currency_sent !== 'CLP') return false
             if (tx.status === 'rejected') return false
 
-            const deposit = tx.id ? byTxId.get(tx.id) : undefined || (tx.group_id ? byGroupId.get(tx.group_id) : undefined)
+            const deposit = (tx.id ? byTxId.get(tx.id) : undefined) || (tx.group_id ? byGroupId.get(tx.group_id) : undefined)
 
             const matchesSearch =
                 tx.profiles?.full_name?.toLowerCase().includes(searchLower) ||
