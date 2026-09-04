@@ -8,20 +8,15 @@ export interface EgliDiscountItem {
     amount: string
 }
 
-export interface EgliBreakdownData {
-    previous_pending: string
-    yesterday_date: string
-    yesterday_ops_total: number
-    discounts: EgliDiscountItem[]
-    calculated_pending: number
-}
-
 export interface BalanceRowData {
     yesterday: string
     today_pass: string
-    today_clps: string
+    today_clps?: string
     total: number
-    breakdown?: EgliBreakdownData
+    anterior?: string
+    ayer?: string
+    ops_date?: string
+    discounts?: EgliDiscountItem[]
 }
 
 export interface ManualBalanceData {
