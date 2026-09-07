@@ -236,7 +236,7 @@ export function parseBankEmail(params: {
 
     // 6. GENERAR REFERENCIA
     // Formato exacto requerido: "cyber transf 1719"
-    const referenceNumber = `cyber transf ${timeHHMM}`
+    referenceNumber = `cyber transf ${timeHHMM}`
 
     // 7. ARMAR COMENTARIOS / NOTAS
     const notesParts: string[] = []
