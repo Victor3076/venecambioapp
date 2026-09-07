@@ -48,6 +48,7 @@ export async function POST(req: Request) {
 
             parsedDetails = parsed
             if (!amount && parsed.amount > 0) amount = parsed.amount
+            if (!body.currency && parsed.currency) currency = parsed.currency
             if (!referenceNumber && parsed.referenceNumber) referenceNumber = parsed.referenceNumber
             if (parsed.bankName) bankName = parsed.bankName
             if (!notes && parsed.notes) notes = parsed.notes

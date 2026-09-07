@@ -68,6 +68,12 @@ function cleanText(input: string): string {
         .trim()
 }
 
+export function parseUSAmount(amountStr: string): number {
+    if (!amountStr) return 0
+    const clean = amountStr.replace(/[^0-9.]/g, '').trim()
+    return parseFloat(clean) || 0
+}
+
 export function parseBankEmail(params: {
     subject?: string
     body?: string
@@ -79,14 +85,64 @@ export function parseBankEmail(params: {
     const rawContent = `${params.subject || ''} ${params.body || ''} ${params.text || ''} ${params.html || ''}`
     const text = cleanText(rawContent)
     const from = (params.from || '').toLowerCase()
+    const subject = params.subject || ''
 
     let amount = 0
+    let currency = 'CLP'
     let timeHHMM = ''
     let bankName = 'Banco Estado'
     let clientName = ''
     let operationNumber = ''
+    let referenceNumber = ''
 
-    // 1. EXTRAER MONTO
+    // DETECCIÓN ESPECIAL: ZELLE / BANK OF AMERICA / US BANKS
+    const isZelleOrUS = from.includes('bankofamerica') || 
+                        from.includes('ealerts.bankofamerica.com') ||
+                        from.includes('chase.com') ||
+                        from.includes('wellsfargo.com') ||
+                        from.includes('zelle') ||
+                        text.toLowerCase().includes('zelle') ||
+                        /sent\s+you\s+\$/i.test(subject) ||
+                        /sent\s+you\s+\$/i.test(text)
+
+    if (isZelleOrUS) {
+        currency = 'USD'
+        bankName = from.includes('bankofamerica') ? 'Bank of America' : 
+                   from.includes('chase') ? 'Chase' :
+                   from.includes('wellsfargo') ? 'Wells Fargo' : 'Zelle'
+
+        // Extraer emisor y monto de Zelle: ej. "Celina Nunez De Hurtado sent you $20.00"
+        const zelleMatch = subject.match(/^([A-Za-zÁÉÍÓÚÑa-záéíóúñ\s]+?)\s+sent\s+you\s+\$([0-9,]+(?:\.[0-9]{1,2})?)/i) 
+            || text.match(/([A-Za-zÁÉÍÓÚÑa-záéíóúñ\s]{2,40}?)\s+sent\s+you\s+\$([0-9,]+(?:\.[0-9]{1,2})?)/i)
+
+        if (zelleMatch) {
+            clientName = zelleMatch[1].trim()
+            amount = parseFloat(zelleMatch[2].replace(/,/g, '')) || 0
+        } else {
+            const usAmountMatch = text.match(/\$\s*([0-9,]+(?:\.[0-9]{2})?)/)
+            if (usAmountMatch) {
+                amount = parseFloat(usAmountMatch[1].replace(/,/g, '')) || 0
+            }
+        }
+
+        // Generar referencia: "zelle [primer_nombre]" ej. "zelle celina"
+        const firstName = clientName ? clientName.split(' ')[0].toLowerCase() : 'deposito'
+        referenceNumber = `zelle ${firstName}`
+        timeHHMM = getChileTimeHHMM(params.date)
+
+        return {
+            amount,
+            currency: 'USD',
+            timeHHMM,
+            referenceNumber,
+            bankName,
+            clientName: clientName || undefined,
+            operationNumber: undefined,
+            notes: clientName ? `Zelle de ${clientName}` : 'Transferencia Zelle'
+        }
+    }
+
+    // 1. EXTRAER MONTO (CHILE / CLP)
     const amountPatterns = [
         /(?:monto\s*transferido|monto\s*transferencia|monto\s*recibido|monto\s*de\s*la\s*transferencia|monto\s*total|monto)\s*[:]?\s*\$?\s*([0-9]{1,3}(?:\.[0-9]{3})*(?:,[0-9]+)?|[0-9]+)/i,
         /transferencia\s*(?:exitosa|por|de)\s*[^\$0-9]*\$?\s*([0-9]{1,3}(?:\.[0-9]{3})+)/i,
