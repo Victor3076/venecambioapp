@@ -88,8 +88,9 @@ export function parseBankEmail(params: {
 
     // 1. EXTRAER MONTO
     const amountPatterns = [
-        /(?:monto\s*transferido|monto\s*transferencia|monto\s*recibido|monto)\s*[:]?\s*\$?\s*([0-9]{1,3}(?:\.[0-9]{3})*(?:,[0-9]+)?|[0-9]+)/i,
-        /has\s*recibido\s*una\s*transferencia[^\$]*\$?\s*([0-9]{1,3}(?:\.[0-9]{3})+)/i,
+        /(?:monto\s*transferido|monto\s*transferencia|monto\s*recibido|monto\s*de\s*la\s*transferencia|monto\s*total|monto)\s*[:]?\s*\$?\s*([0-9]{1,3}(?:\.[0-9]{3})*(?:,[0-9]+)?|[0-9]+)/i,
+        /transferencia\s*(?:exitosa|por|de)\s*[^\$0-9]*\$?\s*([0-9]{1,3}(?:\.[0-9]{3})+)/i,
+        /has\s*recibido\s*(?:una\s*transferencia|un\s*pago)[^\$0-9]*\$?\s*([0-9]{1,3}(?:\.[0-9]{3})+)/i,
         /\$\s*([0-9]{1,3}(?:\.[0-9]{3})+)/,
         /total\s*[:]?\s*\$?\s*([0-9]{1,3}(?:\.[0-9]{3})+)/i
     ]
@@ -120,7 +121,7 @@ export function parseBankEmail(params: {
 
     // 3. EXTRAER NÚMERO DE OPERACIÓN / COMPROBANTE
     const opPatterns = [
-        /(?:n[úu]mero\s*de\s*operaci[oó]n|n[°º]\s*de\s*operaci[oó]n|n[°º]\s*operaci[oó]n|comprobante|c[oó]digo\s*de\s*operaci[oó]n)\s*[:]?\s*(\w+)/i,
+        /(?:n[úu]mero\s*de\s*operaci[oó]n|n[°º]\s*de\s*operaci[oó]n|n[°º]\s*operaci[oó]n|comprobante|c[oó]digo\s*de\s*operaci[oó]n|c[oó]digo\s*de\s*transferencia|id\s*de\s*transacci[oó]n|n[úu]mero\s*de\s*comprobante)\s*[:]?\s*(\w+)/i,
         /operaci[oó]n\s*[:]?\s*(\w+)/i
     ]
 
@@ -134,16 +135,17 @@ export function parseBankEmail(params: {
 
     // 4. EXTRAER NOMBRE DEL CLIENTE / EMISOR
     const clientPatterns = [
+        /recibiste\s+una\s+transferencia\s+de\s+([A-ZÁÉÍÓÚÑa-záéíóúñ\s]{3,40}?)(?:-|\.|$|\shola)/i,
         /(?:cliente|de\s*nuestro\(a\)\s*cliente)\s+([A-ZÁÉÍÓÚÑa-záéíóúñ\s]{3,40}?)(?:,|\sha\s|con\s|hacia|\.|$)/i,
         /transferencia\s+de\s+fondos\s+de\s+([A-ZÁÉÍÓÚÑa-záéíóúñ\s]{3,40}?)\s+(?:hacia|a\s+tu|al)/i,
-        /(?:origen|emisor|ordenante)\s*[:]?\s*([A-ZÁÉÍÓÚÑa-záéíóúñ\s]{3,40}?)(?:rut|banco|cuenta|\.|$)/i
+        /(?:origen|emisor|ordenante|transferido\s*por)\s*[:]?\s*([A-ZÁÉÍÓÚÑa-záéíóúñ\s]{3,40}?)(?:rut|banco|cuenta|\.|$)/i
     ]
 
     for (const pattern of clientPatterns) {
         const match = text.match(pattern)
         if (match && match[1]) {
             const candidate = match[1].trim()
-            if (candidate.length > 2 && !candidate.toLowerCase().includes('cyber') && !candidate.toLowerCase().includes('banco')) {
+            if (candidate.length > 2 && !candidate.toLowerCase().includes('cyber') && !candidate.toLowerCase().includes('banco') && !candidate.toLowerCase().includes('comprobante')) {
                 clientName = candidate
                 break
             }
@@ -151,20 +153,29 @@ export function parseBankEmail(params: {
     }
 
     // 5. DETECTAR BANCO DE ORIGEN / DESTINO
-    if (from.includes('bancoestado') || text.includes('bancoestado') || text.includes('banco estado')) {
+    const combinedSearch = `${from} ${text}`.toLowerCase()
+    if (combinedSearch.includes('machbank') || combinedSearch.includes('mach') || combinedSearch.includes('somosmach')) {
+        bankName = 'MACH'
+    } else if (combinedSearch.includes('tenpo')) {
+        bankName = 'Tenpo'
+    } else if (combinedSearch.includes('bancoestado') || combinedSearch.includes('banco estado')) {
         bankName = 'Banco Estado'
-    } else if (from.includes('bancochile') || text.includes('banco de chile')) {
+    } else if (combinedSearch.includes('bancochile') || combinedSearch.includes('banco de chile') || combinedSearch.includes('edwards')) {
         bankName = 'Banco de Chile'
-    } else if (from.includes('bci') || text.includes('bci') || text.includes('mach')) {
-        bankName = 'Banco BCI'
-    } else if (from.includes('falabella') || text.includes('banco falabella')) {
+    } else if (combinedSearch.includes('falabella') || combinedSearch.includes('cmr')) {
         bankName = 'Banco Falabella'
-    } else if (from.includes('santander') || text.includes('santander')) {
+    } else if (combinedSearch.includes('bci')) {
+        bankName = 'Banco BCI'
+    } else if (combinedSearch.includes('santander')) {
         bankName = 'Banco Santander'
-    } else if (from.includes('scotiabank') || text.includes('scotiabank')) {
+    } else if (combinedSearch.includes('scotiabank')) {
         bankName = 'Scotiabank'
-    } else if (from.includes('itau') || text.includes('itaú') || text.includes('itau')) {
+    } else if (combinedSearch.includes('itau') || combinedSearch.includes('itaú')) {
         bankName = 'Banco Itaú'
+    } else if (combinedSearch.includes('mercadopago') || combinedSearch.includes('mercado pago')) {
+        bankName = 'Mercado Pago'
+    } else if (combinedSearch.includes('coopeuch')) {
+        bankName = 'Coopeuch'
     }
 
     // 6. GENERAR REFERENCIA
