@@ -88,9 +88,9 @@ const StandardBalanceBlock = ({
 )
 
 const DEFAULT_EGLI_DISCOUNTS: EgliDiscountItem[] = [
-    { id: "1", name: "pasaste a cliente", amount: "40000" },
-    { id: "2", name: "pasaste a la corriente", amount: "139000" },
-    { id: "3", name: "pasaste a andean", amount: "70000" },
+    { id: "1", name: "pasaste a cliente", amount: "40000", type: "subtract" },
+    { id: "2", name: "pasaste a la corriente", amount: "139000", type: "subtract" },
+    { id: "3", name: "pasaste a andean", amount: "70000", type: "subtract" },
 ]
 
 export default function ManualCuadrePage() {
@@ -121,12 +121,15 @@ export default function ManualCuadrePage() {
         return parseFormattedNumber(row.yesterday) + parseFormattedNumber(row.today_pass) + parseFormattedNumber(row.today_clps || "0")
     }
 
-    // Calculate Egli Total: Anterior + Ayer - Descuentos
+    // Calculate Egli Total: Anterior + Ayer + Sumas - Descuentos
     const egliTotal = useMemo(() => {
         const anterior = parseFormattedNumber(egliAnterior)
         const ayer = parseFormattedNumber(egliAyer)
-        const totalDiscounts = egliDiscounts.reduce((sum, item) => sum + parseFormattedNumber(item.amount), 0)
-        return anterior + ayer - totalDiscounts
+        const adjustments = egliDiscounts.reduce((sum, item) => {
+            const val = parseFormattedNumber(item.amount)
+            return item.type === 'add' ? sum + val : sum - val
+        }, 0)
+        return anterior + ayer + adjustments
     }, [egliAnterior, egliAyer, egliDiscounts])
 
     // Load latest data on mount
@@ -188,13 +191,24 @@ export default function ManualCuadrePage() {
         }
     }
 
-    const handleAddDiscount = () => {
+    const handleAddMovement = (type: 'subtract' | 'add' = 'subtract') => {
         const newItem: EgliDiscountItem = {
             id: Date.now().toString(),
-            name: "nuevo pase / descuento",
-            amount: "0"
+            name: type === 'add' ? "nuevo ingreso / suma" : "nuevo pase / descuento",
+            amount: "0",
+            type
         }
         setEgliDiscounts(prev => [...prev, newItem])
+    }
+
+    const handleToggleItemType = (id: string) => {
+        setEgliDiscounts(prev => prev.map(item => {
+            if (item.id === id) {
+                const currentType = item.type || 'subtract'
+                return { ...item, type: currentType === 'subtract' ? 'add' : 'subtract' }
+            }
+            return item
+        }))
     }
 
     const handleUpdateDiscount = (id: string, field: 'name' | 'amount', value: string) => {
@@ -350,50 +364,88 @@ export default function ManualCuadrePage() {
                                             </td>
                                         </tr>
 
-                                        {/* 3..N Descuentos / Pases Manuales */}
-                                        {egliDiscounts.map(item => (
-                                            <tr key={item.id} className="border-b hover:bg-red-50/20 transition-colors group">
-                                                <td className="p-2.5">
-                                                    <Input
-                                                        className="h-7 text-xs font-medium text-red-600 dark:text-red-400 bg-transparent border-0 border-b border-transparent hover:border-dashed hover:border-red-300 focus:border-red-500 shadow-none focus-visible:ring-0 p-0 w-full"
-                                                        value={item.name}
-                                                        onChange={e => handleUpdateDiscount(item.id, 'name', e.target.value)}
-                                                        placeholder="concepto descuento"
-                                                    />
-                                                </td>
-                                                <td className="p-2.5 text-right">
-                                                    <div className="flex items-center justify-end gap-1">
-                                                        <span className="text-xs font-bold text-red-500">-</span>
+                                        {/* 3..N Descuentos / Pases / Sumas Manuales */}
+                                        {egliDiscounts.map(item => {
+                                            const isAdd = item.type === 'add'
+                                            return (
+                                                <tr
+                                                    key={item.id}
+                                                    className={`border-b transition-colors group ${
+                                                        isAdd ? 'hover:bg-emerald-50/20' : 'hover:bg-red-50/20'
+                                                    }`}
+                                                >
+                                                    <td className="p-2.5">
                                                         <Input
-                                                            className="h-7 text-right font-bold text-xs w-28 text-red-600 border-dashed hover:border-red-300 focus:border-red-500 transition-all bg-transparent border-0 shadow-none focus-visible:ring-0 p-0"
-                                                            value={item.amount}
-                                                            onChange={e => handleUpdateDiscount(item.id, 'amount', e.target.value)}
-                                                            placeholder="0"
+                                                            className={`h-7 text-xs font-medium bg-transparent border-0 border-b border-transparent shadow-none focus-visible:ring-0 p-0 w-full ${
+                                                                isAdd
+                                                                    ? 'text-emerald-600 dark:text-emerald-400 hover:border-dashed hover:border-emerald-300 focus:border-emerald-500'
+                                                                    : 'text-red-600 dark:text-red-400 hover:border-dashed hover:border-red-300 focus:border-red-500'
+                                                            }`}
+                                                            value={item.name}
+                                                            onChange={e => handleUpdateDiscount(item.id, 'name', e.target.value)}
+                                                            placeholder={isAdd ? "concepto suma / ingreso" : "concepto descuento"}
                                                         />
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-6 w-6 opacity-40 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive hover:bg-red-50 shrink-0"
-                                                            onClick={() => handleRemoveDiscount(item.id)}
-                                                        >
-                                                            <Trash2 className="w-3 h-3" />
-                                                        </Button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
+                                                    </td>
+                                                    <td className="p-2.5 text-right">
+                                                        <div className="flex items-center justify-end gap-1">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleToggleItemType(item.id)}
+                                                                title={`Tipo de movimiento: ${isAdd ? 'Suma (+)' : 'Resta (-)'}. Haz clic para alternar.`}
+                                                                className={`h-6 min-w-[20px] px-1 text-xs font-black rounded flex items-center justify-center transition-all cursor-pointer select-none ${
+                                                                    isAdd
+                                                                        ? 'text-emerald-700 bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-950 dark:text-emerald-300'
+                                                                        : 'text-red-700 bg-red-100 hover:bg-red-200 dark:bg-red-950 dark:text-red-300'
+                                                                }`}
+                                                            >
+                                                                {isAdd ? '+' : '-'}
+                                                            </button>
+                                                            <Input
+                                                                className={`h-7 text-right font-bold text-xs w-28 border-dashed transition-all bg-transparent border-0 shadow-none focus-visible:ring-0 p-0 ${
+                                                                    isAdd
+                                                                        ? 'text-emerald-600 dark:text-emerald-400 hover:border-emerald-300 focus:border-emerald-500'
+                                                                        : 'text-red-600 dark:text-red-400 hover:border-red-300 focus:border-red-500'
+                                                                }`}
+                                                                value={item.amount}
+                                                                onChange={e => handleUpdateDiscount(item.id, 'amount', e.target.value)}
+                                                                placeholder="0"
+                                                            />
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-6 w-6 opacity-40 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive hover:bg-red-50 shrink-0"
+                                                                onClick={() => handleRemoveDiscount(item.id)}
+                                                            >
+                                                                <Trash2 className="w-3 h-3" />
+                                                            </Button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            )
+                                        })}
 
-                                        {/* Botón Agregar Fila */}
+                                        {/* Botones Agregar Fila */}
                                         <tr className="border-b">
                                             <td colSpan={2} className="p-1.5 text-center bg-muted/10">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={handleAddDiscount}
-                                                    className="h-6 text-[11px] px-2 text-muted-foreground hover:text-primary gap-1 font-semibold"
-                                                >
-                                                    <Plus className="w-3 h-3" /> Agregar descuento / pase
-                                                </Button>
+                                                <div className="flex items-center justify-center gap-1 flex-wrap">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => handleAddMovement('subtract')}
+                                                        className="h-6 text-[11px] px-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/50 gap-1 font-semibold"
+                                                    >
+                                                        <Plus className="w-3 h-3" /> Descuento (-)
+                                                    </Button>
+                                                    <span className="text-muted-foreground/30 text-xs">|</span>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => handleAddMovement('add')}
+                                                        className="h-6 text-[11px] px-2 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 gap-1 font-semibold"
+                                                    >
+                                                        <Plus className="w-3 h-3" /> Suma (+)
+                                                    </Button>
+                                                </div>
                                             </td>
                                         </tr>
 

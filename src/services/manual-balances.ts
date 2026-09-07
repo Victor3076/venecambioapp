@@ -6,6 +6,7 @@ export interface EgliDiscountItem {
     id: string
     name: string
     amount: string
+    type?: 'add' | 'subtract'
 }
 
 export interface BalanceRowData {
