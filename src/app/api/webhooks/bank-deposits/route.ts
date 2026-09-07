@@ -13,7 +13,7 @@ export async function POST(req: Request) {
         // 1. Verify Authentication (Bearer token or x-webhook-secret)
         const authHeader = req.headers.get('authorization')
         const headerSecret = req.headers.get('x-webhook-secret')
-        const secret = process.env.N8N_WEBHOOK_SECRET
+        const secret = process.env.N8N_WEBHOOK_SECRET || process.env.WEBHOOK_SECRET
 
         if (secret) {
             const isBearerValid = authHeader === `Bearer ${secret}`
