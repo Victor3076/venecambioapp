@@ -74,6 +74,27 @@ export function parseUSAmount(amountStr: string): number {
     return parseFloat(clean) || 0
 }
 
+export function parseCOPAmount(amountStr: string): number {
+    if (!amountStr) return 0
+    const clean = amountStr.replace(/[^0-9.,]/g, '').trim()
+    if (!clean) return 0
+    const noThousands = clean.replace(/,/g, '')
+    return parseFloat(noThousands) || 0
+}
+
+function toTitleCase(str: string): string {
+    return str.toLowerCase().replace(/(?:^|\s)\S/g, match => match.toUpperCase())
+}
+
+function formatNameForLlave(name: string): string {
+    const parts = name.trim().split(/\s+/)
+    if (parts.length === 1) return parts[0].toLowerCase()
+    if (parts.length === 2) return `${parts[0]} ${parts[1]}`.toLowerCase()
+    if (parts.length === 3) return `${parts[0]} ${parts[1]}`.toLowerCase()
+    if (parts.length >= 4) return `${parts[0]} ${parts[2]}`.toLowerCase()
+    return name.toLowerCase()
+}
+
 export function parseBankEmail(params: {
     subject?: string
     body?: string
@@ -95,7 +116,119 @@ export function parseBankEmail(params: {
     let operationNumber = ''
     let referenceNumber = ''
 
-    // DETECCIÓN ESPECIAL: ZELLE / BANK OF AMERICA / US BANKS
+    // ── DETECCIÓN ESPECIAL: BANCOLOMBIA / COLOMBIA (COP) ──
+    const isBancolombia = from.includes('notificacionesbancolombia.com') ||
+                          from.includes('bancolombia') ||
+                          text.toLowerCase().includes('bancolombia:') ||
+                          subject.toLowerCase().includes('bancolombia')
+
+    if (isBancolombia) {
+        // 1. Descartar transferencias salientes (Transferiste / Pagaste / Debitamos)
+        if (/(?:transferiste|enviaste|pagaste|debitamos|compraste)\s+\$/i.test(text) || 
+            /(?:desde\s+tu\s+cuenta)\s+\*/i.test(text) && !/recibiste/i.test(text)) {
+            return {
+                amount: 0,
+                currency: 'COP',
+                timeHHMM: '',
+                referenceNumber: '',
+                bankName: 'Bancolombia',
+                notes: 'Transferencia saliente ignorada'
+            }
+        }
+
+        currency = 'COP'
+        bankName = 'Bancolombia'
+
+        // Extraer hora del texto (ej. "a las 09:25" o "16/09/26 10:20")
+        const timeMatchBancolombia = text.match(/(?:a\s+las|\d{2}[\/\-]\d{2}[\/\-]\d{2,4})\s*[:\s]*(\d{1,2}):(\d{2})/i)
+            || text.match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/)
+
+        if (timeMatchBancolombia && timeMatchBancolombia[1] && timeMatchBancolombia[2]) {
+            const h = timeMatchBancolombia[1].padStart(2, '0')
+            const m = timeMatchBancolombia[2].padStart(2, '0')
+            timeHHMM = `${h}${m}`
+        } else {
+            timeHHMM = getChileTimeHHMM(params.date)
+        }
+
+        // Caso 1: Corresponsal (ej. "Recibiste una consignacion por $300,000 desde el corresponsal BARRIO SAN BENITO...")
+        if (/corresponsal/i.test(text)) {
+            const amountMatch = text.match(/consignaci[oó]n\s+por\s+\$([0-9,.]+)/i) || text.match(/\$([0-9,.]+)/)
+            if (amountMatch) {
+                amount = parseCOPAmount(amountMatch[1])
+            }
+            referenceNumber = `CORRESPONSAL ${timeHHMM}`
+            
+            const corrMatch = text.match(/desde\s+el\s+corresponsal\s+([A-ZÁÉÍÓÚÑ0-9\s]+?)(?:en\s+|,\s*el|\.|$)/i)
+            const corrName = corrMatch ? corrMatch[1].trim() : ''
+
+            return {
+                amount,
+                currency: 'COP',
+                timeHHMM,
+                referenceNumber,
+                bankName: 'Bancolombia',
+                notes: corrName ? `Consignación desde corresponsal ${corrName}` : 'Consignación Corresponsal Bancolombia'
+            }
+        }
+
+        // Caso 2: Conectada a la llave (ej. "recibiste una transferencia de CARLA CARINA COLINA ROBLES por $40,000.00 en tu cuenta *5101 conectada a la llave...")
+        if (/conectada\s+a\s+la\s+llave|llave/i.test(text)) {
+            const llaveMatch = text.match(/transferencia\s+de\s+([A-ZÁÉÍÓÚÑa-záéíóúñ\s]+?)\s+por\s+\$([0-9,.]+)/i)
+            if (llaveMatch) {
+                clientName = llaveMatch[1].trim()
+                amount = parseCOPAmount(llaveMatch[2])
+            } else {
+                const altAmount = text.match(/\$([0-9,.]+)/)
+                if (altAmount) amount = parseCOPAmount(altAmount[1])
+            }
+
+            const formattedName = clientName ? formatNameForLlave(clientName) : ''
+            referenceNumber = formattedName ? `llave de ${formattedName}` : `llave ${timeHHMM}`
+
+            return {
+                amount,
+                currency: 'COP',
+                timeHHMM,
+                referenceNumber,
+                bankName: 'Bancolombia',
+                clientName: clientName || undefined,
+                notes: clientName ? `Llave Bancolombia de ${clientName}` : 'Transferencia Llave Bancolombia'
+            }
+        }
+
+        // Caso 3: Transferencia estándar recibida (ej. "Recibiste una transferencia por $66,000 de YIRMARY SARABIA en tu cuenta...")
+        const transfMatch = text.match(/transferencia\s+por\s+\$([0-9,.]+)\s+de\s+([A-ZÁÉÍÓÚÑa-záéíóúñ\s]+?)\s+en\s+tu\s+cuenta/i)
+            || text.match(/transferencia\s+de\s+([A-ZÁÉÍÓÚÑa-záéíóúñ\s]+?)\s+por\s+\$([0-9,.]+)/i)
+
+        if (transfMatch) {
+            if (/\$/.test(transfMatch[1])) {
+                amount = parseCOPAmount(transfMatch[1])
+                clientName = transfMatch[2].trim()
+            } else {
+                clientName = transfMatch[1].trim()
+                amount = parseCOPAmount(transfMatch[2])
+            }
+        } else {
+            const altAmount = text.match(/\$([0-9,.]+)/)
+            if (altAmount) amount = parseCOPAmount(altAmount[1])
+        }
+
+        const formattedClient = clientName ? toTitleCase(clientName) : ''
+        referenceNumber = formattedClient ? `Transf de ${formattedClient}` : `Transf ${timeHHMM}`
+
+        return {
+            amount,
+            currency: 'COP',
+            timeHHMM,
+            referenceNumber,
+            bankName: 'Bancolombia',
+            clientName: clientName || undefined,
+            notes: clientName ? `Transferencia de ${clientName}` : 'Transferencia Bancolombia'
+        }
+    }
+
+    // ── DETECCIÓN ESPECIAL: ZELLE / BANK OF AMERICA / US BANKS ──
     const isZelleOrUS = from.includes('bankofamerica') || 
                         from.includes('ealerts.bankofamerica.com') ||
                         from.includes('chase.com') ||
