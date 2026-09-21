@@ -50,20 +50,23 @@ self.addEventListener('fetch', (event) => {
 messaging.onBackgroundMessage((payload) => {
     console.log('[firebase-messaging-sw.js] Received background message ', payload);
 
-    const title = payload.notification?.title || payload.data?.title || 'VeneCambio';
-    const body = payload.notification?.body || payload.data?.body || 'Nueva actualización en el sistema';
+    // Only display notification manually if it's a data-only payload (to prevent duplicate browser notifications)
+    if (payload.data && !payload.notification) {
+        const title = payload.data.title || 'VeneCambio';
+        const body = payload.data.body || 'Nueva actualización en el sistema';
 
-    const options = {
-        body: body,
-        icon: payload.notification?.icon || payload.data?.icon || '/logo.png',
-        badge: '/logo.png',
-        vibrate: [200, 100, 200, 100, 200],
-        tag: payload.data?.transactionId ? `tx-${payload.data.transactionId}` : 'venecambio-alert',
-        renotify: true,
-        data: payload.data || { url: '/admin/transactions' }
-    };
+        const options = {
+            body: body,
+            icon: payload.data.icon || '/logo.png',
+            badge: '/logo.png',
+            vibrate: [200, 100, 200, 100, 200],
+            tag: payload.data.transactionId ? `tx-${payload.data.transactionId}` : 'venecambio-alert',
+            renotify: true,
+            data: payload.data || { url: '/admin/transactions' }
+        };
 
-    self.registration.showNotification(title, options);
+        self.registration.showNotification(title, options);
+    }
 });
 
 self.addEventListener('notificationclick', function (event) {

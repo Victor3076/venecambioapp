@@ -3,6 +3,9 @@ import { createClient } from "@supabase/supabase-js";
 
 export const TARGET_ALERT_CURRENCIES = ['PEN', 'USD', 'COP', 'CLP'];
 
+// In-memory cache to prevent duplicate alerts for the same transaction within 30 seconds
+const recentlyNotifiedTxs = new Set<string>();
+
 export function isTargetCrossCurrency(currency?: string | null): boolean {
     if (!currency) return false;
     return TARGET_ALERT_CURRENCIES.includes(currency.trim().toUpperCase());
@@ -25,6 +28,18 @@ export async function sendCrossCurrencyAlertToAdmins(tx: CrossCurrencyAlertData)
         const destCurrency = (tx.currency_received || '').trim().toUpperCase();
         if (!isTargetCrossCurrency(destCurrency)) {
             return { skipped: true, reason: `Currency ${destCurrency} is not in alert list (PEN, USD, COP, CLP)` };
+        }
+
+        // Deduplication check
+        if (tx.transaction_id) {
+            if (recentlyNotifiedTxs.has(tx.transaction_id)) {
+                console.log(`[Admin Push] Skipping duplicate push for tx: ${tx.transaction_id}`);
+                return { skipped: true, reason: 'Transaction already notified recently' };
+            }
+            recentlyNotifiedTxs.add(tx.transaction_id);
+            setTimeout(() => {
+                recentlyNotifiedTxs.delete(tx.transaction_id!);
+            }, 30000);
         }
 
         const supabaseAdmin = createClient(
@@ -88,10 +103,12 @@ export async function sendCrossCurrencyAlertToAdmins(tx: CrossCurrencyAlertData)
         }
 
         const adminMessaging = getAdminMessaging();
-        const webTokens = tokensData.filter(t => t.platform === 'web').map(t => t.token);
-        const nativeTokens = tokensData.filter(t => t.platform !== 'web').map(t => t.token);
+        // Deduplicate tokens
+        const webTokens = Array.from(new Set(tokensData.filter(t => t.platform === 'web').map(t => t.token)));
+        const nativeTokens = Array.from(new Set(tokensData.filter(t => t.platform !== 'web').map(t => t.token)));
 
         const results: any[] = [];
+        const notificationTag = tx.transaction_id ? `tx-${tx.transaction_id}` : 'cross-currency-alert';
 
         // 4a. Send Web Push
         if (webTokens.length > 0) {
@@ -110,8 +127,8 @@ export async function sendCrossCurrencyAlertToAdmins(tx: CrossCurrencyAlertData)
                         body: message,
                         icon: '/logo.png',
                         badge: '/logo.png',
-                        vibrate: [200, 100, 200, 100, 200],
-                        sound: 'default'
+                        tag: notificationTag,
+                        vibrate: [200, 100, 200, 100, 200]
                     },
                     fcmOptions: {
                         link: '/admin/transactions'
@@ -146,7 +163,8 @@ export async function sendCrossCurrencyAlertToAdmins(tx: CrossCurrencyAlertData)
                         defaultSound: true,
                         defaultVibrateTimings: true,
                         priority: 'high',
-                        visibility: 'public'
+                        visibility: 'public',
+                        tag: notificationTag
                     }
                 },
                 apns: {

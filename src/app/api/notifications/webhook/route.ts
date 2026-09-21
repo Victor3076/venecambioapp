@@ -28,6 +28,12 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
         }
 
+        // Skip cross_currency_alert because sendCrossCurrencyAlertToAdmins already sent the push directly
+        if (notification.type === 'cross_currency_alert') {
+            console.log('Skipping cross_currency_alert push in generic webhook (already handled)');
+            return NextResponse.json({ success: true, message: 'Skipped cross_currency_alert' });
+        }
+
         // 2. Fetch ALL User's FCM Tokens
         const { data: tokensData, error: tokensError } = await supabaseAdmin
             .from('fcm_tokens')
@@ -39,11 +45,10 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ success: true, message: 'No tokens found, skipping push' });
         }
 
-        const tokens = tokensData.map(t => t.token);
-        console.log(`Found ${tokens.length} tokens for user ${notification.user_id}`);
+        console.log(`Found ${tokensData.length} tokens for user ${notification.user_id}`);
 
-        const webTokens = tokensData.filter(t => t.platform === 'web').map(t => t.token);
-        const nativeTokens = tokensData.filter(t => t.platform !== 'web').map(t => t.token);
+        const webTokens = Array.from(new Set(tokensData.filter(t => t.platform === 'web').map(t => t.token)));
+        const nativeTokens = Array.from(new Set(tokensData.filter(t => t.platform !== 'web').map(t => t.token)));
 
         const results = [];
 
