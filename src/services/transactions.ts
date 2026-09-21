@@ -20,6 +20,32 @@ export interface Transaction {
     updated_at?: string
 }
 
+const notifyAdminsIfCrossCurrency = (tx: any, clientName?: string) => {
+    try {
+        const dest = (tx.currency_received || '').toUpperCase()
+        if (!['PEN', 'USD', 'COP', 'CLP'].includes(dest)) return
+
+        if (typeof window !== 'undefined') {
+            fetch('/api/notifications/cross-currency', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: tx.id,
+                    amount_sent: tx.amount_sent,
+                    currency_sent: tx.currency_sent,
+                    amount_received: tx.amount_received,
+                    currency_received: tx.currency_received,
+                    exchange_rate: tx.exchange_rate,
+                    user_id: tx.user_id,
+                    client_name: clientName
+                })
+            }).catch(err => console.warn('Failed to trigger cross-currency notification:', err))
+        }
+    } catch (e) {
+        console.warn('Cross currency notification trigger error:', e)
+    }
+}
+
 export const TransactionsService = {
     async createBulk(items: Omit<Transaction, 'id' | 'user_id' | 'status' | 'created_at' | 'updated_at'>[]) {
         const { data: { user } } = await supabase.auth.getUser()
@@ -42,6 +68,11 @@ export const TransactionsService = {
             .select()
 
         if (error) throw error
+
+        if (data && data.length > 0) {
+            data.forEach(t => notifyAdminsIfCrossCurrency(t))
+        }
+
         return data
     },
 
@@ -59,6 +90,11 @@ export const TransactionsService = {
             .select()
 
         if (error) throw error
+
+        if (data && data[0]) {
+            notifyAdminsIfCrossCurrency(data[0])
+        }
+
         return data[0]
     },
 
@@ -73,6 +109,11 @@ export const TransactionsService = {
             .select()
 
         if (error) throw error
+
+        if (data && data[0]) {
+            notifyAdminsIfCrossCurrency(data[0])
+        }
+
         return data[0]
     },
 

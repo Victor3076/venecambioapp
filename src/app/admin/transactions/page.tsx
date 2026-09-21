@@ -51,7 +51,7 @@ export default function AdminTransactionsPage() {
     useEffect(() => {
         // Pre-load audio for better responsiveness and to bypass some browser restrictions
         audioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3')
-        audioRef.current.volume = 0.5
+        audioRef.current.volume = 0.9
         audioRef.current.load()
     }, [])
 
@@ -145,17 +145,28 @@ export default function AdminTransactionsPage() {
             const isInsert = payload.eventType?.toUpperCase() === 'INSERT' || payload.event?.toUpperCase() === 'INSERT';
             
             if (isInsert) {
-                console.log('New transaction detected, triggering alert...');
+                const newTx = payload.new;
+                const destCurrency = (newTx?.currency_received || '').toUpperCase();
+                const isCrossCurrency = ['PEN', 'USD', 'COP', 'CLP'].includes(destCurrency);
+
+                console.log('New transaction detected, triggering alert...', isCrossCurrency ? `[DEST: ${destCurrency}]` : '');
                 playAlertSound();
                 
-                const newTx = payload.new;
                 const clientName = newTx.profiles?.full_name || 'Nuevo Cliente';
-                
-                toast.info(`🔔 NUEVA OPERACIÓN: ${newTx.amount_sent} ${newTx.currency_sent}`, {
-                    description: `De ${clientName}. Se ha cargado una nueva operación para revisar.`,
-                    duration: 15000,
-                    position: 'top-right',
-                });
+
+                if (isCrossCurrency) {
+                    toast.error(`🚨 NUEVA OPERACIÓN HACIA ${destCurrency}`, {
+                        description: `${newTx.amount_sent} ${newTx.currency_sent} → ${newTx.amount_received} ${destCurrency} (${clientName})`,
+                        duration: 20000,
+                        position: 'top-right',
+                    });
+                } else {
+                    toast.info(`🔔 NUEVA OPERACIÓN: ${newTx.amount_sent} ${newTx.currency_sent}`, {
+                        description: `De ${clientName}. Se ha cargado una nueva operación para revisar.`,
+                        duration: 15000,
+                        position: 'top-right',
+                    });
+                }
             }
             loadTransactions(true)
         })

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { messaging, getToken, onMessage } from "@/lib/firebase"
 import { supabase } from "@/lib/supabase"
 import { Capacitor } from "@capacitor/core"
@@ -8,10 +8,34 @@ import { PushNotifications } from "@capacitor/push-notifications"
 import { LocalNotifications } from "@capacitor/local-notifications"
 import { Button } from "@/components/ui/button"
 import { Bell } from "lucide-react"
+import { toast } from "sonner"
 
 export function FcmHandler() {
     const [token, setToken] = useState<string | null>(null)
     const [showPermissionButton, setShowPermissionButton] = useState(false)
+    const audioRef = useRef<HTMLAudioElement | null>(null)
+
+    useEffect(() => {
+        // Pre-load audio for instant playback
+        if (typeof window !== 'undefined') {
+            audioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3')
+            audioRef.current.volume = 0.9
+            audioRef.current.load()
+        }
+    }, [])
+
+    const playChimeSound = () => {
+        try {
+            if (audioRef.current) {
+                audioRef.current.currentTime = 0
+                audioRef.current.play().catch(e => {
+                    console.warn("Chime playback was prevented by browser:", e)
+                })
+            }
+        } catch (e) {
+            console.warn("Error playing chime:", e)
+        }
+    }
 
     const setupWebFcm = async (userId: string) => {
         try {
@@ -29,7 +53,6 @@ export function FcmHandler() {
 
             console.log("Web FCM: Service worker status:", registration.active ? 'active' : 'not active');
 
-            // Hardcoded key to ensure it works in PWA/Prod without env var issues
             const vapidKey = "BNHpLPlpSVRXK73eeUBmIyEA7g1h-TNalsRUxav5N3ZVFd5a0B5CZx4CWhtGD-PzGWHAlKLbDMlmqZO4Ok3Xmj0"
 
             if (!vapidKey) {
@@ -54,10 +77,19 @@ export function FcmHandler() {
 
             onMessage(messaging, (payload) => {
                 console.log("Web message received in foreground:", payload)
+                playChimeSound()
+
+                const title = payload.notification?.title || payload.data?.title || 'VeneCambio'
+                const body = payload.notification?.body || payload.data?.body || 'Nueva actualización en el sistema'
+
+                toast.info(`🔔 ${title}`, {
+                    description: body,
+                    duration: 12000,
+                    position: 'top-right'
+                })
             })
         } catch (error: any) {
             console.error("Error setting up Web FCM:", error);
-            // On iOS, sometimes it fails if not in standalone mode or other restrictions
             if (error.message?.includes('Permission denied')) {
                 setShowPermissionButton(true);
             }
@@ -82,6 +114,21 @@ export function FcmHandler() {
 
     const setupNativeFcm = async (userId: string) => {
         try {
+            // 1. Create Android Notification Channel for loud alerts
+            try {
+                await PushNotifications.createChannel({
+                    id: 'transactions_alert',
+                    name: 'Alertas de Operaciones',
+                    description: 'Notificaciones con sonido para nuevas operaciones',
+                    importance: 5,
+                    visibility: 1,
+                    vibration: true,
+                    sound: 'default'
+                })
+            } catch (chanErr) {
+                console.warn("Could not create Android Notification Channel:", chanErr)
+            }
+
             let permStatus = await PushNotifications.checkPermissions()
 
             if (permStatus.receive === 'prompt') {
@@ -104,15 +151,19 @@ export function FcmHandler() {
 
             PushNotifications.addListener('pushNotificationReceived', async (notification: any) => {
                 console.log("Native push received in FOREGROUND:", notification)
+                playChimeSound()
+
                 await LocalNotifications.schedule({
                     notifications: [
                         {
-                            title: notification.title || "Venecambio",
+                            title: notification.title || "VeneCambio",
                             body: notification.body || "",
                             id: Math.floor(Math.random() * 1000000),
                             extra: notification.data,
                             smallIcon: 'ic_stat_name',
-                            iconColor: '#eab308'
+                            iconColor: '#eab308',
+                            channelId: 'transactions_alert',
+                            sound: 'default'
                         }
                     ]
                 })
@@ -179,7 +230,7 @@ export function FcmHandler() {
                 <div className="bg-background border p-4 rounded-lg shadow-lg max-w-sm pointer-events-auto animate-in slide-in-from-bottom-5">
                     <h3 className="font-bold mb-2">Activar Notificaciones</h3>
                     <p className="text-sm text-muted-foreground mb-4">
-                        Recibe actualizaciones sobre tus operaciones al instante.
+                        Recibe alertas inmediatas con sonido cuando se carguen operaciones.
                     </p>
                     <button
                         onClick={handleManualPermissionRequest}

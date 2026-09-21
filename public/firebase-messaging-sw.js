@@ -50,25 +50,27 @@ self.addEventListener('fetch', (event) => {
 messaging.onBackgroundMessage((payload) => {
     console.log('[firebase-messaging-sw.js] Received background message ', payload);
 
-    // Check if it's a data-only message or standard notification
-    if (payload.data && !payload.notification) {
-        const title = payload.data.title || 'Venecambio';
-        const options = {
-            body: payload.data.body,
-            icon: payload.data.icon || '/logo.png',
-            badge: '/logo.png',
-            data: payload.data
-        };
+    const title = payload.notification?.title || payload.data?.title || 'VeneCambio';
+    const body = payload.notification?.body || payload.data?.body || 'Nueva actualización en el sistema';
 
-        self.registration.showNotification(title, options);
-    }
+    const options = {
+        body: body,
+        icon: payload.notification?.icon || payload.data?.icon || '/logo.png',
+        badge: '/logo.png',
+        vibrate: [200, 100, 200, 100, 200],
+        tag: payload.data?.transactionId ? `tx-${payload.data.transactionId}` : 'venecambio-alert',
+        renotify: true,
+        data: payload.data || { url: '/admin/transactions' }
+    };
+
+    self.registration.showNotification(title, options);
 });
 
 self.addEventListener('notificationclick', function (event) {
     console.log('[firebase-messaging-sw.js] Notification click received.');
     event.notification.close();
 
-    const targetUrl = event.notification.data?.url || '/dashboard/transactions';
+    const targetUrl = event.notification.data?.url || '/admin/transactions';
 
     event.waitUntil(clients.matchAll({
         type: 'window',
@@ -76,7 +78,10 @@ self.addEventListener('notificationclick', function (event) {
     }).then(function (clientList) {
         for (var i = 0; i < clientList.length; i++) {
             var client = clientList[i];
-            if (client.url.includes('/dashboard') && 'focus' in client) {
+            if ((client.url.includes('/admin') || client.url.includes('/dashboard')) && 'focus' in client) {
+                if ('navigate' in client && targetUrl) {
+                    client.navigate(targetUrl);
+                }
                 return client.focus();
             }
         }

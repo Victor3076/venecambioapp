@@ -101,6 +101,24 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Failed to create transaction' }, { status: 500 });
         }
 
+        // 6. Notify Admins if destination currency is PEN, USD, COP or CLP
+        try {
+            const { sendCrossCurrencyAlertToAdmins } = await import('@/lib/admin-push');
+            await sendCrossCurrencyAlertToAdmins({
+                transaction_id: transaction.id,
+                amount_sent: Number(amount_sent),
+                currency_sent: sourceCurrency,
+                amount_received: amountReceived,
+                currency_received: targetCurrency,
+                client_name: user.full_name || user.client_code,
+                client_phone: user.phone,
+                exchange_rate: rate,
+                user_id: user.id
+            });
+        } catch (pushErr) {
+            console.error('Error sending admin push alert:', pushErr);
+        }
+
         return NextResponse.json({ 
             success: true, 
             message: 'Transaction created successfully in verifying state',

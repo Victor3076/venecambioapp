@@ -10,7 +10,6 @@ import { cn } from "@/lib/utils"
 
 import { NotificationBell } from "@/components/NotificationBell"
 import { Logo } from "@/components/logo"
-import { FcmHandler } from "@/components/FcmHandler"
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
     const router = useRouter()
@@ -63,7 +62,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
     return (
         <div className="flex min-h-screen bg-muted/30 text-foreground transition-colors overflow-x-hidden">
-            <FcmHandler />
 
             {/* Mobile Sidebar Overlay */}
             {isMobileMenuOpen && (
