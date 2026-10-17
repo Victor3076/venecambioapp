@@ -11,10 +11,13 @@ UPDATE public.bank_deposits SET deposit_date = (created_at AT TIME ZONE 'UTC')::
 ALTER TABLE public.bank_deposits ALTER COLUMN deposit_date SET NOT NULL;
 
 -- 4. Create a trigger function to keep deposit_date updated automatically
+-- Respeta deposit_date si ya fue proporcionado y usa la zona horaria de Chile (America/Santiago)
 CREATE OR REPLACE FUNCTION public.sync_deposit_date()
 RETURNS TRIGGER AS $$
 BEGIN
-    NEW.deposit_date := (NEW.created_at AT TIME ZONE 'UTC')::date;
+    IF NEW.deposit_date IS NULL THEN
+        NEW.deposit_date := (COALESCE(NEW.created_at, now()) AT TIME ZONE 'America/Santiago')::date;
+    END IF;
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -22,7 +25,7 @@ $$ LANGUAGE plpgsql;
 -- 5. Attach the trigger
 DROP TRIGGER IF EXISTS trg_sync_deposit_date ON public.bank_deposits;
 CREATE TRIGGER trg_sync_deposit_date
-BEFORE INSERT OR UPDATE OF created_at ON public.bank_deposits
+BEFORE INSERT OR UPDATE ON public.bank_deposits
 FOR EACH ROW EXECUTE FUNCTION public.sync_deposit_date();
 
 -- 6. CLEANUP: Delete existing duplicates (keeping the most recent/matched/first one)

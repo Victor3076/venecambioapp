@@ -24,8 +24,19 @@ export const BankDepositsService = {
         return data as BankDeposit
     },
     async create(deposit: Omit<BankDeposit, 'id' | 'status' | 'created_at' | 'deposit_date'>) {
-        // Check for duplicates (same reference, currency and day) using the new deposit_date column
-        const today = new Date().toISOString().split('T')[0]
+        // Check for duplicates (same reference, currency and day) using local timezone
+        let today: string
+        try {
+            today = new Intl.DateTimeFormat('en-CA', {
+                timeZone: 'America/Santiago',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            }).format(new Date())
+        } catch {
+            today = new Date().toISOString().split('T')[0]
+        }
+
         const { data: existing, error: checkError } = await supabase
             .from('bank_deposits')
             .select('id')
@@ -43,6 +54,7 @@ export const BankDepositsService = {
             .from('bank_deposits')
             .insert([{
                 ...deposit,
+                deposit_date: today,
                 status: 'available'
             }])
             .select()
