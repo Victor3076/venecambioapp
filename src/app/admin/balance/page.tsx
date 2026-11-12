@@ -44,12 +44,14 @@ export default function AdminBalancePage() {
     const [crossedOutTxs, setCrossedOutTxs] = useState<Set<string>>(new Set())
     const [reconciliationSearch, setReconciliationSearch] = useState("")
     const [isUploadingPdf, setIsUploadingPdf] = useState(false)
+    const [pdfUploadStatus, setPdfUploadStatus] = useState<string>("")
     const [reconciliationResult, setReconciliationResult] = useState<{
         filename: string
         totalFound: number
         matchedCount: number
         alreadyCrossedCount: number
         unmatchedBankAmounts: number[]
+        usedOcr?: boolean
     } | null>(null)
     const [showUnmatchedDetails, setShowUnmatchedDetails] = useState(false)
     const [isDraggingFile, setIsDraggingFile] = useState(false)
@@ -106,10 +108,21 @@ export default function AdminBalancePage() {
         }
 
         setIsUploadingPdf(true)
+        setPdfUploadStatus("Extrayendo texto del PDF...")
         const toastId = toast.loading("Extrayendo movimientos del PDF del banco...")
 
         try {
-            const bankAmounts = await extractAmountsFromBankPdf(file)
+            const result = await extractAmountsFromBankPdf(file, (stage, page, total) => {
+                if (stage === 'ocr') {
+                    const msg = `Usando OCR (pág. ${page}/${total})...`
+                    setPdfUploadStatus(msg)
+                    toast.loading(msg, { id: toastId })
+                } else {
+                    setPdfUploadStatus(`Leyendo pág. ${page}/${total}...`)
+                }
+            })
+
+            const bankAmounts = result.amounts
 
             if (bankAmounts.length === 0) {
                 toast.dismiss(toastId)
@@ -178,7 +191,8 @@ export default function AdminBalancePage() {
                 totalFound: bankAmounts.length,
                 matchedCount: newlyMarked,
                 alreadyCrossedCount: relevantTxs.filter(tx => crossedOutTxs.has(tx.id!)).length,
-                unmatchedBankAmounts
+                unmatchedBankAmounts,
+                usedOcr: result.usedOcr
             })
 
             toast.dismiss(toastId)
@@ -195,6 +209,7 @@ export default function AdminBalancePage() {
             toast.error(err.message || "Error al procesar el PDF")
         } finally {
             setIsUploadingPdf(false)
+            setPdfUploadStatus("")
             if (fileInputRef.current) fileInputRef.current.value = ""
         }
     }
@@ -776,7 +791,7 @@ export default function AdminBalancePage() {
                                             {isUploadingPdf ? (
                                                 <>
                                                     <Loader2 className="w-4 h-4 animate-spin" />
-                                                    <span>Leyendo PDF...</span>
+                                                    <span className="truncate max-w-[140px]">{pdfUploadStatus || "Leyendo PDF..."}</span>
                                                 </>
                                             ) : (
                                                 <>
@@ -813,6 +828,9 @@ export default function AdminBalancePage() {
                                                 <span>
                                                     Archivo <strong className="font-mono">{reconciliationResult.filename}</strong>: Se encontraron <strong>{reconciliationResult.totalFound}</strong> movimientos en el banco y se tacharon <strong>{reconciliationResult.matchedCount}</strong> transferencias coincidentes.
                                                 </span>
+                                                {reconciliationResult.usedOcr && (
+                                                    <span className="ml-1 text-muted-foreground">(procesado con OCR)</span>
+                                                )}
                                             </div>
                                         </div>
                                         <Button 
