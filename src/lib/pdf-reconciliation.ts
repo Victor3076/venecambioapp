@@ -95,79 +95,72 @@ export async function extractAmountsFromBankPdf(file: File): Promise<number[]> {
         const page = await pdfDoc.getPage(pageNum)
         const textContent = await page.getTextContent()
 
-        // Agrupar elementos por línea visual según coordenada vertical Y
-        const linesMap: { y: number; items: { x: number; str: string }[] }[] = []
-        const Y_TOLERANCE = 4 // píxeles de tolerancia en la misma fila
+        // Agrupar elementos por fila visual utilizando una tolerancia de 8 píxeles.
+        // En extractos bancarios (BDV, Banesco), las filas están separadas por más de 20px,
+        // por lo que 8px agrupa exactamente la línea de una misma transacción sin fragmentarla.
+        const items = (textContent.items as any[])
+            .map(it => ({
+                str: (it.str || '').trim(),
+                x: it.transform ? Math.round(it.transform[4]) : 0,
+                y: it.transform ? Math.round(it.transform[5]) : 0
+            }))
+            .filter(it => it.str)
 
-        for (const item of textContent.items as any[]) {
-            const str = (item.str || '').trim()
-            if (!str) continue
+        // Ordenar de arriba a abajo
+        items.sort((a, b) => b.y - a.y)
 
-            const x = item.transform ? item.transform[4] : 0
-            const y = item.transform ? item.transform[5] : 0
-
-            let line = linesMap.find(l => Math.abs(l.y - y) <= Y_TOLERANCE)
-            if (!line) {
-                line = { y, items: [] }
-                linesMap.push(line)
+        const rows: { y: number; items: { x: number; y: number; str: string }[] }[] = []
+        for (const item of items) {
+            let row = rows.find(r => Math.abs(r.y - item.y) <= 8)
+            if (!row) {
+                row = { y: item.y, items: [] }
+                rows.push(row)
             }
-            line.items.push({ x, str: item.str })
+            row.items.push(item)
         }
 
-        // Ordenar líneas de arriba hacia abajo (en PDF Y=0 está abajo)
-        linesMap.sort((a, b) => b.y - a.y)
-
-        let pendingContext = ""
-
-        for (const lineObj of linesMap) {
+        for (const r of rows) {
             // Ordenar items de izquierda a derecha
-            lineObj.items.sort((a, b) => a.x - b.x)
-            const lineText = lineObj.items.map(it => it.str).join(" ").trim()
-            const upper = lineText.toUpperCase()
+            r.items.sort((a, b) => a.x - b.x)
+            const rowText = r.items.map(it => it.str).join(' ').trim()
+            const upper = rowText.toUpperCase()
 
-            // Extraer montos numéricos presentes en esta línea
+            // Extraer montos numéricos presentes en esta fila
             const amountRegex = /(?:^|[^\d/:\-])([+-]?(?:[1-9]\d{0,2}(?:\.\d{3})+,\d{2}|\d+,\d{2}|[1-9]\d{0,2}(?:,\d{3})+\.\d{2}|\d+\.\d{2}))(?=[^\d/:]|$)/g
-            const lineAmounts: number[] = []
+            const rowAmounts: number[] = []
             let m: RegExpExecArray | null
 
-            while ((m = amountRegex.exec(lineText)) !== null) {
+            while ((m = amountRegex.exec(rowText)) !== null) {
                 const raw = m[1].replace('+', '').trim()
-                if (lineText.includes(raw + '-') || lineText.includes('-' + raw)) continue
+                if (rowText.includes(raw + '-') || rowText.includes('-' + raw)) continue
                 const parsed = parseAmount(raw)
                 if (parsed !== null && parsed > 0.001) {
-                    lineAmounts.push(parsed)
+                    rowAmounts.push(parsed)
                 }
             }
 
-            // Si la línea no tiene montos (típico de celdas multilínea donde la descripción se parte en dos líneas),
-            // guardamos su texto para dárselo de contexto a la línea inferior que sí tiene los números.
-            if (lineAmounts.length === 0) {
-                pendingContext = (pendingContext + " " + upper).trim()
-                if (pendingContext.length > 250) {
-                    pendingContext = pendingContext.slice(-250)
-                }
-                continue
-            }
-
-            // La línea tiene montos: unimos el contexto acumulado de la línea anterior con la actual
-            const fullContext = (pendingContext + " " + upper).trim()
-            pendingContext = ""
+            if (rowAmounts.length === 0) continue
 
             // 1. OMITIR COMISIONES BANCARIAS
-            // Detecta comisiones en una o varias líneas (ej. "COBRO COMISION PAG" en línea 1 y "MOVIL BDV A BDV" en línea 2)
-            const isCommission = fullContext.includes("COMISION") || 
-                                 fullContext.includes("COMISIÓN") ||
-                                 fullContext.includes("COBRO COM") ||
-                                 fullContext.includes("MOVIL BDV A BDV") ||
-                                 fullContext.includes("PAGOMOVILBDV DEBITO") ||
-                                 fullContext.includes("IVA COMIS")
+            // Detecta comisiones en BDV, Banesco, etc.
+            // Ejemplos en BDV:
+            // - "COMISION PAGOMOVILBDV"
+            // - "COBRO COMISION PAG MOVIL BDV A BDV"
+            // - "COM TRANSF EN LINEA OT BCOS NAT NA"
+            // Las operaciones reales dicen: "OPERACION PAGOMOVIL BDV", "TRASPASO OTRAS CTAS", etc.
+            const isCommission = upper.includes("COMISION") ||
+                                 upper.includes("COMISIÓN") ||
+                                 upper.includes("COBRO COM") ||
+                                 upper.includes("COM TRANSF") ||
+                                 /\bCOM\s+/.test(upper) ||
+                                 upper.includes("IVA COMIS")
 
             if (isCommission) {
                 continue
             }
 
             // 2. OMITIR CRÉDITOS / ENTRADAS (solo interesan egresos / débitos a beneficiarios)
-            if (fullContext.includes("CREDITO") || fullContext.includes("CRÉDITO")) {
+            if (upper.includes("CREDITO") || upper.includes("CRÉDITO")) {
                 continue
             }
 
@@ -177,10 +170,10 @@ export async function extractAmountsFromBankPdf(file: File): Promise<number[]> {
             // Por lo tanto, el Monto de la operación es el penúltimo valor numérico.
             // En extractos con una sola columna de monto (como Banesco): se toma ese valor único.
             let targetAmount: number
-            if (lineAmounts.length >= 2) {
-                targetAmount = lineAmounts[lineAmounts.length - 2]
+            if (rowAmounts.length >= 2) {
+                targetAmount = rowAmounts[rowAmounts.length - 2]
             } else {
-                targetAmount = lineAmounts[0]
+                targetAmount = rowAmounts[0]
             }
 
             if (targetAmount && targetAmount > 0) {
