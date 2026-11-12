@@ -44,23 +44,20 @@ export default function AdminBalancePage() {
     const [crossedOutTxs, setCrossedOutTxs] = useState<Set<string>>(new Set())
     const [reconciliationSearch, setReconciliationSearch] = useState("")
     const [isUploadingPdf, setIsUploadingPdf] = useState(false)
-    const [pdfUploadStatus, setPdfUploadStatus] = useState<string>("")
-    const [reconciliationResult, setReconciliationResult] = useState<{
+    const [pdfResults, setPdfResults] = useState<{
         filename: string
         totalFound: number
         matchedCount: number
-        alreadyCrossedCount: number
-        unmatchedBankAmounts: number[]
-        usedOcr?: boolean
-    } | null>(null)
-    const [showUnmatchedDetails, setShowUnmatchedDetails] = useState(false)
+        unmatchedBankItems: { amount: number; filename: string }[]
+    }[]>([])
+    const [showUnmatchedDetails, setShowUnmatchedDetails] = useState(true)
     const [isDraggingFile, setIsDraggingFile] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
 
     // Cargar marcas guardadas en localStorage para la fecha y moneda seleccionada
     useEffect(() => {
         if (!reconciliationCurrency) {
-            setReconciliationResult(null)
+            setPdfResults([])
             return
         }
         const storageKey = `reconciliation_crossed_${filterDate}_${reconciliationCurrency}`
@@ -77,7 +74,7 @@ export default function AdminBalancePage() {
         } catch {
             setCrossedOutTxs(new Set())
         }
-        setReconciliationResult(null)
+        setPdfResults([])
     }, [reconciliationCurrency, filterDate])
 
     const updateCrossedOut = (newSet: Set<string>) => {
@@ -96,40 +93,22 @@ export default function AdminBalancePage() {
         if (crossedOutTxs.size === 0) return
         if (confirm("¿Deseas desmarcar todas las transferencias de esta lista?")) {
             updateCrossedOut(new Set())
-            setReconciliationResult(null)
+            setPdfResults([])
             toast.success("Se han desmarcado todas las transferencias.")
         }
     }
 
-    const processBankPdfFile = async (file: File) => {
-        if (!file.name.toLowerCase().endsWith('.pdf') && file.type !== 'application/pdf') {
-            toast.error("Por favor selecciona un archivo PDF válido.")
+    const processBankPdfFiles = async (files: FileList | File[]) => {
+        const fileList = Array.from(files).filter(f => f.name.toLowerCase().endsWith('.pdf') || f.type === 'application/pdf')
+        if (fileList.length === 0) {
+            toast.error("Por favor selecciona archivos PDF válidos.")
             return
         }
 
         setIsUploadingPdf(true)
-        setPdfUploadStatus("Extrayendo texto del PDF...")
-        const toastId = toast.loading("Extrayendo movimientos del PDF del banco...")
+        const toastId = toast.loading(`Leyendo ${fileList.length === 1 ? 'PDF bancario...' : `${fileList.length} PDFs bancarios...`}`)
 
         try {
-            const result = await extractAmountsFromBankPdf(file, (stage, page, total) => {
-                if (stage === 'ocr') {
-                    const msg = `Usando OCR (pág. ${page}/${total})...`
-                    setPdfUploadStatus(msg)
-                    toast.loading(msg, { id: toastId })
-                } else {
-                    setPdfUploadStatus(`Leyendo pág. ${page}/${total}...`)
-                }
-            })
-
-            const bankAmounts = result.amounts
-
-            if (bankAmounts.length === 0) {
-                toast.dismiss(toastId)
-                toast.warning("No se detectaron montos monetarios en el PDF. Asegúrate de que sea un extracto bancario con texto legible.")
-                return
-            }
-
             // Operaciones relevantes para esta moneda
             const relevantTxs = transactions.filter(tx => 
                 (tx.status === 'verified' || tx.status === 'completed') && 
@@ -137,87 +116,91 @@ export default function AdminBalancePage() {
                 (REGION_TO_CURRENCY[tx.currency_received] || tx.currency_received) === reconciliationCurrency
             )
 
-            // Cuota por monto en el PDF (redondeado a 2 decimales)
-            const bankQuotas: Record<string, number> = {}
-            for (const amt of bankAmounts) {
-                const key = amt.toFixed(2)
-                bankQuotas[key] = (bankQuotas[key] || 0) + 1
-            }
+            // Usamos el Set actual como punto de partida y vamos acumulando
+            const workingSet = new Set(crossedOutTxs)
+            const newResults: {
+                filename: string
+                totalFound: number
+                matchedCount: number
+                unmatchedBankItems: { amount: number; filename: string }[]
+            }[] = []
 
-            // Contar cuántas transferencias ya están tachadas por cada monto
-            const alreadyCrossedCountPerAmount: Record<string, number> = {}
-            for (const tx of relevantTxs) {
-                if (crossedOutTxs.has(tx.id!)) {
-                    const key = Number(tx.amount_received).toFixed(2)
-                    alreadyCrossedCountPerAmount[key] = (alreadyCrossedCountPerAmount[key] || 0) + 1
+            let totalNewlyMarked = 0
+
+            for (const file of fileList) {
+                const bankAmounts = await extractAmountsFromBankPdf(file)
+
+                if (bankAmounts.length === 0) {
+                    newResults.push({
+                        filename: file.name,
+                        totalFound: 0,
+                        matchedCount: 0,
+                        unmatchedBankItems: []
+                    })
+                    continue
                 }
-            }
 
-            // Cuota restante para tachar por monto (banco - ya tachadas)
-            const remainingQuota: Record<string, number> = {}
-            for (const key of Object.keys(bankQuotas)) {
-                const totalInBank = bankQuotas[key]
-                const already = alreadyCrossedCountPerAmount[key] || 0
-                remainingQuota[key] = Math.max(0, totalInBank - already)
-            }
+                let fileNewlyMarked = 0
+                const fileUnmatched: { amount: number; filename: string }[] = []
 
-            const newSet = new Set(crossedOutTxs)
-            let newlyMarked = 0
+                // Para cada monto presente en este extracto bancario:
+                // Buscamos una operación en el sistema que aún NO esté tachada
+                for (const amt of bankAmounts) {
+                    const key = amt.toFixed(2)
+                    const matchingTx = relevantTxs.find(tx => 
+                        !workingSet.has(tx.id!) && 
+                        Number(tx.amount_received).toFixed(2) === key
+                    )
 
-            // Iterar sobre operaciones NO tachadas y tacharlas respetando la cantidad exacta que hay en el banco
-            for (const tx of relevantTxs) {
-                if (newSet.has(tx.id!)) continue
-
-                const key = Number(tx.amount_received).toFixed(2)
-                if ((remainingQuota[key] || 0) > 0) {
-                    newSet.add(tx.id!)
-                    remainingQuota[key]--
-                    newlyMarked++
+                    if (matchingTx) {
+                        workingSet.add(matchingTx.id!)
+                        fileNewlyMarked++
+                        totalNewlyMarked++
+                    } else {
+                        // Este monto del banco no tiene operación pendiente en el sistema (sobra en el PDF)
+                        fileUnmatched.push({
+                            amount: amt,
+                            filename: file.name
+                        })
+                    }
                 }
+
+                newResults.push({
+                    filename: file.name,
+                    totalFound: bankAmounts.length,
+                    matchedCount: fileNewlyMarked,
+                    unmatchedBankItems: fileUnmatched
+                })
             }
 
-            // Montos del PDF que no se pudieron tachar (o porque ya estaban todos tachados o porque no existen en el sistema)
-            const unmatchedBankAmounts: number[] = []
-            for (const [key, left] of Object.entries(remainingQuota)) {
-                for (let i = 0; i < left; i++) {
-                    unmatchedBankAmounts.push(parseFloat(key))
-                }
-            }
-
-            updateCrossedOut(newSet)
-
-            setReconciliationResult({
-                filename: file.name,
-                totalFound: bankAmounts.length,
-                matchedCount: newlyMarked,
-                alreadyCrossedCount: relevantTxs.filter(tx => crossedOutTxs.has(tx.id!)).length,
-                unmatchedBankAmounts,
-                usedOcr: result.usedOcr
-            })
+            updateCrossedOut(workingSet)
+            setPdfResults(prev => [...prev, ...newResults])
+            setShowUnmatchedDetails(true)
 
             toast.dismiss(toastId)
-            if (newlyMarked > 0) {
-                toast.success(`¡Listo! Se tacharon ${newlyMarked} transferencias automáticamente.`)
-            } else if (unmatchedBankAmounts.length === bankAmounts.length) {
-                toast.info("No se encontraron coincidencias nuevas entre el PDF y las operaciones pendientes.")
+            const totalUnmatchedCount = newResults.reduce((s, r) => s + r.unmatchedBankItems.length, 0)
+
+            if (totalNewlyMarked > 0) {
+                toast.success(`¡Listo! Se tacharon ${totalNewlyMarked} transferencias.${totalUnmatchedCount > 0 ? ` Hay ${totalUnmatchedCount} montos sobrantes en el banco.` : ''}`)
+            } else if (totalUnmatchedCount > 0) {
+                toast.warning(`No se encontraron transferencias pendientes para los montos leídos (${totalUnmatchedCount} sobran en el banco).`)
             } else {
                 toast.info("Las operaciones correspondientes al PDF ya estaban tachadas.")
             }
         } catch (err: any) {
             console.error(err)
             toast.dismiss(toastId)
-            toast.error(err.message || "Error al procesar el PDF")
+            toast.error(err.message || "Error al procesar los archivos PDF")
         } finally {
             setIsUploadingPdf(false)
-            setPdfUploadStatus("")
             if (fileInputRef.current) fileInputRef.current.value = ""
         }
     }
 
     const handlePdfUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0]
-        if (file) {
-            processBankPdfFile(file)
+        const files = e.target.files
+        if (files && files.length > 0) {
+            processBankPdfFiles(files)
         }
     }
 
@@ -711,9 +694,9 @@ export default function AdminBalancePage() {
                         onDrop={(e) => {
                             e.preventDefault()
                             setIsDraggingFile(false)
-                            const file = e.dataTransfer.files?.[0]
-                            if (file) {
-                                processBankPdfFile(file)
+                            const files = e.dataTransfer.files
+                            if (files && files.length > 0) {
+                                processBankPdfFiles(files)
                             }
                         }}
                     >
@@ -746,7 +729,7 @@ export default function AdminBalancePage() {
                                 <Button 
                                     variant="ghost" 
                                     size="icon" 
-                                    onClick={() => { setReconciliationCurrency(null); setReconciliationSearch(""); setReconciliationResult(null); }} 
+                                    onClick={() => { setReconciliationCurrency(null); setReconciliationSearch(""); setPdfResults([]); }} 
                                     className="absolute right-3 top-3 rounded-full h-8 w-8" 
                                     type="button"
                                 >
@@ -778,6 +761,7 @@ export default function AdminBalancePage() {
                                             type="file" 
                                             ref={fileInputRef} 
                                             accept="application/pdf" 
+                                            multiple
                                             className="hidden" 
                                             onChange={handlePdfUpload} 
                                         />
@@ -791,7 +775,7 @@ export default function AdminBalancePage() {
                                             {isUploadingPdf ? (
                                                 <>
                                                     <Loader2 className="w-4 h-4 animate-spin" />
-                                                    <span className="truncate max-w-[140px]">{pdfUploadStatus || "Leyendo PDF..."}</span>
+                                                    <span>Leyendo PDF...</span>
                                                 </>
                                             ) : (
                                                 <>
@@ -818,61 +802,111 @@ export default function AdminBalancePage() {
                                 </div>
                             </CardHeader>
 
-                            {/* Banner con resultados del PDF */}
-                            {reconciliationResult && (
-                                <div className="p-3 bg-muted/40 border-b text-xs space-y-2 animate-in fade-in">
-                                    <div className="flex items-start justify-between gap-2">
-                                        <div className="flex items-start gap-2">
-                                            <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
-                                            <div>
-                                                <span>
-                                                    Archivo <strong className="font-mono">{reconciliationResult.filename}</strong>: Se encontraron <strong>{reconciliationResult.totalFound}</strong> movimientos en el banco y se tacharon <strong>{reconciliationResult.matchedCount}</strong> transferencias coincidentes.
-                                                </span>
-                                                {reconciliationResult.usedOcr && (
-                                                    <span className="ml-1 text-muted-foreground">(procesado con OCR)</span>
+                            {/* Banner con resultados de PDFs cargados y transferencias sobrantes */}
+                            {pdfResults.length > 0 && (() => {
+                                const totalMatched = pdfResults.reduce((s, r) => s + r.matchedCount, 0)
+                                const allUnmatched = pdfResults.flatMap(r => r.unmatchedBankItems)
+
+                                // Agrupar sobrantes por monto para mostrar cantidades (ej. 0,30 x3)
+                                const groupedUnmatched: Record<string, { amount: number; count: number; filenames: Set<string> }> = {}
+                                for (const item of allUnmatched) {
+                                    const key = item.amount.toFixed(2)
+                                    if (!groupedUnmatched[key]) {
+                                        groupedUnmatched[key] = { amount: item.amount, count: 0, filenames: new Set() }
+                                    }
+                                    groupedUnmatched[key].count++
+                                    groupedUnmatched[key].filenames.add(item.filename)
+                                }
+                                const groupedList = Object.values(groupedUnmatched).sort((a, b) => b.amount - a.amount)
+
+                                return (
+                                    <div className="p-3 bg-muted/40 border-b text-xs space-y-2.5 animate-in fade-in">
+                                        <div className="flex items-start justify-between gap-2">
+                                            <div className="flex items-start gap-2">
+                                                <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
+                                                <div className="space-y-1">
+                                                    <div className="font-semibold text-foreground">
+                                                        {pdfResults.length === 1 ? '1 archivo procesado' : `${pdfResults.length} archivos bancarios procesados`}: <strong className="text-green-700 dark:text-green-400">{totalMatched} transferencias tachadas</strong> en total.
+                                                    </div>
+                                                    <div className="text-[11px] text-muted-foreground flex flex-wrap gap-x-3 gap-y-0.5">
+                                                        {pdfResults.map((r, i) => (
+                                                            <span key={i} className="inline-flex items-center gap-1">
+                                                                <span className="font-mono font-medium text-foreground">{r.filename}</span>: 
+                                                                <span>{r.totalFound} movs ({r.matchedCount} tachados{r.unmatchedBankItems.length > 0 ? `, ${r.unmatchedBankItems.length} sobran` : ''})</span>
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <Button 
+                                                variant="ghost" 
+                                                size="icon" 
+                                                className="h-6 w-6 rounded-full shrink-0 -mr-1 -mt-1 text-muted-foreground hover:text-foreground" 
+                                                onClick={() => setPdfResults([])}
+                                                title="Cerrar resumen"
+                                            >
+                                                <X className="w-3.5 h-3.5" />
+                                            </Button>
+                                        </div>
+
+                                        {allUnmatched.length > 0 && (
+                                            <div className="p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-lg space-y-2">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-1.5 text-amber-800 dark:text-amber-300 font-bold text-xs">
+                                                        <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                                                        <span>
+                                                            Transferencias sobrantes en el PDF ({allUnmatched.length}):
+                                                        </span>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowUnmatchedDetails(!showUnmatchedDetails)}
+                                                        className="text-[11px] text-amber-700 dark:text-amber-400 hover:underline flex items-center gap-0.5 cursor-pointer font-medium"
+                                                    >
+                                                        {showUnmatchedDetails ? 'Ocultar' : 'Ver detalle'}
+                                                        {showUnmatchedDetails ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                                                    </button>
+                                                </div>
+
+                                                <p className="text-muted-foreground text-[11px] leading-relaxed">
+                                                    Salieron del banco en los PDFs, pero <strong>no tienen ninguna operación pendiente en el sistema</strong> (o exceden las registradas):
+                                                </p>
+
+                                                {showUnmatchedDetails && (
+                                                    <div className="flex flex-wrap gap-1.5 pt-1 max-h-36 overflow-y-auto">
+                                                        {groupedList.map((item, idx) => (
+                                                            <div 
+                                                                key={idx} 
+                                                                className="px-2 py-1 rounded bg-background/90 border border-amber-300 dark:border-amber-800 flex items-center gap-1.5 text-[11px] shadow-2xs"
+                                                                title={`Archivos: ${Array.from(item.filenames).join(', ')}`}
+                                                            >
+                                                                <span className="font-mono font-bold text-amber-950 dark:text-amber-100">
+                                                                    {formatCurrency(item.amount)}
+                                                                </span>
+                                                                {item.count > 1 && (
+                                                                    <span className="text-[10px] px-1 rounded bg-amber-200/80 dark:bg-amber-800/80 font-bold text-amber-900 dark:text-amber-200">
+                                                                        x{item.count}
+                                                                    </span>
+                                                                )}
+                                                                <span className="text-[9px] text-muted-foreground uppercase truncate max-w-[90px]">
+                                                                    {Array.from(item.filenames)[0].split('.')[0]}
+                                                                </span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
                                                 )}
                                             </div>
-                                        </div>
-                                        <Button 
-                                            variant="ghost" 
-                                            size="icon" 
-                                            className="h-6 w-6 rounded-full shrink-0 -mr-1 -mt-1 text-muted-foreground hover:text-foreground" 
-                                            onClick={() => setReconciliationResult(null)}
-                                        >
-                                            <X className="w-3.5 h-3.5" />
-                                        </Button>
+                                        )}
+
+                                        {allUnmatched.length === 0 && totalMatched > 0 && (
+                                            <div className="pt-1.5 border-t border-border/50 flex items-center gap-1.5 text-green-700 dark:text-green-400 font-medium text-xs">
+                                                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                                                <span>¡Todos los movimientos del banco coinciden exactamente con operaciones del sistema!</span>
+                                            </div>
+                                        )}
                                     </div>
-
-                                    {reconciliationResult.unmatchedBankAmounts.length > 0 && (
-                                        <div className="pt-1.5 border-t border-border/50">
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowUnmatchedDetails(!showUnmatchedDetails)}
-                                                className="flex items-center gap-1.5 text-amber-700 dark:text-amber-400 font-medium hover:underline text-left text-xs"
-                                            >
-                                                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                                                <span>
-                                                    {reconciliationResult.unmatchedBankAmounts.length} {reconciliationResult.unmatchedBankAmounts.length === 1 ? 'monto del PDF no tuvo' : 'montos del PDF no tuvieron'} coincidencia pendiente (o ya estaban tachados).
-                                                </span>
-                                                {showUnmatchedDetails ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                                            </button>
-
-                                            {showUnmatchedDetails && (
-                                                <div className="mt-2 flex flex-wrap gap-1.5 p-2 bg-background/80 rounded-md border border-amber-200 dark:border-amber-900/40 max-h-24 overflow-y-auto">
-                                                    {reconciliationResult.unmatchedBankAmounts.map((amt, idx) => (
-                                                        <span 
-                                                            key={idx} 
-                                                            className="px-2 py-0.5 rounded text-[11px] font-mono font-medium bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300"
-                                                        >
-                                                            {formatCurrency(amt)}
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
+                                )
+                            })()}
 
                             <CardContent className="flex-1 overflow-y-auto p-0">
                                 <div className="divide-y">
