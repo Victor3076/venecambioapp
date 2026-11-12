@@ -1,17 +1,18 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { toast } from "sonner"
 import { TransactionsService, Transaction } from "@/services/transactions"
 import { BankDepositsService, BankDeposit } from "@/services/bank-deposits"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { ArrowLeft, Scale, Landmark, TrendingUp, TrendingDown, Wallet, Calendar, Trash2, Edit, X, Search } from "lucide-react"
+import { ArrowLeft, Scale, Landmark, TrendingUp, TrendingDown, Wallet, Calendar, Trash2, Edit, X, Search, FileUp, RotateCcw, Loader2, CheckCircle2, AlertCircle, Info, ChevronDown, ChevronUp } from "lucide-react"
 import Link from "next/link"
 import { CURRENCY_LABELS } from "@/lib/constants"
 import { formatCurrency } from "@/lib/rates-utils"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Badge } from "@/components/ui/badge"
 
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
@@ -41,6 +42,180 @@ export default function AdminBalancePage() {
     const [reconciliationCurrency, setReconciliationCurrency] = useState<string | null>(null)
     const [crossedOutTxs, setCrossedOutTxs] = useState<Set<string>>(new Set())
     const [reconciliationSearch, setReconciliationSearch] = useState("")
+    const [isUploadingPdf, setIsUploadingPdf] = useState(false)
+    const [reconciliationResult, setReconciliationResult] = useState<{
+        filename: string
+        totalFound: number
+        matchedCount: number
+        alreadyCrossedCount: number
+        unmatchedBankAmounts: number[]
+    } | null>(null)
+    const [showUnmatchedDetails, setShowUnmatchedDetails] = useState(false)
+    const [isDraggingFile, setIsDraggingFile] = useState(false)
+    const fileInputRef = useRef<HTMLInputElement>(null)
+
+    // Cargar marcas guardadas en localStorage para la fecha y moneda seleccionada
+    useEffect(() => {
+        if (!reconciliationCurrency) {
+            setReconciliationResult(null)
+            return
+        }
+        const storageKey = `reconciliation_crossed_${filterDate}_${reconciliationCurrency}`
+        try {
+            const saved = localStorage.getItem(storageKey)
+            if (saved) {
+                const parsed = JSON.parse(saved)
+                if (Array.isArray(parsed)) {
+                    setCrossedOutTxs(new Set(parsed))
+                }
+            } else {
+                setCrossedOutTxs(new Set())
+            }
+        } catch {
+            setCrossedOutTxs(new Set())
+        }
+        setReconciliationResult(null)
+    }, [reconciliationCurrency, filterDate])
+
+    const updateCrossedOut = (newSet: Set<string>) => {
+        setCrossedOutTxs(newSet)
+        if (reconciliationCurrency) {
+            const storageKey = `reconciliation_crossed_${filterDate}_${reconciliationCurrency}`
+            try {
+                localStorage.setItem(storageKey, JSON.stringify(Array.from(newSet)))
+            } catch (e) {
+                console.error("Error guardando marcas en localStorage", e)
+            }
+        }
+    }
+
+    const handleClearMarks = () => {
+        if (crossedOutTxs.size === 0) return
+        if (confirm("¿Deseas desmarcar todas las transferencias de esta lista?")) {
+            updateCrossedOut(new Set())
+            setReconciliationResult(null)
+            toast.success("Se han desmarcado todas las transferencias.")
+        }
+    }
+
+    const processBankPdfFile = async (file: File) => {
+        if (!file.name.toLowerCase().endsWith('.pdf') && file.type !== 'application/pdf') {
+            toast.error("Por favor selecciona un archivo PDF válido.")
+            return
+        }
+
+        setIsUploadingPdf(true)
+        const toastId = toast.loading("Extrayendo movimientos del PDF del banco...")
+
+        try {
+            const formData = new FormData()
+            formData.append("file", file)
+
+            const res = await fetch("/api/admin/reconcile-pdf", {
+                method: "POST",
+                body: formData,
+            })
+
+            const data = await res.json()
+            if (!res.ok || !data.success) {
+                throw new Error(data.error || "Error al procesar el archivo PDF")
+            }
+
+            const bankAmounts: number[] = data.amounts || []
+            if (bankAmounts.length === 0) {
+                toast.dismiss(toastId)
+                toast.warning("No se detectaron montos monetarios en el PDF. Asegúrate de que sea un extracto bancario con texto legible.")
+                return
+            }
+
+            // Operaciones relevantes para esta moneda
+            const relevantTxs = transactions.filter(tx => 
+                (tx.status === 'verified' || tx.status === 'completed') && 
+                tx.beneficiary_data?.type !== 'cash' && 
+                (REGION_TO_CURRENCY[tx.currency_received] || tx.currency_received) === reconciliationCurrency
+            )
+
+            // Cuota por monto en el PDF (redondeado a 2 decimales)
+            const bankQuotas: Record<string, number> = {}
+            for (const amt of bankAmounts) {
+                const key = amt.toFixed(2)
+                bankQuotas[key] = (bankQuotas[key] || 0) + 1
+            }
+
+            // Contar cuántas transferencias ya están tachadas por cada monto
+            const alreadyCrossedCountPerAmount: Record<string, number> = {}
+            for (const tx of relevantTxs) {
+                if (crossedOutTxs.has(tx.id!)) {
+                    const key = Number(tx.amount_received).toFixed(2)
+                    alreadyCrossedCountPerAmount[key] = (alreadyCrossedCountPerAmount[key] || 0) + 1
+                }
+            }
+
+            // Cuota restante para tachar por monto (banco - ya tachadas)
+            const remainingQuota: Record<string, number> = {}
+            for (const key of Object.keys(bankQuotas)) {
+                const totalInBank = bankQuotas[key]
+                const already = alreadyCrossedCountPerAmount[key] || 0
+                remainingQuota[key] = Math.max(0, totalInBank - already)
+            }
+
+            const newSet = new Set(crossedOutTxs)
+            let newlyMarked = 0
+
+            // Iterar sobre operaciones NO tachadas y tacharlas respetando la cantidad exacta que hay en el banco
+            for (const tx of relevantTxs) {
+                if (newSet.has(tx.id!)) continue
+
+                const key = Number(tx.amount_received).toFixed(2)
+                if ((remainingQuota[key] || 0) > 0) {
+                    newSet.add(tx.id!)
+                    remainingQuota[key]--
+                    newlyMarked++
+                }
+            }
+
+            // Montos del PDF que no se pudieron tachar (o porque ya estaban todos tachados o porque no existen en el sistema)
+            const unmatchedBankAmounts: number[] = []
+            for (const [key, left] of Object.entries(remainingQuota)) {
+                for (let i = 0; i < left; i++) {
+                    unmatchedBankAmounts.push(parseFloat(key))
+                }
+            }
+
+            updateCrossedOut(newSet)
+
+            setReconciliationResult({
+                filename: file.name,
+                totalFound: bankAmounts.length,
+                matchedCount: newlyMarked,
+                alreadyCrossedCount: relevantTxs.filter(tx => crossedOutTxs.has(tx.id!)).length,
+                unmatchedBankAmounts
+            })
+
+            toast.dismiss(toastId)
+            if (newlyMarked > 0) {
+                toast.success(`¡Listo! Se tacharon ${newlyMarked} transferencias automáticamente.`)
+            } else if (unmatchedBankAmounts.length === bankAmounts.length) {
+                toast.info("No se encontraron coincidencias nuevas entre el PDF y las operaciones pendientes.")
+            } else {
+                toast.info("Las operaciones correspondientes al PDF ya estaban tachadas.")
+            }
+        } catch (err: any) {
+            console.error(err)
+            toast.dismiss(toastId)
+            toast.error(err.message || "Error al procesar el PDF")
+        } finally {
+            setIsUploadingPdf(false)
+            if (fileInputRef.current) fileInputRef.current.value = ""
+        }
+    }
+
+    const handlePdfUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (file) {
+            processBankPdfFile(file)
+        }
+    }
 
     // Verificar rol una sola vez al montar el componente
     useEffect(() => {
@@ -490,69 +665,225 @@ export default function AdminBalancePage() {
             />
 
             {/* Modal de Reconciliación */}
-            {reconciliationCurrency && (
-                <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 backdrop-blur-sm animate-in fade-in duration-200">
-                    <Card className="w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl border-none">
-                        <CardHeader className="border-b relative shrink-0">
-                            <CardTitle className="flex items-center gap-2">
-                                <TrendingDown className="w-5 h-5 text-primary" /> 
-                                Operaciones en {CURRENCY_LABELS[reconciliationCurrency as keyof typeof CURRENCY_LABELS] || reconciliationCurrency}
-                            </CardTitle>
-                            <CardDescription>
-                                Verifica las transferencias contra tu banco. Marca las que ya has comprobado.
-                            </CardDescription>
-                            <Button variant="ghost" size="icon" onClick={() => { setReconciliationCurrency(null); setReconciliationSearch(""); }} className="absolute right-4 top-4 rounded-full" type="button">
-                                <X className="h-4 w-4" />
-                            </Button>
-                            
-                            <div className="relative mt-4">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                                <Input 
-                                    placeholder="Buscar por monto, banco o cuenta..." 
-                                    className="pl-9"
-                                    value={reconciliationSearch}
-                                    onChange={(e) => setReconciliationSearch(e.target.value)}
-                                />
-                            </div>
-                        </CardHeader>
+            {reconciliationCurrency && (() => {
+                const currencyTransactions = transactions.filter(tx => 
+                    (tx.status === 'verified' || tx.status === 'completed') && 
+                    tx.beneficiary_data?.type !== 'cash' && 
+                    (REGION_TO_CURRENCY[tx.currency_received] || tx.currency_received) === reconciliationCurrency
+                )
+                const crossedCount = currencyTransactions.filter(tx => crossedOutTxs.has(tx.id!)).length
+                const totalCount = currencyTransactions.length
+                const percentChecked = totalCount > 0 ? Math.round((crossedCount / totalCount) * 100) : 0
 
-                        <CardContent className="flex-1 overflow-y-auto p-0">
-                            <div className="divide-y">
-                                {transactions
-                                    .filter(tx => {
-                                        if (!(tx.status === 'verified' || tx.status === 'completed')) return false;
-                                        if (tx.beneficiary_data?.type === 'cash') return false;
-                                        if ((REGION_TO_CURRENCY[tx.currency_received] || tx.currency_received) !== reconciliationCurrency) return false;
-                                        
-                                        if (reconciliationSearch) {
-                                            const searchLower = reconciliationSearch.toLowerCase();
-                                            const amountStr = tx.amount_received.toString();
-                                            const formattedAmountStr = formatCurrency(tx.amount_received).toLowerCase();
-                                            const bankStr = (tx.beneficiary_data?.bank_name || '').toLowerCase();
-                                            const accountStr = (tx.beneficiary_data?.account_number || tx.beneficiary_data?.phone_number || '').toLowerCase();
-                                            
-                                            return amountStr.includes(searchLower) || 
-                                                   formattedAmountStr.includes(searchLower) ||
-                                                   bankStr.includes(searchLower) || 
-                                                   accountStr.includes(searchLower);
-                                        }
-                                        return true;
-                                    })
-                                    .map(tx => {
-                                        const isCrossed = crossedOutTxs.has(tx.id!);
+                const filteredList = currencyTransactions.filter(tx => {
+                    if (!reconciliationSearch) return true
+                    const searchLower = reconciliationSearch.toLowerCase()
+                    const amountStr = tx.amount_received.toString()
+                    const formattedAmountStr = formatCurrency(tx.amount_received).toLowerCase()
+                    const bankStr = (tx.beneficiary_data?.bank_name || '').toLowerCase()
+                    const accountStr = (tx.beneficiary_data?.account_number || tx.beneficiary_data?.phone_number || '').toLowerCase()
+                    const nameStr = (tx.beneficiary_data?.name || tx.beneficiary_data?.full_name || '').toLowerCase()
+                    const docStr = (tx.beneficiary_data?.doc_id || '').toLowerCase()
+
+                    return amountStr.includes(searchLower) || 
+                           formattedAmountStr.includes(searchLower) ||
+                           bankStr.includes(searchLower) || 
+                           accountStr.includes(searchLower) ||
+                           nameStr.includes(searchLower) ||
+                           docStr.includes(searchLower)
+                })
+
+                return (
+                    <div 
+                        className="fixed inset-0 bg-black/60 flex items-center justify-center p-3 sm:p-4 z-50 backdrop-blur-sm animate-in fade-in duration-200"
+                        onDragOver={(e) => {
+                            e.preventDefault()
+                            setIsDraggingFile(true)
+                        }}
+                        onDragLeave={(e) => {
+                            e.preventDefault()
+                            setIsDraggingFile(false)
+                        }}
+                        onDrop={(e) => {
+                            e.preventDefault()
+                            setIsDraggingFile(false)
+                            const file = e.dataTransfer.files?.[0]
+                            if (file) {
+                                processBankPdfFile(file)
+                            }
+                        }}
+                    >
+                        <Card className="w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl border-none relative overflow-hidden">
+                            {/* Drag & Drop Overlay */}
+                            {isDraggingFile && (
+                                <div className="absolute inset-0 z-50 bg-primary/90 text-primary-foreground flex flex-col items-center justify-center gap-3 backdrop-blur-sm p-6 text-center animate-in fade-in">
+                                    <FileUp className="w-12 h-12 animate-bounce" />
+                                    <div className="text-xl font-bold">Suelta aquí el PDF del banco</div>
+                                    <p className="text-sm opacity-90">Se leerán los movimientos y se tacharán las transferencias automáticamente.</p>
+                                </div>
+                            )}
+
+                            <CardHeader className="border-b relative shrink-0 pb-3">
+                                <div className="flex items-start justify-between gap-3 pr-8">
+                                    <div>
+                                        <CardTitle className="flex items-center gap-2 text-lg sm:text-xl flex-wrap">
+                                            <TrendingDown className="w-5 h-5 text-primary" /> 
+                                            <span>Operaciones en {CURRENCY_LABELS[reconciliationCurrency as keyof typeof CURRENCY_LABELS] || reconciliationCurrency}</span>
+                                            <Badge variant={crossedCount === totalCount && totalCount > 0 ? "success" : "secondary"} className="font-mono text-xs">
+                                                {crossedCount} / {totalCount} ({percentChecked}%)
+                                            </Badge>
+                                        </CardTitle>
+                                        <CardDescription className="text-xs mt-1">
+                                            Verifica las transferencias contra tu banco. Marca manualmente o sube el PDF del banco para tachado automático.
+                                        </CardDescription>
+                                    </div>
+                                </div>
+
+                                <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    onClick={() => { setReconciliationCurrency(null); setReconciliationSearch(""); setReconciliationResult(null); }} 
+                                    className="absolute right-3 top-3 rounded-full h-8 w-8" 
+                                    type="button"
+                                >
+                                    <X className="h-4 w-4" />
+                                </Button>
+                                
+                                <div className="mt-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                                    <div className="relative flex-1">
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                        <Input 
+                                            placeholder="Buscar por monto, banco o cuenta..." 
+                                            className="pl-9 pr-8 h-9 text-xs sm:text-sm"
+                                            value={reconciliationSearch}
+                                            onChange={(e) => setReconciliationSearch(e.target.value)}
+                                        />
+                                        {reconciliationSearch && (
+                                            <button 
+                                                type="button" 
+                                                onClick={() => setReconciliationSearch("")} 
+                                                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs"
+                                            >
+                                                <X className="w-3.5 h-3.5" />
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        <input 
+                                            type="file" 
+                                            ref={fileInputRef} 
+                                            accept="application/pdf" 
+                                            className="hidden" 
+                                            onChange={handlePdfUpload} 
+                                        />
+                                        <Button 
+                                            variant="default" 
+                                            size="sm" 
+                                            onClick={() => fileInputRef.current?.click()} 
+                                            disabled={isUploadingPdf}
+                                            className="h-9 px-3 text-xs sm:text-sm font-semibold flex items-center gap-1.5 shadow-sm"
+                                        >
+                                            {isUploadingPdf ? (
+                                                <>
+                                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                                    <span>Leyendo PDF...</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <FileUp className="w-4 h-4" />
+                                                    <span>Cargar PDF Banco</span>
+                                                </>
+                                            )}
+                                        </Button>
+
+                                        {crossedCount > 0 && (
+                                            <Button 
+                                                variant="outline" 
+                                                size="sm" 
+                                                onClick={handleClearMarks}
+                                                disabled={isUploadingPdf}
+                                                className="h-9 px-2.5 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                                title="Desmarcar todas las transferencias"
+                                            >
+                                                <RotateCcw className="w-3.5 h-3.5 mr-1" />
+                                                <span className="hidden sm:inline">Desmarcar</span>
+                                            </Button>
+                                        )}
+                                    </div>
+                                </div>
+                            </CardHeader>
+
+                            {/* Banner con resultados del PDF */}
+                            {reconciliationResult && (
+                                <div className="p-3 bg-muted/40 border-b text-xs space-y-2 animate-in fade-in">
+                                    <div className="flex items-start justify-between gap-2">
+                                        <div className="flex items-start gap-2">
+                                            <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
+                                            <div>
+                                                <span>
+                                                    Archivo <strong className="font-mono">{reconciliationResult.filename}</strong>: Se encontraron <strong>{reconciliationResult.totalFound}</strong> movimientos en el banco y se tacharon <strong>{reconciliationResult.matchedCount}</strong> transferencias coincidentes.
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            className="h-6 w-6 rounded-full shrink-0 -mr-1 -mt-1 text-muted-foreground hover:text-foreground" 
+                                            onClick={() => setReconciliationResult(null)}
+                                        >
+                                            <X className="w-3.5 h-3.5" />
+                                        </Button>
+                                    </div>
+
+                                    {reconciliationResult.unmatchedBankAmounts.length > 0 && (
+                                        <div className="pt-1.5 border-t border-border/50">
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowUnmatchedDetails(!showUnmatchedDetails)}
+                                                className="flex items-center gap-1.5 text-amber-700 dark:text-amber-400 font-medium hover:underline text-left text-xs"
+                                            >
+                                                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                                                <span>
+                                                    {reconciliationResult.unmatchedBankAmounts.length} {reconciliationResult.unmatchedBankAmounts.length === 1 ? 'monto del PDF no tuvo' : 'montos del PDF no tuvieron'} coincidencia pendiente (o ya estaban tachados).
+                                                </span>
+                                                {showUnmatchedDetails ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                                            </button>
+
+                                            {showUnmatchedDetails && (
+                                                <div className="mt-2 flex flex-wrap gap-1.5 p-2 bg-background/80 rounded-md border border-amber-200 dark:border-amber-900/40 max-h-24 overflow-y-auto">
+                                                    {reconciliationResult.unmatchedBankAmounts.map((amt, idx) => (
+                                                        <span 
+                                                            key={idx} 
+                                                            className="px-2 py-0.5 rounded text-[11px] font-mono font-medium bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300"
+                                                        >
+                                                            {formatCurrency(amt)}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            <CardContent className="flex-1 overflow-y-auto p-0">
+                                <div className="divide-y">
+                                    {filteredList.map(tx => {
+                                        const isCrossed = crossedOutTxs.has(tx.id!)
                                         return (
                                             <div 
                                                 key={tx.id} 
-                                                className={`p-4 flex items-center justify-between gap-3 hover:bg-muted/10 transition-colors ${isCrossed ? 'opacity-50 grayscale' : ''}`}
+                                                className={`p-3.5 sm:p-4 flex items-center justify-between gap-3 hover:bg-muted/10 transition-colors ${isCrossed ? 'opacity-50 grayscale bg-muted/5' : ''}`}
                                             >
                                                 <div className="flex items-center gap-3 min-w-0 flex-1">
                                                     <Checkbox 
                                                         checked={isCrossed} 
                                                         onCheckedChange={() => {
-                                                            const newSet = new Set(crossedOutTxs);
-                                                            if (isCrossed) newSet.delete(tx.id!);
-                                                            else newSet.add(tx.id!);
-                                                            setCrossedOutTxs(newSet);
+                                                            const newSet = new Set(crossedOutTxs)
+                                                            if (isCrossed) newSet.delete(tx.id!)
+                                                            else newSet.add(tx.id!)
+                                                            updateCrossedOut(newSet)
                                                         }}
                                                     />
                                                     <div className={`min-w-0 ${isCrossed ? 'line-through' : ''}`}>
@@ -568,19 +899,24 @@ export default function AdminBalancePage() {
                                                     {formatCurrency(tx.amount_received)}
                                                 </div>
                                             </div>
-                                        );
-                                    })
-                                }
-                                {transactions.filter(tx => (tx.status === 'verified' || tx.status === 'completed') && tx.beneficiary_data?.type !== 'cash' && (REGION_TO_CURRENCY[tx.currency_received] || tx.currency_received) === reconciliationCurrency).length === 0 && (
-                                    <div className="p-8 text-center text-muted-foreground">
-                                        No hay operaciones registradas en esta moneda.
-                                    </div>
-                                )}
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-            )}
+                                        )
+                                    })}
+                                    {currencyTransactions.length === 0 && (
+                                        <div className="p-8 text-center text-muted-foreground text-sm">
+                                            No hay operaciones registradas en esta moneda para la fecha seleccionada.
+                                        </div>
+                                    )}
+                                    {currencyTransactions.length > 0 && filteredList.length === 0 && (
+                                        <div className="p-8 text-center text-muted-foreground text-sm">
+                                            No se encontraron transferencias que coincidan con la búsqueda.
+                                        </div>
+                                    )}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+                )
+            })()}
         </div>
     )
 }
