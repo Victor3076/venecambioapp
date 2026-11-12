@@ -18,6 +18,7 @@ import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { AdjustmentsService, CashflowAdjustment } from "@/services/adjustments"
 import { AdjustmentDialog } from "@/components/admin/adjustment-dialog"
+import { extractAmountsFromBankPdf } from "@/lib/pdf-reconciliation"
 
 const REGION_TO_CURRENCY: Record<string, string> = {
     'PERU': 'PEN',
@@ -108,20 +109,8 @@ export default function AdminBalancePage() {
         const toastId = toast.loading("Extrayendo movimientos del PDF del banco...")
 
         try {
-            const formData = new FormData()
-            formData.append("file", file)
+            const bankAmounts = await extractAmountsFromBankPdf(file)
 
-            const res = await fetch("/api/admin/reconcile-pdf", {
-                method: "POST",
-                body: formData,
-            })
-
-            const data = await res.json()
-            if (!res.ok || !data.success) {
-                throw new Error(data.error || "Error al procesar el archivo PDF")
-            }
-
-            const bankAmounts: number[] = data.amounts || []
             if (bankAmounts.length === 0) {
                 toast.dismiss(toastId)
                 toast.warning("No se detectaron montos monetarios en el PDF. Asegúrate de que sea un extracto bancario con texto legible.")
