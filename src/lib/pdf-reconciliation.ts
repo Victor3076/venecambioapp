@@ -117,24 +117,15 @@ export async function extractAmountsFromBankPdf(file: File): Promise<number[]> {
         // Ordenar líneas de arriba hacia abajo (en PDF Y=0 está abajo)
         linesMap.sort((a, b) => b.y - a.y)
 
+        let pendingContext = ""
+
         for (const lineObj of linesMap) {
             // Ordenar items de izquierda a derecha
             lineObj.items.sort((a, b) => a.x - b.x)
             const lineText = lineObj.items.map(it => it.str).join(" ").trim()
             const upper = lineText.toUpperCase()
 
-            // 1. OMITIR COMISIONES BANCARIAS
-            // Ejemplos BDV: "COMISION PAGOMOVILBDV DEBITO", "COBRO COMISION PAG MOVIL BDV A BDV"
-            if (upper.includes("COMISION") || upper.includes("COMISIÓN")) {
-                continue
-            }
-
-            // 2. OMITIR CRÉDITOS / ENTRADAS (solo interesan egresos / débitos a beneficiarios)
-            if (upper.includes("CREDITO") || upper.includes("CRÉDITO")) {
-                continue
-            }
-
-            // 3. Extraer todos los números monetarios con 2 decimales en la línea
+            // Extraer montos numéricos presentes en esta línea
             const amountRegex = /(?:^|[^\d/:\-])([+-]?(?:[1-9]\d{0,2}(?:\.\d{3})+,\d{2}|\d+,\d{2}|[1-9]\d{0,2}(?:,\d{3})+\.\d{2}|\d+\.\d{2}))(?=[^\d/:]|$)/g
             const lineAmounts: number[] = []
             let m: RegExpExecArray | null
@@ -148,9 +139,39 @@ export async function extractAmountsFromBankPdf(file: File): Promise<number[]> {
                 }
             }
 
-            if (lineAmounts.length === 0) continue
+            // Si la línea no tiene montos (típico de celdas multilínea donde la descripción se parte en dos líneas),
+            // guardamos su texto para dárselo de contexto a la línea inferior que sí tiene los números.
+            if (lineAmounts.length === 0) {
+                pendingContext = (pendingContext + " " + upper).trim()
+                if (pendingContext.length > 250) {
+                    pendingContext = pendingContext.slice(-250)
+                }
+                continue
+            }
 
-            // 4. DISTINGUIR MONTO VS SALDO:
+            // La línea tiene montos: unimos el contexto acumulado de la línea anterior con la actual
+            const fullContext = (pendingContext + " " + upper).trim()
+            pendingContext = ""
+
+            // 1. OMITIR COMISIONES BANCARIAS
+            // Detecta comisiones en una o varias líneas (ej. "COBRO COMISION PAG" en línea 1 y "MOVIL BDV A BDV" en línea 2)
+            const isCommission = fullContext.includes("COMISION") || 
+                                 fullContext.includes("COMISIÓN") ||
+                                 fullContext.includes("COBRO COM") ||
+                                 fullContext.includes("MOVIL BDV A BDV") ||
+                                 fullContext.includes("PAGOMOVILBDV DEBITO") ||
+                                 fullContext.includes("IVA COMIS")
+
+            if (isCommission) {
+                continue
+            }
+
+            // 2. OMITIR CRÉDITOS / ENTRADAS (solo interesan egresos / débitos a beneficiarios)
+            if (fullContext.includes("CREDITO") || fullContext.includes("CRÉDITO")) {
+                continue
+            }
+
+            // 3. DISTINGUIR MONTO VS SALDO:
             // En extractos bancarios con columnas Monto y Saldo (como BDV):
             // La fila termina con: [..., Monto, Saldo].
             // Por lo tanto, el Monto de la operación es el penúltimo valor numérico.
