@@ -57,8 +57,31 @@ async function loadPdfJs(): Promise<any> {
     })
 }
 
+function parseAmount(numStr: string): number | null {
+    let clean = numStr.replace(/[\u00A0\u202F]/g, ' ').replace('+', '').trim()
+
+    if (clean.includes(',') && clean.includes('.')) {
+        if (clean.lastIndexOf(',') > clean.lastIndexOf('.')) {
+            // Formato venezolano: 1.234,56
+            clean = clean.replace(/\./g, '').replace(',', '.')
+        } else {
+            // Formato internacional: 1,234.56
+            clean = clean.replace(/,/g, '')
+        }
+    } else if (clean.includes(',')) {
+        clean = clean.replace(',', '.')
+    }
+
+    const val = parseFloat(clean)
+    if (isNaN(val) || Math.abs(val) <= 0.001) return null
+    return Math.round(Math.abs(val) * 100) / 100
+}
+
 /**
- * Extrae todos los montos de transacciones bancarias presentes en el PDF.
+ * Extrae los montos reales de las transferencias salientes (débitos) presentes en el PDF.
+ * - Omite comisiones bancarias (BDV, Banesco, etc.)
+ * - Omite créditos / depósitos entrantes (solo busca salidas a beneficiarios)
+ * - En tablas con columna Monto y Saldo (ej. BDV), extrae SOLO el Monto y descarta el Saldo.
  */
 export async function extractAmountsFromBankPdf(file: File): Promise<number[]> {
     const pdfjsLib = await loadPdfJs()
@@ -66,49 +89,84 @@ export async function extractAmountsFromBankPdf(file: File): Promise<number[]> {
     const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) })
     const pdfDoc = await loadingTask.promise
 
-    let fullText = ""
+    const validAmounts: number[] = []
+
     for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
         const page = await pdfDoc.getPage(pageNum)
         const textContent = await page.getTextContent()
-        const pageText = textContent.items
-            .map((item: any) => item.str || "")
-            .join(" ")
-        fullText += pageText + "\n"
-    }
 
-    const normalizedText = fullText.replace(/[\u00A0\u202F]/g, ' ')
+        // Agrupar elementos por línea visual según coordenada vertical Y
+        const linesMap: { y: number; items: { x: number; str: string }[] }[] = []
+        const Y_TOLERANCE = 4 // píxeles de tolerancia en la misma fila
 
-    // Regex para capturar montos con 2 decimales (estándar bancario)
-    // Soporta formatos venezolanos (1.533.739,27 / 49.635,00) e internacionales (1,533,739.27 / 49635.00)
-    const regex = /(?:^|[^\d/:\-])(?:Bs\.?|VES|USD|COP|CLP|PEN|\$)?\s*([+-]?(?:[1-9]\d{0,2}(?:\.\d{3})+,\d{2}|\d+,\d{2}|[1-9]\d{0,2}(?:,\d{3})+\.\d{2}|\d+\.\d{2}))\s*(?:Bs\.?|VES|USD|COP|CLP|PEN|\$)?(?=[^\d/:]|$)/gmi
+        for (const item of textContent.items as any[]) {
+            const str = (item.str || '').trim()
+            if (!str) continue
 
-    const amounts: number[] = []
-    let match: RegExpExecArray | null
+            const x = item.transform ? item.transform[4] : 0
+            const y = item.transform ? item.transform[5] : 0
 
-    while ((match = regex.exec(normalizedText)) !== null) {
-        const raw = match[1].replace('+', '').trim()
-
-        // Excluir teléfonos o códigos con guion (ej. 0212-501)
-        if (normalizedText.includes(raw + '-') || normalizedText.includes('-' + raw)) {
-            continue
-        }
-
-        let numStr = raw
-        if (numStr.includes(',') && numStr.includes('.')) {
-            if (numStr.lastIndexOf(',') > numStr.lastIndexOf('.')) {
-                numStr = numStr.replace(/\./g, '').replace(',', '.')
-            } else {
-                numStr = numStr.replace(/,/g, '')
+            let line = linesMap.find(l => Math.abs(l.y - y) <= Y_TOLERANCE)
+            if (!line) {
+                line = { y, items: [] }
+                linesMap.push(line)
             }
-        } else if (numStr.includes(',')) {
-            numStr = numStr.replace(',', '.')
+            line.items.push({ x, str: item.str })
         }
 
-        const val = parseFloat(numStr)
-        if (!isNaN(val) && Math.abs(val) > 0.001) {
-            amounts.push(Math.round(Math.abs(val) * 100) / 100)
+        // Ordenar líneas de arriba hacia abajo (en PDF Y=0 está abajo)
+        linesMap.sort((a, b) => b.y - a.y)
+
+        for (const lineObj of linesMap) {
+            // Ordenar items de izquierda a derecha
+            lineObj.items.sort((a, b) => a.x - b.x)
+            const lineText = lineObj.items.map(it => it.str).join(" ").trim()
+            const upper = lineText.toUpperCase()
+
+            // 1. OMITIR COMISIONES BANCARIAS
+            // Ejemplos BDV: "COMISION PAGOMOVILBDV DEBITO", "COBRO COMISION PAG MOVIL BDV A BDV"
+            if (upper.includes("COMISION") || upper.includes("COMISIÓN")) {
+                continue
+            }
+
+            // 2. OMITIR CRÉDITOS / ENTRADAS (solo interesan egresos / débitos a beneficiarios)
+            if (upper.includes("CREDITO") || upper.includes("CRÉDITO")) {
+                continue
+            }
+
+            // 3. Extraer todos los números monetarios con 2 decimales en la línea
+            const amountRegex = /(?:^|[^\d/:\-])([+-]?(?:[1-9]\d{0,2}(?:\.\d{3})+,\d{2}|\d+,\d{2}|[1-9]\d{0,2}(?:,\d{3})+\.\d{2}|\d+\.\d{2}))(?=[^\d/:]|$)/g
+            const lineAmounts: number[] = []
+            let m: RegExpExecArray | null
+
+            while ((m = amountRegex.exec(lineText)) !== null) {
+                const raw = m[1].replace('+', '').trim()
+                if (lineText.includes(raw + '-') || lineText.includes('-' + raw)) continue
+                const parsed = parseAmount(raw)
+                if (parsed !== null && parsed > 0.001) {
+                    lineAmounts.push(parsed)
+                }
+            }
+
+            if (lineAmounts.length === 0) continue
+
+            // 4. DISTINGUIR MONTO VS SALDO:
+            // En extractos bancarios con columnas Monto y Saldo (como BDV):
+            // La fila termina con: [..., Monto, Saldo].
+            // Por lo tanto, el Monto de la operación es el penúltimo valor numérico.
+            // En extractos con una sola columna de monto (como Banesco): se toma ese valor único.
+            let targetAmount: number
+            if (lineAmounts.length >= 2) {
+                targetAmount = lineAmounts[lineAmounts.length - 2]
+            } else {
+                targetAmount = lineAmounts[0]
+            }
+
+            if (targetAmount && targetAmount > 0) {
+                validAmounts.push(targetAmount)
+            }
         }
     }
 
-    return amounts
+    return validAmounts
 }
